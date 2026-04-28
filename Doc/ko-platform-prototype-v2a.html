@@ -1,0 +1,1373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KO Platform — Prototype v2a</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
+<style>
+:root {
+  --teal-900:#04342C; --teal-800:#085041; --teal-700:#0F6E56; --teal-500:#1D9E75; --teal-400:#5DCAA5; --teal-100:#9FE1CB; --teal-50:#E1F5EE;
+  --ink:#0D1F1A; --ink-60:rgba(13,31,26,0.6); --ink-20:rgba(13,31,26,0.12); --ink-08:rgba(13,31,26,0.06);
+  --white:#FFFFFF; --surface:#F7FBF9; --amber:#EF9F27; --red:#E24B4A; --blue:#378ADD;
+  --r:10px; --rs:6px;
+
+  /* Stage colourways */
+  --c-enquiry-bg:#EFF6FF; --c-enquiry-border:#BFDBFE; --c-enquiry-text:#1D4ED8; --c-enquiry-dot:#3B82F6;
+  --c-factfind-bg:#FFF7ED; --c-factfind-border:#FED7AA; --c-factfind-text:#C2410C; --c-factfind-dot:#F97316;
+  --c-research-bg:#F0FDF4; --c-research-border:#BBF7D0; --c-research-text:#166534; --c-research-dot:#22C55E;
+  --c-dip-bg:#FAF5FF; --c-dip-border:#E9D5FF; --c-dip-text:#7E22CE; --c-dip-dot:#A855F7;
+  --c-offer-bg:#FFF1F2; --c-offer-border:#FECDD3; --c-offer-text:#BE123C; --c-offer-dot:#F43F5E;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:var(--ink);color:var(--white);min-height:100vh;overflow-x:hidden}
+
+/* ── NAV */
+nav{position:fixed;top:0;left:0;right:0;z-index:200;display:flex;align-items:center;justify-content:space-between;padding:0 40px;height:64px;background:rgba(13,31,26,0.92);backdrop-filter:blur(16px);border-bottom:1px solid rgba(255,255,255,0.07)}
+.nav-logo{display:flex;align-items:center;gap:10px;font-family:'Syne',sans-serif;font-weight:700;font-size:18px;color:var(--white);text-decoration:none;cursor:pointer}
+.nav-logo svg{width:28px;height:28px}
+.nav-links{display:flex;gap:32px}
+.nav-links a{font-size:14px;color:rgba(255,255,255,0.6);text-decoration:none;transition:color .2s;cursor:pointer}
+.nav-links a:hover,.nav-links a.active{color:var(--white)}
+.nav-cta{display:flex;gap:10px}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:var(--rs);font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;cursor:pointer;transition:all .2s;border:none}
+.btn-ghost{background:rgba(255,255,255,0.08);color:var(--white)}
+.btn-ghost:hover{background:rgba(255,255,255,0.14)}
+.btn-primary{background:var(--teal-500);color:var(--white)}
+.btn-primary:hover{background:var(--teal-400)}
+.btn-sm{padding:6px 14px;font-size:13px}
+.btn-outline{background:transparent;color:var(--teal-400);border:1px solid var(--teal-700)}
+.btn-ink{background:var(--ink);color:var(--white)}
+.btn-ink:hover{background:#1a3028}
+
+/* ── VIEWS */
+.view{display:none;min-height:100vh;padding-top:64px}
+.view.active{display:block}
+
+/* ══ LANDING ══ */
+#landing{background:var(--ink)}
+.hero{position:relative;padding:100px 80px 80px;text-align:center;overflow:hidden}
+.hero-glow{position:absolute;top:-60px;left:50%;transform:translateX(-50%);width:700px;height:400px;background:radial-gradient(ellipse at center,rgba(29,158,117,0.22) 0%,transparent 70%);pointer-events:none}
+.hero-tag{display:inline-flex;align-items:center;gap:6px;padding:5px 14px;border-radius:100px;background:rgba(29,158,117,0.15);border:1px solid rgba(29,158,117,0.3);font-size:12px;font-weight:500;color:var(--teal-400);margin-bottom:28px}
+.hero-tag span{width:6px;height:6px;border-radius:50%;background:var(--teal-500);display:inline-block}
+h1{font-family:'Syne',sans-serif;font-size:clamp(42px,5.5vw,72px);font-weight:800;line-height:1.04;letter-spacing:-.02em;max-width:820px;margin:0 auto 22px}
+h1 em{font-style:normal;color:var(--teal-400)}
+.hero-sub{font-size:18px;font-weight:300;color:rgba(255,255,255,0.55);max-width:540px;margin:0 auto 40px;line-height:1.65}
+.hero-actions{display:flex;gap:12px;justify-content:center;margin-bottom:64px}
+.btn-lg{padding:14px 28px;font-size:15px;border-radius:var(--r)}
+.hero-mockup{max-width:900px;margin:0 auto;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.09);border-radius:14px;overflow:hidden;box-shadow:0 40px 120px rgba(0,0,0,0.6)}
+.mockup-bar{background:rgba(255,255,255,0.05);border-bottom:1px solid rgba(255,255,255,0.07);padding:12px 18px;display:flex;align-items:center;gap:8px}
+.dot{width:10px;height:10px;border-radius:50%}
+.mockup-inner{display:grid;grid-template-columns:190px 1fr;height:380px}
+.mockup-sidebar{background:rgba(255,255,255,0.03);border-right:1px solid rgba(255,255,255,0.07);padding:20px 12px;display:flex;flex-direction:column;gap:4px}
+.ms-item{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:6px;font-size:13px;color:rgba(255,255,255,0.45)}
+.ms-item.active{background:rgba(29,158,117,0.18);color:var(--teal-400)}
+.ms-icon{width:16px;height:16px;opacity:.7}
+.mockup-main{padding:20px;display:flex;flex-direction:column;gap:14px}
+.mock-stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.mock-stat{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:14px}
+.mock-stat-label{font-size:11px;color:rgba(255,255,255,0.4);margin-bottom:6px}
+.mock-stat-val{font-family:'Syne',sans-serif;font-size:22px;font-weight:700}
+.mock-stat-val.teal{color:var(--teal-400)}
+.mock-stat-val.amber{color:var(--amber)}
+.mock-kanban{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;flex:1}
+.mock-col{border-radius:6px;padding:10px 8px}
+.mock-col-head{font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px}
+.mock-card{border-radius:5px;padding:8px 9px;margin-bottom:6px}
+.mock-card-name{font-size:11px;font-weight:500;margin-bottom:3px}
+.mock-card-sub{font-size:10px}
+.mock-pill{display:inline-block;padding:2px 7px;border-radius:100px;font-size:9px;font-weight:600;margin-top:5px}
+
+/* Stage themed mock cols */
+.mock-col.enquiry{background:rgba(59,130,246,0.12)} .mock-col.enquiry .mock-col-head{color:rgba(147,197,253,0.9)} .mock-col.enquiry .mock-card{background:rgba(59,130,246,0.15);border:1px solid rgba(147,197,253,0.2)} .mock-col.enquiry .mock-card-name{color:#BFDBFE} .mock-col.enquiry .mock-card-sub{color:rgba(191,219,254,0.6)}
+.mock-col.factfind{background:rgba(249,115,22,0.1)} .mock-col.factfind .mock-col-head{color:rgba(253,186,116,0.9)} .mock-col.factfind .mock-card{background:rgba(249,115,22,0.12);border:1px solid rgba(253,186,116,0.2)} .mock-col.factfind .mock-card-name{color:#FED7AA} .mock-col.factfind .mock-card-sub{color:rgba(253,186,116,0.6)}
+.mock-col.research{background:rgba(34,197,94,0.1)} .mock-col.research .mock-col-head{color:rgba(134,239,172,0.9)} .mock-col.research .mock-card{background:rgba(34,197,94,0.12);border:1px solid rgba(134,239,172,0.2)} .mock-col.research .mock-card-name{color:#BBF7D0} .mock-col.research .mock-card-sub{color:rgba(134,239,172,0.6)}
+.mock-col.dip{background:rgba(168,85,247,0.1)} .mock-col.dip .mock-col-head{color:rgba(216,180,254,0.9)} .mock-col.dip .mock-card{background:rgba(168,85,247,0.12);border:1px solid rgba(216,180,254,0.2)} .mock-col.dip .mock-card-name{color:#E9D5FF} .mock-col.dip .mock-card-sub{color:rgba(216,180,254,0.6)}
+.mock-col.offer{background:rgba(244,63,94,0.1)} .mock-col.offer .mock-col-head{color:rgba(253,164,175,0.9)} .mock-col.offer .mock-card{background:rgba(244,63,94,0.12);border:1px solid rgba(253,164,175,0.2)} .mock-col.offer .mock-card-name{color:#FECDD3} .mock-col.offer .mock-card-sub{color:rgba(253,164,175,0.6)}
+
+/* Landing sections */
+.pain-strip{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;border-top:1px solid rgba(255,255,255,0.07);border-bottom:1px solid rgba(255,255,255,0.07);background:rgba(255,255,255,0.07)}
+.pain-item{background:var(--ink);padding:40px 48px}
+.pain-icon{font-size:28px;margin-bottom:16px}
+.pain-title{font-family:'Syne',sans-serif;font-size:16px;font-weight:700;margin-bottom:8px}
+.pain-desc{font-size:14px;color:rgba(255,255,255,0.5);line-height:1.6}
+.section{padding:80px}
+.section-tag{font-size:12px;font-weight:600;color:var(--teal-500);letter-spacing:.1em;text-transform:uppercase;margin-bottom:12px}
+h2{font-family:'Syne',sans-serif;font-size:clamp(28px,3.5vw,42px);font-weight:800;line-height:1.1;letter-spacing:-.02em;margin-bottom:48px}
+.features-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:1px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.07);border-radius:12px;overflow:hidden}
+.feature-card{background:var(--ink);padding:32px 26px;transition:background .2s}
+.feature-card:hover{background:rgba(29,158,117,0.08)}
+.feature-icon{width:40px;height:40px;border-radius:8px;background:rgba(29,158,117,0.15);border:1px solid rgba(29,158,117,0.25);display:flex;align-items:center;justify-content:center;margin-bottom:18px;font-size:18px}
+.feature-title{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;margin-bottom:8px}
+.feature-desc{font-size:13px;color:rgba(255,255,255,0.5);line-height:1.6}
+.pricing-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;max-width:860px;margin:0 auto}
+.pricing-card{border-radius:12px;padding:32px 28px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);position:relative}
+.pricing-card.featured{background:var(--teal-700);border-color:var(--teal-500)}
+.pricing-badge{position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:var(--teal-400);color:var(--ink);font-size:11px;font-weight:700;padding:3px 12px;border-radius:100px}
+.plan-name{font-size:13px;font-weight:600;color:rgba(255,255,255,0.6);margin-bottom:12px;letter-spacing:.06em;text-transform:uppercase}
+.price{font-family:'Syne',sans-serif;font-size:44px;font-weight:800;line-height:1}
+.price sup{font-size:22px;vertical-align:top;margin-top:8px}
+.price-sub{font-size:13px;color:rgba(255,255,255,0.5);margin-bottom:24px}
+.feature-list{list-style:none;display:flex;flex-direction:column;gap:10px;margin-bottom:28px}
+.feature-list li{font-size:13px;color:rgba(255,255,255,0.65);display:flex;align-items:center;gap:8px}
+.feature-list li::before{content:'✓';color:var(--teal-400);font-weight:700}
+.stats-strip{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid rgba(255,255,255,0.07);text-align:center}
+.stat-item{padding:56px 40px;border-right:1px solid rgba(255,255,255,0.07)}
+.stat-item:last-child{border-right:none}
+.stat-num{font-family:'Syne',sans-serif;font-size:52px;font-weight:800;color:var(--teal-400);line-height:1;margin-bottom:8px}
+.stat-label{font-size:14px;color:rgba(255,255,255,0.5)}
+footer{border-top:1px solid rgba(255,255,255,0.07);padding:40px 80px;display:flex;align-items:center;justify-content:space-between}
+.footer-copy{font-size:13px;color:rgba(255,255,255,0.35)}
+
+/* ══ DASHBOARD ══ */
+#dashboard{background:var(--surface);color:var(--ink)}
+.dash-layout{display:flex;min-height:calc(100vh - 64px)}
+.dash-sidebar{width:220px;flex-shrink:0;background:var(--white);border-right:1px solid var(--ink-20);display:flex;flex-direction:column;padding:20px 12px;gap:2px}
+.dash-sidebar-section{font-size:10px;font-weight:700;color:rgba(13,31,26,0.35);letter-spacing:.1em;text-transform:uppercase;padding:12px 12px 6px}
+.dash-nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:var(--rs);font-size:13px;font-weight:500;color:var(--ink-60);cursor:pointer;transition:all .15s;text-decoration:none;position:relative}
+.dash-nav-item:hover{background:var(--ink-08);color:var(--ink)}
+.dash-nav-item.active{background:var(--teal-50);color:var(--teal-700)}
+.dash-nav-item svg{width:16px;height:16px;flex-shrink:0}
+.dash-nav-item .badge{margin-left:auto;background:var(--red);color:white;font-size:10px;font-weight:700;padding:1px 6px;border-radius:100px}
+.dash-nav-item .badge-blue{margin-left:auto;background:#2563EB;color:white;font-size:10px;font-weight:700;padding:1px 6px;border-radius:100px}
+.sidebar-bottom{margin-top:auto;padding:12px;background:var(--teal-50);border-radius:8px;border:1px solid rgba(15,110,86,0.15)}
+.sidebar-plan{font-size:11px;font-weight:700;color:var(--teal-700);text-transform:uppercase;letter-spacing:.08em}
+.sidebar-plan-sub{font-size:11px;color:var(--teal-600);margin-top:2px}
+.dash-main{flex:1;overflow-y:auto;min-width:0}
+.dash-topbar{background:var(--white);border-bottom:1px solid var(--ink-20);padding:0 28px;height:52px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.dash-topbar-title{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:var(--ink)}
+.dash-topbar-actions{display:flex;gap:8px}
+.dash-content{padding:24px 28px;display:flex;flex-direction:column;gap:20px}
+
+/* Panels */
+.panel{background:var(--white);border:1px solid var(--ink-20);border-radius:var(--r)}
+.panel-head{padding:16px 20px;border-bottom:1px solid var(--ink-20);display:flex;align-items:center;justify-content:space-between}
+.panel-title{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:var(--ink)}
+.panel-body{padding:20px}
+
+/* Stat cards */
+.stat-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.stat-card{background:var(--white);border:1px solid var(--ink-20);border-radius:var(--r);padding:18px 20px}
+.stat-card-label{font-size:12px;font-weight:500;color:var(--ink-60);margin-bottom:6px}
+.stat-card-val{font-family:'Syne',sans-serif;font-size:30px;font-weight:800;color:var(--ink);line-height:1;margin-bottom:4px}
+.stat-card-sub{font-size:12px;color:var(--ink-60)}
+.accent{display:inline-block;padding:2px 8px;border-radius:100px;font-size:11px;font-weight:600}
+.accent-green{background:rgba(15,110,86,0.1);color:var(--teal-700)}
+.accent-amber{background:rgba(239,159,39,0.12);color:#8a5a0a}
+.accent-red{background:rgba(226,75,74,0.1);color:#8a2020}
+.accent-blue{background:rgba(55,138,221,0.12);color:#185FA5}
+
+/* Tables */
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead th{text-align:left;font-size:11px;font-weight:700;color:var(--ink-60);letter-spacing:.06em;text-transform:uppercase;padding:0 14px 10px;border-bottom:1px solid var(--ink-20)}
+tbody td{padding:12px 14px;border-bottom:1px solid var(--ink-08);color:var(--ink)}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover td{background:var(--surface)}
+
+/* Status pills */
+.status{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:100px;font-size:11px;font-weight:600}
+.status::before{content:'';width:5px;height:5px;border-radius:50%}
+.s-enquiry{background:var(--c-enquiry-bg);color:var(--c-enquiry-text)}.s-enquiry::before{background:var(--c-enquiry-dot)}
+.s-factfind{background:var(--c-factfind-bg);color:var(--c-factfind-text)}.s-factfind::before{background:var(--c-factfind-dot)}
+.s-research{background:var(--c-research-bg);color:var(--c-research-text)}.s-research::before{background:var(--c-research-dot)}
+.s-dip{background:var(--c-dip-bg);color:var(--c-dip-text)}.s-dip::before{background:var(--c-dip-dot)}
+.s-offer{background:var(--c-offer-bg);color:var(--c-offer-text)}.s-offer::before{background:var(--c-offer-dot)}
+.s-active{background:var(--c-research-bg);color:var(--c-research-text)}.s-active::before{background:var(--c-research-dot)}
+.s-complete{background:var(--ink-08);color:var(--ink-60)}.s-complete::before{background:var(--ink-60)}
+.s-lead{background:var(--c-enquiry-bg);color:var(--c-enquiry-text)}.s-lead::before{background:var(--c-enquiry-dot)}
+.s-pending{background:rgba(239,159,39,0.12);color:#7a4e08}.s-pending::before{background:var(--amber)}
+.s-done{background:var(--c-research-bg);color:var(--c-research-text)}.s-done::before{background:var(--c-research-dot)}
+
+/* ── KANBAN (light themed with stage colours) */
+.kanban{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
+.kb-col{border-radius:8px;padding:10px}
+.kb-col.enquiry{background:var(--c-enquiry-bg);border:1px solid var(--c-enquiry-border)}
+.kb-col.factfind{background:var(--c-factfind-bg);border:1px solid var(--c-factfind-border)}
+.kb-col.research{background:var(--c-research-bg);border:1px solid var(--c-research-border)}
+.kb-col.dip{background:var(--c-dip-bg);border:1px solid var(--c-dip-border)}
+.kb-col.offer{background:var(--c-offer-bg);border:1px solid var(--c-offer-border)}
+.kb-head{font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center}
+.kb-col.enquiry .kb-head{color:var(--c-enquiry-text)}
+.kb-col.factfind .kb-head{color:var(--c-factfind-text)}
+.kb-col.research .kb-head{color:var(--c-research-text)}
+.kb-col.dip .kb-head{color:var(--c-dip-text)}
+.kb-col.offer .kb-head{color:var(--c-offer-text)}
+.kb-count{font-size:10px;padding:1px 7px;border-radius:100px;font-weight:600;background:rgba(13,31,26,0.1)}
+.kb-card{background:var(--white);border-radius:6px;padding:11px 12px;margin-bottom:7px;cursor:pointer;transition:box-shadow .15s;border:1px solid rgba(13,31,26,0.08)}
+.kb-card:hover{box-shadow:0 2px 10px rgba(13,31,26,0.1)}
+.kb-card-name{font-size:12px;font-weight:600;color:var(--ink);margin-bottom:3px}
+.kb-card-type{font-size:11px;color:var(--ink-60);margin-bottom:8px}
+.kb-card-foot{display:flex;justify-content:space-between;align-items:center}
+.kb-amount{font-size:11px;font-weight:700}
+.kb-col.enquiry .kb-amount{color:var(--c-enquiry-text)}
+.kb-col.factfind .kb-amount{color:var(--c-factfind-text)}
+.kb-col.research .kb-amount{color:var(--c-research-text)}
+.kb-col.dip .kb-amount{color:var(--c-dip-text)}
+.kb-col.offer .kb-amount{color:var(--c-offer-text)}
+.kb-avatar{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700}
+.kb-col.enquiry .kb-avatar{background:var(--c-enquiry-border);color:var(--c-enquiry-text)}
+.kb-col.factfind .kb-avatar{background:var(--c-factfind-border);color:var(--c-factfind-text)}
+.kb-col.research .kb-avatar{background:var(--c-research-border);color:var(--c-research-text)}
+.kb-col.dip .kb-avatar{background:var(--c-dip-border);color:var(--c-dip-text)}
+.kb-col.offer .kb-avatar{background:var(--c-offer-border);color:var(--c-offer-text)}
+
+/* ── CASE DETAIL */
+.case-detail-header{background:var(--white);border-bottom:1px solid var(--ink-20);padding:16px 28px;display:flex;align-items:center;gap:14px}
+.case-back{cursor:pointer;color:var(--ink-60);font-size:13px;display:flex;align-items:center;gap:5px;transition:color .15s}
+.case-back:hover{color:var(--ink)}
+.case-title{font-family:'Syne',sans-serif;font-size:16px;font-weight:700;color:var(--ink)}
+.case-meta{font-size:12px;color:var(--ink-60)}
+.case-tabs{display:flex;gap:0;border-bottom:1px solid var(--ink-20);padding:0 28px;background:var(--white)}
+.case-tab{padding:11px 18px;font-size:13px;font-weight:500;color:var(--ink-60);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s}
+.case-tab:hover{color:var(--ink)}
+.case-tab.active{color:var(--teal-700);border-bottom-color:var(--teal-600)}
+.case-body{padding:24px 28px;display:flex;flex-direction:column;gap:16px}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.three-col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.info-row{display:flex;flex-direction:column;gap:3px;padding:8px 0;border-bottom:1px solid var(--ink-08)}
+.info-row:last-child{border-bottom:none}
+.info-label{font-size:11px;font-weight:600;color:var(--ink-60)}
+.info-val{font-size:13px;font-weight:500;color:var(--ink)}
+.timeline{display:flex;flex-direction:column;gap:0}
+.tl-item{display:flex;gap:14px;padding:12px 0}
+.tl-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;margin-top:4px}
+.tl-line{width:1px;background:var(--ink-20);flex-shrink:0;margin:2px 0 0 4.5px;height:100%}
+.tl-content{flex:1;padding-bottom:4px}
+.tl-title{font-size:13px;font-weight:600;color:var(--ink);margin-bottom:2px}
+.tl-time{font-size:11px;color:var(--ink-60)}
+
+/* ── MESSAGES */
+.msg-layout{display:grid;grid-template-columns:300px 1fr;height:calc(100vh - 64px - 52px)}
+.msg-list{border-right:1px solid var(--ink-20);overflow-y:auto;background:var(--white)}
+.msg-list-head{padding:14px 16px;border-bottom:1px solid var(--ink-20);display:flex;align-items:center;justify-content:space-between}
+.msg-list-title{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:var(--ink)}
+.msg-filter-tabs{display:flex;gap:2px;padding:10px 12px;border-bottom:1px solid var(--ink-08)}
+.msg-filter-tab{padding:5px 12px;border-radius:100px;font-size:12px;font-weight:500;color:var(--ink-60);cursor:pointer;transition:all .15s}
+.msg-filter-tab.active{background:var(--teal-50);color:var(--teal-700)}
+.msg-filter-tab:hover{background:var(--ink-08)}
+.msg-item{padding:14px 16px;border-bottom:1px solid var(--ink-08);cursor:pointer;transition:background .15s;position:relative}
+.msg-item:hover{background:var(--surface)}
+.msg-item.active{background:var(--teal-50)}
+.msg-item.unread::before{content:'';width:7px;height:7px;border-radius:50%;background:var(--teal-500);position:absolute;top:18px;right:14px}
+.msg-item-name{font-size:13px;font-weight:600;color:var(--ink);margin-bottom:2px}
+.msg-item-preview{font-size:12px;color:var(--ink-60);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:220px}
+.msg-item-meta{display:flex;align-items:center;gap:8px;margin-top:5px}
+.msg-item-time{font-size:11px;color:var(--ink-60)}
+.msg-source-badge{font-size:10px;font-weight:600;padding:1px 7px;border-radius:100px}
+.src-case{background:var(--c-research-bg);color:var(--c-research-text)}
+.src-compliance{background:var(--c-dip-bg);color:var(--c-dip-text)}
+.src-ai{background:rgba(239,159,39,0.12);color:#7a4e08}
+.src-client{background:var(--c-enquiry-bg);color:var(--c-enquiry-text)}
+.src-email{background:var(--ink-08);color:var(--ink-60)}
+.src-inbound{background:rgba(226,75,74,0.1);color:#8a2020}
+.msg-thread{display:flex;flex-direction:column;flex:1;overflow:hidden}
+.msg-thread-head{padding:16px 20px;border-bottom:1px solid var(--ink-20);background:var(--white);display:flex;align-items:center;justify-content:space-between}
+.msg-thread-name{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:var(--ink)}
+.msg-thread-sub{font-size:12px;color:var(--ink-60);margin-top:2px}
+.msg-thread-body{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:16px;background:var(--surface)}
+.msg-bubble-wrap{display:flex;gap:10px;max-width:80%}
+.msg-bubble-wrap.outbound{align-self:flex-end;flex-direction:row-reverse}
+.msg-avatar-sm{width:28px;height:28px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700}
+.msg-bubble{padding:10px 14px;border-radius:10px;font-size:13px;line-height:1.55}
+.msg-bubble.inbound{background:var(--white);border:1px solid var(--ink-20);color:var(--ink);border-radius:4px 10px 10px 10px}
+.msg-bubble.outbound{background:var(--teal-700);color:var(--white);border-radius:10px 4px 10px 10px}
+.msg-bubble.system{background:rgba(55,138,221,0.1);border:1px solid rgba(55,138,221,0.2);color:#185FA5;border-radius:8px;font-size:12px}
+.msg-bubble.compliance-note{background:var(--c-dip-bg);border:1px solid var(--c-dip-border);color:var(--c-dip-text);border-radius:8px;font-size:12px}
+.msg-bubble.ai-note{background:rgba(239,159,39,0.08);border:1px solid rgba(239,159,39,0.2);color:#7a4e08;border-radius:8px;font-size:12px}
+.msg-bubble-time{font-size:10px;color:var(--ink-60);margin-top:4px}
+.msg-bubble-wrap.outbound .msg-bubble-time{text-align:right;color:rgba(255,255,255,0.6)}
+.msg-input-area{padding:16px 20px;border-top:1px solid var(--ink-20);background:var(--white);display:flex;gap:10px;align-items:flex-end}
+.msg-input{flex:1;padding:10px 14px;border:1px solid var(--ink-20);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--ink);resize:none;outline:none;min-height:42px;max-height:120px}
+.msg-input:focus{border-color:var(--teal-500)}
+.msg-send-btn{padding:10px 16px;background:var(--teal-500);color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;font-size:13px;flex-shrink:0}
+.msg-send-btn:hover{background:var(--teal-400)}
+
+/* Inline message widget (in case/compliance/AI screens) */
+.inline-msg-bar{display:flex;align-items:center;gap:10px;padding:12px 16px;background:var(--surface);border:1px solid var(--ink-20);border-radius:8px}
+.inline-msg-input{flex:1;padding:7px 12px;border:1px solid var(--ink-20);border-radius:6px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--ink);outline:none}
+.inline-msg-input:focus{border-color:var(--teal-500)}
+.inline-msg-send{padding:7px 14px;background:var(--teal-500);color:white;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600}
+.msg-hist-item{display:flex;gap:10px;margin-bottom:10px}
+.msg-hist-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:5px}
+.msg-hist-content{flex:1}
+.msg-hist-title{font-size:12px;font-weight:600;color:var(--ink)}
+.msg-hist-sub{font-size:11px;color:var(--ink-60)}
+
+/* Compliance / AI report panels (same as v2) */
+.compliance-stages{display:flex;gap:0;margin-bottom:20px}
+.comp-stage{flex:1;padding:14px 16px;background:var(--surface);border:1px solid var(--ink-20);border-right:none;font-size:12px;position:relative}
+.comp-stage:last-child{border-right:1px solid var(--ink-20);border-radius:0 6px 6px 0}
+.comp-stage:first-child{border-radius:6px 0 0 6px}
+.comp-stage.done{background:rgba(15,110,86,0.07);border-color:rgba(15,110,86,0.2)}
+.comp-stage.current{background:var(--teal-50);border-color:var(--teal-500)}
+.comp-stage-label{font-weight:600;color:var(--ink-60);margin-bottom:3px;font-size:11px}
+.comp-stage.done .comp-stage-label,.comp-stage.current .comp-stage-label{color:var(--teal-700)}
+.comp-stage-date{font-size:10px;color:var(--ink-60)}
+.comp-check-mark{position:absolute;top:10px;right:10px;width:16px;height:16px;border-radius:50%;background:var(--teal-500);display:flex;align-items:center;justify-content:center;font-size:9px;color:white}
+.report-section{border:1px solid var(--ink-20);border-radius:8px;overflow:hidden;margin-bottom:10px}
+.report-section-head{display:flex;align-items:center;justify-content:space-between;padding:11px 16px;background:var(--surface);cursor:pointer;border-bottom:1px solid var(--ink-20)}
+.report-section-head:hover{background:rgba(13,31,26,0.04)}
+.rs-title{font-size:13px;font-weight:600;color:var(--ink)}
+.rs-actions{display:flex;gap:6px;align-items:center}
+.rs-btn{padding:4px 10px;border-radius:4px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--ink-20);background:var(--white);color:var(--ink-60);transition:all .15s}
+.rs-btn:hover{border-color:var(--teal-500);color:var(--teal-700)}
+.rs-btn.regen{background:rgba(15,110,86,0.08);border-color:rgba(15,110,86,0.2);color:var(--teal-700)}
+.report-section-body{padding:14px 16px;background:var(--white);font-size:13px;line-height:1.75;color:var(--ink)}
+.report-section-body.collapsed{display:none}
+.rs-flag{font-size:10px;padding:2px 8px;border-radius:100px;font-weight:600}
+.rs-flag-amber{background:rgba(239,159,39,0.15);color:#7a4e08}
+.rs-flag-green{background:rgba(15,110,86,0.12);color:var(--teal-700)}
+.template-list{display:flex;flex-direction:column;gap:2px}
+.template-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--rs);font-size:13px;font-weight:500;color:var(--ink-60);cursor:pointer;transition:all .15s;border:1px solid transparent}
+.template-item:hover{background:var(--surface);color:var(--ink)}
+.template-item.active{background:var(--teal-50);color:var(--teal-700);border-color:rgba(15,110,86,0.2)}
+.template-item .tmpl-badge{margin-left:auto;font-size:10px;padding:1px 7px;border-radius:100px;background:rgba(15,110,86,0.12);color:var(--teal-700);font-weight:600}
+.template-item .tmpl-phase{margin-left:auto;font-size:10px;padding:1px 7px;border-radius:100px;background:var(--ink-08);color:var(--ink-60);font-weight:600}
+.data-check{display:flex;flex-direction:column;gap:8px;margin-bottom:16px}
+.data-check-row{display:flex;align-items:center;gap:10px;font-size:13px}
+.check-icon{width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0}
+.check-pass{background:rgba(15,110,86,0.15);color:var(--teal-700)}
+.check-warn{background:rgba(239,159,39,0.15);color:#7a4e08}
+.product-field{margin-bottom:10px}
+.product-field label{display:block;font-size:11px;font-weight:600;color:var(--ink-60);margin-bottom:4px}
+.product-field input,.product-field select,.product-field textarea{width:100%;padding:7px 10px;border:1px solid var(--ink-20);border-radius:6px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--ink);background:var(--white);outline:none;transition:border-color .15s}
+.product-field textarea{resize:vertical;min-height:58px}
+.product-field input:focus,.product-field select:focus,.product-field textarea:focus{border-color:var(--teal-500)}
+.section-editor{display:none;position:fixed;inset:0;z-index:300;background:rgba(13,31,26,0.5);backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:24px}
+.section-editor.open{display:flex}
+.editor-modal{background:var(--white);border-radius:12px;width:100%;max-width:640px;box-shadow:0 24px 60px rgba(13,31,26,0.3);overflow:hidden}
+.editor-head{padding:16px 20px;border-bottom:1px solid var(--ink-20);display:flex;justify-content:space-between;align-items:center}
+.editor-title{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:var(--ink)}
+.editor-close{cursor:pointer;color:var(--ink-60);font-size:20px;line-height:1}
+.editor-body{padding:20px}
+.editor-textarea{width:100%;padding:12px;border:1px solid var(--ink-20);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;line-height:1.7;color:var(--ink);background:var(--surface);min-height:180px;resize:vertical;outline:none}
+.editor-textarea:focus{border-color:var(--teal-500)}
+.editor-context{margin-top:12px}
+.editor-context label{display:block;font-size:11px;font-weight:600;color:var(--ink-60);margin-bottom:5px}
+.editor-context input{width:100%;padding:8px 12px;border:1px solid var(--ink-20);border-radius:6px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--ink);outline:none}
+.editor-foot{padding:14px 20px;border-top:1px solid var(--ink-20);display:flex;gap:8px;justify-content:flex-end}
+.compliance-checks{display:flex;flex-direction:column;gap:7px;padding:14px 16px;background:var(--white);border-radius:8px;border:1px solid var(--ink-20)}
+.cc-row{display:flex;align-items:center;gap:10px;font-size:13px}
+.spinner{width:32px;height:32px;border:3px solid var(--teal-50);border-top-color:var(--teal-500);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.report-layout{display:grid;grid-template-columns:240px 1fr;gap:16px}
+
+/* Calc */
+.calc-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.calc-card{background:var(--surface);border:1px solid var(--ink-20);border-radius:8px;padding:16px;cursor:pointer;transition:all .15s}
+.calc-card:hover,.calc-card.active{background:var(--teal-50);border-color:var(--teal-500)}
+.calc-card-icon{font-size:22px;margin-bottom:8px}
+.calc-card-name{font-size:13px;font-weight:600;color:var(--ink)}
+.calc-card-desc{font-size:11px;color:var(--ink-60);margin-top:3px}
+.calc-active{background:var(--teal-50);border:1px solid rgba(15,110,86,0.25);border-radius:8px;padding:20px;margin-top:16px}
+.calc-active-title{font-family:'Syne',sans-serif;font-size:16px;font-weight:700;margin-bottom:16px;color:var(--ink)}
+.calc-fields{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+.calc-field label{display:block;font-size:11px;font-weight:600;color:var(--ink-60);margin-bottom:5px}
+.calc-field input,.calc-field select{width:100%;padding:8px 12px;border:1px solid var(--ink-20);border-radius:6px;font-family:'DM Sans',sans-serif;font-size:14px;color:var(--ink);background:var(--white);outline:none;transition:border-color .15s}
+.calc-field input:focus,.calc-field select:focus{border-color:var(--teal-500)}
+.calc-result{background:var(--teal-700);color:white;border-radius:8px;padding:18px 20px;display:flex;justify-content:space-between;align-items:center}
+.calc-result-label{font-size:13px;opacity:.8}
+.calc-result-val{font-family:'Syne',sans-serif;font-size:30px;font-weight:800}
+
+.hidden{display:none!important}
+.sub-nav{display:flex;gap:0;border-bottom:1px solid var(--ink-20);padding:0 20px}
+.sub-nav-item{padding:10px 16px;font-size:13px;font-weight:500;color:var(--ink-60);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s}
+.sub-nav-item:hover{color:var(--ink)}
+.sub-nav-item.active{color:var(--teal-700);border-bottom-color:var(--teal-600)}
+.ai-badge{background:rgba(15,110,86,0.12);border:1px solid rgba(15,110,86,0.25);color:var(--teal-700);font-size:11px;font-weight:600;padding:4px 12px;border-radius:100px;display:inline-flex;align-items:center;gap:5px}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo" onclick="showView('landing')">
+    <svg viewBox="0 0 28 28" fill="none"><path d="M14 3L3 12.5V25h7v-8h8v8h7V12.5L14 3Z" fill="#1D9E75"/><path d="M11 25v-6h6v6" stroke="#0F6E56" stroke-width="1.5" fill="none"/></svg>
+    KO Platform
+  </div>
+  <div class="nav-links">
+    <a onclick="scrollToSection('features')">Features</a>
+    <a onclick="scrollToSection('pricing')">Pricing</a>
+    <a onclick="showView('dashboard')" class="active">Live Demo</a>
+  </div>
+  <div class="nav-cta">
+    <button class="btn btn-ghost btn-sm" onclick="showView('dashboard')">Open Dashboard</button>
+    <button class="btn btn-primary btn-sm">Start free trial</button>
+  </div>
+</nav>
+
+<!-- ══════════ LANDING ══════════ -->
+<div id="landing" class="view active">
+  <section class="hero">
+    <div class="hero-glow"></div>
+    <div class="hero-tag"><span></span> Built for UK mortgage brokerages</div>
+    <h1>The <em>smarter</em> broker platform</h1>
+    <p class="hero-sub">AI-powered suitability reports, built-in FCA compliance, messaging, and full CRM — designed by practitioners, priced for everyone.</p>
+    <div class="hero-actions">
+      <button class="btn btn-primary btn-lg" onclick="showView('dashboard')">↗ Open live demo</button>
+      <button class="btn btn-ghost btn-lg">Book a walkthrough</button>
+    </div>
+    <div class="hero-mockup">
+      <div class="mockup-bar">
+        <div class="dot" style="background:#E24B4A"></div>
+        <div class="dot" style="background:#EF9F27"></div>
+        <div class="dot" style="background:#1D9E75"></div>
+        <span style="font-size:12px;color:rgba(255,255,255,0.3);margin-left:10px">KO Platform — Dashboard</span>
+      </div>
+      <div class="mockup-inner">
+        <div class="mockup-sidebar">
+          <div class="ms-item active"><svg class="ms-icon" viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="6" height="6" rx="1.5" fill="currentColor" opacity=".6"/><rect x="9" y="1" width="6" height="6" rx="1.5" fill="currentColor" opacity=".6"/><rect x="1" y="9" width="6" height="6" rx="1.5" fill="currentColor" opacity=".6"/><rect x="9" y="9" width="6" height="6" rx="1.5" fill="currentColor" opacity=".6"/></svg>Dashboard</div>
+          <div class="ms-item"><svg class="ms-icon" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="5" r="3" stroke="currentColor" stroke-width="1.5"/><path d="M2 14c0-3.3 2.7-6 6-6s6 2.7 6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>Clients</div>
+          <div class="ms-item"><svg class="ms-icon" viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M5 6h6M5 9h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>Cases</div>
+          <div class="ms-item" style="color:rgba(55,138,221,0.8)"><svg class="ms-icon" viewBox="0 0 16 16" fill="none"><path d="M14 10c0 .6-.4 1-1 1H5l-3 3V3c0-.6.4-1 1-1h10c.6 0 1 .4 1 1v7Z" stroke="currentColor" stroke-width="1.5"/></svg>Messages</div>
+          <div class="ms-item"><svg class="ms-icon" viewBox="0 0 16 16" fill="none"><path d="M8 1L1 5v5c0 3 3 5 7 5s7-2 7-5V5L8 1Z" stroke="currentColor" stroke-width="1.5"/></svg>Compliance</div>
+          <div class="ms-item"><svg class="ms-icon" viewBox="0 0 16 16" fill="none"><rect x="2" y="1" width="10" height="14" rx="1.5" stroke="currentColor" stroke-width="1.5"/><path d="M5 5h6M5 7.5h6M5 10h4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>AI Reports</div>
+        </div>
+        <div class="mockup-main">
+          <div class="mock-stat-row">
+            <div class="mock-stat"><div class="mock-stat-label">Active Cases</div><div class="mock-stat-val teal">24</div></div>
+            <div class="mock-stat"><div class="mock-stat-label">Clients</div><div class="mock-stat-val">187</div></div>
+            <div class="mock-stat"><div class="mock-stat-label">Messages</div><div class="mock-stat-val amber">8</div></div>
+            <div class="mock-stat"><div class="mock-stat-label">Pipeline</div><div class="mock-stat-val">£4.2M</div></div>
+          </div>
+          <div class="mock-kanban">
+            <div class="mock-col enquiry"><div class="mock-col-head">Enquiry</div><div class="mock-card"><div class="mock-card-name">T. Adeyemi</div><div class="mock-card-sub">Purchase · £385K</div></div></div>
+            <div class="mock-col factfind"><div class="mock-col-head">Fact-Find</div><div class="mock-card"><div class="mock-card-name">J. Patel</div><div class="mock-card-sub">Purchase · £320K</div></div><div class="mock-card"><div class="mock-card-name">S. Williams</div><div class="mock-card-sub">Remortgage · £210K</div></div></div>
+            <div class="mock-col research"><div class="mock-col-head">Research</div><div class="mock-card"><div class="mock-card-name">M. Chen</div><div class="mock-card-sub">BTL · Product ✓</div></div></div>
+            <div class="mock-col dip"><div class="mock-col-head">DIP</div><div class="mock-card"><div class="mock-card-name">R. Johnson</div><div class="mock-card-sub">Purchase · £580K</div></div></div>
+            <div class="mock-col offer"><div class="mock-col-head">Offer</div><div class="mock-card"><div class="mock-card-name">A. Okafor</div><div class="mock-card-sub">Remortgage · £195K</div></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="pain-strip">
+    <div class="pain-item"><div class="pain-icon">⏱</div><div class="pain-title">30–60 min per lender search</div><div class="pain-desc">Manual cross-referencing of criteria against client profiles on every single case.</div></div>
+    <div class="pain-item" style="border-left:1px solid rgba(255,255,255,0.07);border-right:1px solid rgba(255,255,255,0.07)"><div class="pain-icon">📁</div><div class="pain-title">Fragmented compliance docs</div><div class="pain-desc">Suitability reports, ESIS and audit trails scattered across email, folders and spreadsheets.</div></div>
+    <div class="pain-item"><div class="pain-icon">💸</div><div class="pain-title">Enterprise tools out of reach</div><div class="pain-desc">Platforms like Xplan are built for networks. Solo brokers and small DAs have nowhere to go.</div></div>
+  </div>
+
+  <section class="section" id="features">
+    <div class="section-tag">Platform modules</div>
+    <h2>Everything in one place</h2>
+    <div class="features-grid">
+      <div class="feature-card"><div class="feature-icon">👥</div><div class="feature-title">Client & Case Management</div><div class="feature-desc">Full CRM with coloured pipeline from enquiry to completion. Joint applicants, document upload, KYC.</div></div>
+      <div class="feature-card"><div class="feature-icon">💬</div><div class="feature-title">Messages & Notifications</div><div class="feature-desc">Centralised 2-way messaging hub. Send updates from any screen. All conversations compiled by case, client, and channel.</div></div>
+      <div class="feature-card"><div class="feature-icon">🛡</div><div class="feature-title">Compliance Engine</div><div class="feature-desc">FCA-ready workflows, suitability report generator, vulnerable customer flags, immutable audit trail.</div></div>
+      <div class="feature-card" style="background:rgba(29,158,117,0.06)"><div class="feature-icon" style="background:rgba(29,158,117,0.25)">✍️</div><div class="feature-title">AI Report Generation</div><div class="feature-desc">Generates FCA-compliant suitability reports from structured fact-find data. Adviser reviews and approves every section.</div></div>
+      <div class="feature-card"><div class="feature-icon">🧮</div><div class="feature-title">Calculators & Tools</div><div class="feature-desc">8 mortgage calculators: affordability, stamp duty, LTV, ERC, rental yield, and more.</div></div>
+    </div>
+  </section>
+
+  <div class="stats-strip">
+    <div class="stat-item"><div class="stat-num">5,000+</div><div class="stat-label">FCA-authorised mortgage intermediaries in UK</div></div>
+    <div class="stat-item"><div class="stat-num">65%</div><div class="stat-label">Still using manual processes or spreadsheets</div></div>
+    <div class="stat-item"><div class="stat-num">30 min</div><div class="stat-label">Saved per case with AI report generation</div></div>
+  </div>
+
+  <section class="section" id="pricing" style="background:rgba(255,255,255,0.02)">
+    <div class="section-tag">Pricing</div>
+    <h2 style="text-align:center;margin-bottom:48px">Simple, transparent pricing</h2>
+    <div class="pricing-grid">
+      <div class="pricing-card"><div class="plan-name">Starter</div><div class="price"><sup>£</sup>35</div><div class="price-sub">per user / month · Solo brokers, new DAs</div><ul class="feature-list"><li>Core CRM & Pipeline</li><li>Compliance Engine</li><li>All 8 Calculators</li><li>Basic Integrations</li></ul><button class="btn btn-outline" style="width:100%">Get started</button></div>
+      <div class="pricing-card featured"><div class="pricing-badge">Most popular</div><div class="plan-name" style="color:rgba(255,255,255,0.7)">Professional</div><div class="price"><sup>£</sup>50</div><div class="price-sub">per user / month · Small firms (2–10 users)</div><ul class="feature-list"><li>Everything in Starter</li><li>Messages & Notifications</li><li>AI Report Generation</li><li>Client Portal</li><li>Advanced Reporting</li></ul><button class="btn btn-primary" style="width:100%;background:rgba(255,255,255,0.2)" onclick="showView('dashboard')">Try the demo</button></div>
+      <div class="pricing-card"><div class="plan-name">Enterprise</div><div class="price"><sup>£</sup>75</div><div class="price-sub">per user / month · Networks, large DAs</div><ul class="feature-list"><li>Everything in Pro</li><li>Full AI Intelligence Suite</li><li>Lender API Submissions</li><li>Custom Domain</li></ul><button class="btn btn-outline" style="width:100%">Talk to us</button></div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="nav-logo"><svg viewBox="0 0 28 28" fill="none" style="width:22px;height:22px"><path d="M14 3L3 12.5V25h7v-8h8v8h7V12.5L14 3Z" fill="#1D9E75"/></svg>KO Platform</div>
+    <div class="footer-copy">© 2026 KO Realtors · Powered by Luxcity Technology. Confidential.</div>
+  </footer>
+</div>
+
+<!-- ══════════ DASHBOARD ══════════ -->
+<div id="dashboard" class="view">
+  <div class="dash-layout">
+    <aside class="dash-sidebar">
+      <div class="dash-sidebar-section">Main</div>
+      <div class="dash-nav-item active" onclick="showTab('overview')">
+        <svg viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.5"/><rect x="9" y="1" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.5"/><rect x="1" y="9" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.5"/><rect x="9" y="9" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.5"/></svg>
+        Overview
+      </div>
+      <div class="dash-nav-item" onclick="showTab('clients')">
+        <svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="5" r="3" stroke="currentColor" stroke-width="1.5"/><path d="M2 14c0-3.3 2.7-6 6-6s6 2.7 6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        Clients
+      </div>
+      <div class="dash-nav-item" onclick="showTab('cases')">
+        <svg viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M5 6h6M5 9h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        Cases
+      </div>
+      <div class="dash-sidebar-section">Tools</div>
+      <div class="dash-nav-item" onclick="showTab('messages')">
+        <svg viewBox="0 0 16 16" fill="none"><path d="M14 10c0 .6-.4 1-1 1H5l-3 3V3c0-.6.4-1 1-1h10c.6 0 1 .4 1 1v7Z" stroke="currentColor" stroke-width="1.5"/></svg>
+        Messages
+        <span class="badge-blue">8</span>
+      </div>
+      <div class="dash-nav-item" onclick="showTab('compliance')">
+        <svg viewBox="0 0 16 16" fill="none"><path d="M8 1L1 5v5c0 3 3 5 7 5s7-2 7-5V5L8 1Z" stroke="currentColor" stroke-width="1.5"/><path d="M5.5 8l2 2 3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Compliance
+        <span class="badge">3</span>
+      </div>
+      <div class="dash-nav-item" onclick="showTab('ai')">
+        <svg viewBox="0 0 16 16" fill="none"><rect x="2" y="1" width="10" height="14" rx="1.5" stroke="currentColor" stroke-width="1.5"/><path d="M5 5h6M5 7.5h6M5 10h4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><circle cx="12" cy="12" r="3" fill="currentColor" opacity=".5"/><path d="M11 12h2M12 11v2" stroke="white" stroke-width="1" stroke-linecap="round"/></svg>
+        AI Reports
+      </div>
+      <div class="dash-nav-item" onclick="showTab('calculators')">
+        <svg viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M5 5h6M5 8h2M5 11h2M9 8h2v3H9z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        Calculators
+      </div>
+      <div style="margin-top:auto"></div>
+      <div class="sidebar-bottom"><div class="sidebar-plan">Professional</div><div class="sidebar-plan-sub">KO Financials</div></div>
+    </aside>
+
+    <main class="dash-main">
+
+      <!-- ── OVERVIEW ── -->
+      <div id="tab-overview">
+        <div class="dash-topbar">
+          <div class="dash-topbar-title">Good morning, Sarah 👋</div>
+          <div class="dash-topbar-actions">
+            <button class="btn btn-ghost btn-sm btn-ink">+ New Client</button>
+            <button class="btn btn-primary btn-sm">+ New Case</button>
+          </div>
+        </div>
+        <div class="dash-content">
+          <div class="stat-cards">
+            <div class="stat-card"><div class="stat-card-label">Active Cases</div><div class="stat-card-val">24</div><div class="stat-card-sub"><span class="accent accent-green">+3 this week</span></div></div>
+            <div class="stat-card"><div class="stat-card-label">Total Clients</div><div class="stat-card-val">187</div><div class="stat-card-sub"><span class="accent accent-green">+12 this month</span></div></div>
+            <div class="stat-card"><div class="stat-card-label">Unread Messages</div><div class="stat-card-val">8</div><div class="stat-card-sub"><span class="accent accent-blue" style="cursor:pointer" onclick="showTab('messages')">3 from clients ↗</span></div></div>
+            <div class="stat-card"><div class="stat-card-label">Pipeline Value</div><div class="stat-card-val">£4.2M</div><div class="stat-card-sub"><span class="accent accent-green">On track</span></div></div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-head"><span class="panel-title">Case Pipeline</span><button class="btn btn-ghost btn-sm" style="color:var(--ink-60);background:var(--surface)" onclick="showTab('cases')">View all</button></div>
+            <div class="panel-body">
+              <div class="kanban">
+                <div class="kb-col enquiry">
+                  <div class="kb-head">Enquiry <span class="kb-count">2</span></div>
+                  <div class="kb-card" onclick="openCase('adeyemi')"><div class="kb-card-name">T. Adeyemi</div><div class="kb-card-type">Purchase</div><div class="kb-card-foot"><span class="kb-amount">£385K</span><div class="kb-avatar">TA</div></div></div>
+                  <div class="kb-card"><div class="kb-card-name">L. Park</div><div class="kb-card-type">Remortgage</div><div class="kb-card-foot"><span class="kb-amount">£290K</span><div class="kb-avatar">LP</div></div></div>
+                </div>
+                <div class="kb-col factfind">
+                  <div class="kb-head">Fact-Find <span class="kb-count">5</span></div>
+                  <div class="kb-card" onclick="openCase('patel')"><div class="kb-card-name">J. Patel</div><div class="kb-card-type">Purchase</div><div class="kb-card-foot"><span class="kb-amount">£320K</span><div class="kb-avatar">JP</div></div></div>
+                  <div class="kb-card" onclick="openCase('williams')"><div class="kb-card-name">S. Williams</div><div class="kb-card-type">Remortgage</div><div class="kb-card-foot"><span class="kb-amount">£210K</span><div class="kb-avatar">SW</div></div></div>
+                  <div class="kb-card"><div class="kb-card-name">F. Adeyemi</div><div class="kb-card-type">Purchase</div><div class="kb-card-foot"><span class="kb-amount">£265K</span><div class="kb-avatar">FA</div></div></div>
+                </div>
+                <div class="kb-col research">
+                  <div class="kb-head">Research <span class="kb-count">4</span></div>
+                  <div class="kb-card" onclick="openCase('chen')"><div class="kb-card-name">M. Chen</div><div class="kb-card-type">BTL · Product ✓</div><div class="kb-card-foot"><span class="kb-amount">£445K</span><div class="kb-avatar">MC</div></div></div>
+                  <div class="kb-card"><div class="kb-card-name">P. Mehta</div><div class="kb-card-type">Purchase</div><div class="kb-card-foot"><span class="kb-amount">£510K</span><div class="kb-avatar">PM</div></div></div>
+                </div>
+                <div class="kb-col dip">
+                  <div class="kb-head">DIP <span class="kb-count">7</span></div>
+                  <div class="kb-card" onclick="openCase('johnson')"><div class="kb-card-name">R. Johnson</div><div class="kb-card-type">Purchase</div><div class="kb-card-foot"><span class="kb-amount">£580K</span><div class="kb-avatar">RJ</div></div></div>
+                  <div class="kb-card"><div class="kb-card-name">B. Osei</div><div class="kb-card-type">Purchase</div><div class="kb-card-foot"><span class="kb-amount">£265K</span><div class="kb-avatar">BO</div></div></div>
+                </div>
+                <div class="kb-col offer">
+                  <div class="kb-head">Offer <span class="kb-count">6</span></div>
+                  <div class="kb-card" onclick="openCase('okafor')"><div class="kb-card-name">A. Okafor</div><div class="kb-card-type">Remortgage</div><div class="kb-card-foot"><span class="kb-amount">£195K</span><div class="kb-avatar">AO</div></div></div>
+                  <div class="kb-card"><div class="kb-card-name">Y. Hassan</div><div class="kb-card-type">Purchase</div><div class="kb-card-foot"><span class="kb-amount">£430K</span><div class="kb-avatar">YH</div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-head"><span class="panel-title">Recent messages</span><button class="btn btn-ghost btn-sm" style="color:var(--ink-60);background:var(--surface)" onclick="showTab('messages')">Open messages</button></div>
+            <table>
+              <thead><tr><th>From</th><th>Subject</th><th>Source</th><th>Time</th></tr></thead>
+              <tbody>
+                <tr style="cursor:pointer" onclick="showTab('messages')"><td style="font-weight:600">James Patel</td><td>Re: your mortgage update</td><td><span class="msg-source-badge src-inbound">Inbound email</span></td><td style="color:var(--ink-60);font-size:12px">10 min ago</td></tr>
+                <tr style="cursor:pointer" onclick="showTab('messages')"><td style="font-weight:600">Compliance system</td><td>KOF-0312 — Stage advance required</td><td><span class="msg-source-badge src-compliance">Compliance</span></td><td style="color:var(--ink-60);font-size:12px">34 min ago</td></tr>
+                <tr style="cursor:pointer" onclick="showTab('messages')"><td style="font-weight:600">Sarah Williams</td><td>Question about my fixed term end</td><td><span class="msg-source-badge src-inbound">Inbound email</span></td><td style="color:var(--ink-60);font-size:12px">2 hrs ago</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── CLIENTS ── -->
+      <div id="tab-clients" class="hidden">
+        <div class="dash-topbar">
+          <div class="dash-topbar-title">Clients</div>
+          <div class="dash-topbar-actions"><button class="btn btn-primary btn-sm">+ Add client</button></div>
+        </div>
+        <div class="dash-content">
+          <div class="panel">
+            <div class="panel-head"><span class="panel-title">All Clients <span style="font-weight:400;color:var(--ink-60);font-size:13px">(187)</span></span>
+              <select style="padding:6px 10px;border:1px solid var(--ink-20);border-radius:6px;font-size:13px;color:var(--ink)"><option>All statuses</option><option>Active</option><option>Lead</option><option>Completed</option></select>
+            </div>
+            <table>
+              <thead><tr><th>Client</th><th>Reference</th><th>Employment</th><th>Income</th><th>Status</th><th>Cases</th><th>Messages</th><th>Adviser</th></tr></thead>
+              <tbody>
+                <tr><td><div style="font-weight:600">Priya Mehta</div><div style="font-size:11px;color:var(--ink-60)">priya.m@email.com</div></td><td style="color:var(--ink-60);font-size:12px">KOC-0187</td><td style="color:var(--ink-60)">Employed</td><td style="font-weight:600">£72,000</td><td><span class="status s-active">Active</span></td><td style="text-align:center">2</td><td><button class="btn btn-ghost btn-sm" style="font-size:11px;color:#185FA5;background:var(--c-enquiry-bg)" onclick="showTab('messages')">💬 Message</button></td><td style="color:var(--ink-60)">S. Davies</td></tr>
+                <tr><td><div style="font-weight:600">Marcus Chen</div><div style="font-size:11px;color:var(--ink-60)">m.chen@email.com</div></td><td style="color:var(--ink-60);font-size:12px">KOC-0186</td><td style="color:var(--ink-60)">Self-employed</td><td style="font-weight:600">£95,000</td><td><span class="status s-research">Research</span></td><td style="text-align:center">1</td><td><button class="btn btn-ghost btn-sm" style="font-size:11px;color:#185FA5;background:var(--c-enquiry-bg)" onclick="showTab('messages')">💬 1 unread</button></td><td style="color:var(--ink-60)">J. Osei</td></tr>
+                <tr><td><div style="font-weight:600">Sarah Williams</div><div style="font-size:11px;color:var(--ink-60)">s.williams@email.com</div></td><td style="color:var(--ink-60);font-size:12px">KOC-0185</td><td style="color:var(--ink-60)">Employed</td><td style="font-weight:600">£48,000</td><td><span class="status s-factfind">Fact-find</span></td><td style="text-align:center">1</td><td><button class="btn btn-ghost btn-sm" style="font-size:11px;color:#185FA5;background:var(--c-enquiry-bg)" onclick="showTab('messages')">💬 2 unread</button></td><td style="color:var(--ink-60)">S. Davies</td></tr>
+                <tr><td><div style="font-weight:600">Adisa Okafor</div><div style="font-size:11px;color:var(--ink-60)">a.okafor@email.com</div></td><td style="color:var(--ink-60);font-size:12px">KOC-0184</td><td style="color:var(--ink-60)">Employed</td><td style="font-weight:600">£54,000</td><td><span class="status s-offer">Offer</span></td><td style="text-align:center">3</td><td><button class="btn btn-ghost btn-sm" style="font-size:11px;color:#185FA5;background:var(--c-enquiry-bg)" onclick="showTab('messages')">💬 Message</button></td><td style="color:var(--ink-60)">J. Osei</td></tr>
+                <tr><td><div style="font-weight:600">James Patel</div><div style="font-size:11px;color:var(--ink-60)">j.patel@email.com</div></td><td style="color:var(--ink-60);font-size:12px">KOC-0183</td><td style="color:var(--ink-60)">Employed</td><td style="font-weight:600">£65,000</td><td><span class="status s-factfind">Fact-find</span></td><td style="text-align:center">1</td><td><button class="btn btn-ghost btn-sm" style="font-size:11px;color:var(--red);background:rgba(226,75,74,0.08)" onclick="showTab('messages')">💬 1 new reply</button></td><td style="color:var(--ink-60)">S. Davies</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── CASES ── -->
+      <div id="tab-cases" class="hidden">
+        <div class="dash-topbar">
+          <div class="dash-topbar-title">Cases</div>
+          <div class="dash-topbar-actions"><button class="btn btn-primary btn-sm">+ New Case</button></div>
+        </div>
+        <div class="dash-content">
+          <div class="panel">
+            <div class="sub-nav">
+              <div class="sub-nav-item active" id="cases-kanban-tab" onclick="switchCasesView('kanban')">Pipeline view</div>
+              <div class="sub-nav-item" id="cases-table-tab" onclick="switchCasesView('table')">Table view</div>
+            </div>
+            <div class="panel-body" id="cases-kanban-view">
+              <div class="kanban">
+                <div class="kb-col enquiry">
+                  <div class="kb-head">Enquiry <span class="kb-count">2</span></div>
+                  <div class="kb-card" onclick="openCase('adeyemi')"><div class="kb-card-name">T. Adeyemi</div><div class="kb-card-type">Purchase · £385K</div><div class="kb-card-foot"><span class="kb-amount">LTV 78%</span><div class="kb-avatar">TA</div></div></div>
+                  <div class="kb-card"><div class="kb-card-name">L. Park</div><div class="kb-card-type">Remortgage · £290K</div><div class="kb-card-foot"><span class="kb-amount">LTV 65%</span><div class="kb-avatar">LP</div></div></div>
+                </div>
+                <div class="kb-col factfind">
+                  <div class="kb-head">Fact-Find <span class="kb-count">5</span></div>
+                  <div class="kb-card" onclick="openCase('patel')"><div class="kb-card-name">J. Patel</div><div class="kb-card-type">Purchase · £320K</div><div class="kb-card-foot"><span class="kb-amount">LTV 80%</span><div class="kb-avatar">JP</div></div></div>
+                  <div class="kb-card" onclick="openCase('williams')"><div class="kb-card-name">S. Williams</div><div class="kb-card-type">Remortgage · £210K</div><div class="kb-card-foot"><span class="kb-amount">LTV 55%</span><div class="kb-avatar">SW</div></div></div>
+                  <div class="kb-card"><div class="kb-card-name">F. Adeyemi</div><div class="kb-card-type">Purchase · £265K</div><div class="kb-card-foot"><span class="kb-amount">LTV 82%</span><div class="kb-avatar">FA</div></div></div>
+                </div>
+                <div class="kb-col research">
+                  <div class="kb-head">Research <span class="kb-count">4</span></div>
+                  <div class="kb-card" onclick="openCase('chen')"><div class="kb-card-name">M. Chen</div><div class="kb-card-type">BTL · £445K</div><div style="font-size:10px;color:var(--c-research-text);font-weight:600;margin:4px 0">Halifax — selected ✓</div><div class="kb-card-foot"><span class="kb-amount">LTV 70%</span><div class="kb-avatar">MC</div></div></div>
+                  <div class="kb-card"><div class="kb-card-name">P. Mehta</div><div class="kb-card-type">Purchase · £510K</div><div class="kb-card-foot"><span class="kb-amount">LTV 72%</span><div class="kb-avatar">PM</div></div></div>
+                </div>
+                <div class="kb-col dip">
+                  <div class="kb-head">DIP <span class="kb-count">7</span></div>
+                  <div class="kb-card" onclick="openCase('johnson')"><div class="kb-card-name">R. Johnson</div><div class="kb-card-type">Purchase · £580K</div><div class="kb-card-foot"><span class="kb-amount">LTV 75%</span><div class="kb-avatar">RJ</div></div></div>
+                  <div class="kb-card"><div class="kb-card-name">B. Osei</div><div class="kb-card-type">Purchase · £265K</div><div class="kb-card-foot"><span class="kb-amount">LTV 85%</span><div class="kb-avatar">BO</div></div></div>
+                </div>
+                <div class="kb-col offer">
+                  <div class="kb-head">Offer <span class="kb-count">6</span></div>
+                  <div class="kb-card" onclick="openCase('okafor')"><div class="kb-card-name">A. Okafor</div><div class="kb-card-type">Remortgage · £195K</div><div class="kb-card-foot"><span class="kb-amount">LTV 48%</span><div class="kb-avatar">AO</div></div></div>
+                  <div class="kb-card"><div class="kb-card-name">Y. Hassan</div><div class="kb-card-type">Purchase · £430K</div><div class="kb-card-foot"><span class="kb-amount">LTV 68%</span><div class="kb-avatar">YH</div></div></div>
+                </div>
+              </div>
+            </div>
+            <div class="hidden" id="cases-table-view">
+              <table>
+                <thead><tr><th>Reference</th><th>Client</th><th>Type</th><th>Lender</th><th>Amount</th><th>LTV</th><th>Stage</th><th>Messages</th><th>Adviser</th><th>Updated</th></tr></thead>
+                <tbody>
+                  <tr style="cursor:pointer" onclick="openCase('okafor')"><td style="font-size:12px;color:var(--ink-60)">KOF-0315</td><td style="font-weight:600">A. Okafor</td><td style="color:var(--ink-60)">Remortgage</td><td style="color:var(--ink-60)">Santander</td><td style="font-weight:600">£195K</td><td>48%</td><td><span class="status s-offer">Offer</span></td><td><span class="accent accent-blue" style="cursor:pointer">2 msgs</span></td><td style="color:var(--ink-60)">J. Osei</td><td style="font-size:12px;color:var(--ink-60)">Today</td></tr>
+                  <tr style="cursor:pointer" onclick="openCase('johnson')"><td style="font-size:12px;color:var(--ink-60)">KOF-0314</td><td style="font-weight:600">R. Johnson</td><td style="color:var(--ink-60)">Purchase</td><td style="color:var(--ink-60)">Barclays</td><td style="font-weight:600">£580K</td><td>75%</td><td><span class="status s-dip">DIP</span></td><td><span class="accent accent-blue">—</span></td><td style="color:var(--ink-60)">S. Davies</td><td style="font-size:12px;color:var(--ink-60)">Today</td></tr>
+                  <tr style="cursor:pointer" onclick="openCase('chen')"><td style="font-size:12px;color:var(--ink-60)">KOF-0313</td><td style="font-weight:600">M. Chen</td><td style="color:var(--ink-60)">BTL Purchase</td><td style="color:var(--ink-60)">Halifax</td><td style="font-weight:600">£445K</td><td>70%</td><td><span class="status s-research">Research</span></td><td><span class="accent accent-blue" style="cursor:pointer">1 unread</span></td><td style="color:var(--ink-60)">J. Osei</td><td style="font-size:12px;color:var(--ink-60)">Yesterday</td></tr>
+                  <tr style="cursor:pointer" onclick="openCase('patel')"><td style="font-size:12px;color:var(--ink-60)">KOF-0312</td><td style="font-weight:600">J. Patel</td><td style="color:var(--ink-60)">Purchase</td><td style="color:var(--ink-60)">TBC</td><td style="font-weight:600">£320K</td><td>80%</td><td><span class="status s-factfind">Fact-Find</span></td><td><span class="accent" style="background:rgba(226,75,74,0.1);color:#8a2020;cursor:pointer">1 new reply</span></td><td style="color:var(--ink-60)">S. Davies</td><td style="font-size:12px;color:var(--ink-60)">Yesterday</td></tr>
+                  <tr style="cursor:pointer" onclick="openCase('williams')"><td style="font-size:12px;color:var(--ink-60)">KOF-0311</td><td style="font-weight:600">S. Williams</td><td style="color:var(--ink-60)">Remortgage</td><td style="color:var(--ink-60)">TBC</td><td style="font-weight:600">£210K</td><td>55%</td><td><span class="status s-factfind">Fact-Find</span></td><td><span class="accent" style="background:rgba(226,75,74,0.1);color:#8a2020;cursor:pointer">2 unread</span></td><td style="color:var(--ink-60)">S. Davies</td><td style="font-size:12px;color:var(--ink-60)">2 days ago</td></tr>
+                  <tr style="cursor:pointer" onclick="openCase('adeyemi')"><td style="font-size:12px;color:var(--ink-60)">KOF-0310</td><td style="font-weight:600">T. Adeyemi</td><td style="color:var(--ink-60)">Purchase</td><td style="color:var(--ink-60)">TBC</td><td style="font-weight:600">£385K</td><td>78%</td><td><span class="status s-enquiry">Enquiry</span></td><td><span class="accent accent-blue">—</span></td><td style="color:var(--ink-60)">J. Osei</td><td style="font-size:12px;color:var(--ink-60)">3 days ago</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── CASE DETAIL (shared deep view) ── -->
+      <div id="tab-case-detail" class="hidden">
+        <div id="case-detail-content"></div>
+      </div>
+
+      <!-- ── MESSAGES ── -->
+      <div id="tab-messages" class="hidden">
+        <div class="dash-topbar">
+          <div class="dash-topbar-title">Messages</div>
+          <div class="dash-topbar-actions"><button class="btn btn-primary btn-sm">+ New message</button></div>
+        </div>
+        <div class="msg-layout">
+          <div class="msg-list">
+            <div class="msg-list-head"><span class="msg-list-title">All conversations</span><span style="font-size:12px;color:var(--ink-60)">8 unread</span></div>
+            <div class="msg-filter-tabs">
+              <div class="msg-filter-tab active">All</div>
+              <div class="msg-filter-tab">Inbound</div>
+              <div class="msg-filter-tab">Cases</div>
+              <div class="msg-filter-tab">System</div>
+            </div>
+            <div class="msg-item unread active" onclick="switchThread('patel')">
+              <div class="msg-item-name">James Patel</div>
+              <div class="msg-item-preview">Re: your mortgage update — thank you for...</div>
+              <div class="msg-item-meta"><span class="msg-item-time">10 min ago</span><span class="msg-source-badge src-inbound">Inbound email</span></div>
+            </div>
+            <div class="msg-item unread" onclick="switchThread('williams')">
+              <div class="msg-item-name">Sarah Williams</div>
+              <div class="msg-item-preview">Question about my fixed term end date...</div>
+              <div class="msg-item-meta"><span class="msg-item-time">2 hrs ago</span><span class="msg-source-badge src-inbound">Inbound email</span></div>
+            </div>
+            <div class="msg-item unread" onclick="switchThread('chen')">
+              <div class="msg-item-name">M. Chen — KOF-0313</div>
+              <div class="msg-item-preview">Product selection confirmed, report draft ready</div>
+              <div class="msg-item-meta"><span class="msg-item-time">Yesterday</span><span class="msg-source-badge src-ai">AI Report</span></div>
+            </div>
+            <div class="msg-item" onclick="switchThread('compliance')">
+              <div class="msg-item-name">Compliance system</div>
+              <div class="msg-item-preview">KOF-0312 — stage advance required before...</div>
+              <div class="msg-item-meta"><span class="msg-item-time">34 min ago</span><span class="msg-source-badge src-compliance">Compliance</span></div>
+            </div>
+            <div class="msg-item" onclick="switchThread('okafor')">
+              <div class="msg-item-name">A. Okafor — KOF-0315</div>
+              <div class="msg-item-preview">Mortgage offer received — update sent to client</div>
+              <div class="msg-item-meta"><span class="msg-item-time">2 hrs ago</span><span class="msg-source-badge src-case">Case update</span></div>
+            </div>
+            <div class="msg-item" onclick="switchThread('johnson')">
+              <div class="msg-item-name">R. Johnson — KOF-0314</div>
+              <div class="msg-item-preview">DIP submitted to Barclays — awaiting decision</div>
+              <div class="msg-item-meta"><span class="msg-item-time">3 hrs ago</span><span class="msg-source-badge src-case">Case update</span></div>
+            </div>
+            <div class="msg-item" onclick="switchThread('adeyemi')">
+              <div class="msg-item-name">T. Adeyemi — KOF-0310</div>
+              <div class="msg-item-preview">Initial enquiry logged — fact-find scheduled</div>
+              <div class="msg-item-meta"><span class="msg-item-time">3 days ago</span><span class="msg-source-badge src-case">Case update</span></div>
+            </div>
+            <div class="msg-item" onclick="switchThread('sys-report')">
+              <div class="msg-item-name">AI Report system</div>
+              <div class="msg-item-preview">BTL report generated for M. Chen — adviser review...</div>
+              <div class="msg-item-meta"><span class="msg-item-time">Yesterday</span><span class="msg-source-badge src-ai">AI Report</span></div>
+            </div>
+          </div>
+          <div class="msg-thread" id="msg-thread-area">
+            <!-- Thread content injected by JS -->
+          </div>
+        </div>
+      </div>
+
+      <!-- ── COMPLIANCE ── -->
+      <div id="tab-compliance" class="hidden">
+        <div class="dash-topbar">
+          <div class="dash-topbar-title">Compliance Engine</div>
+        </div>
+        <div class="dash-content">
+          <div class="panel" style="border-color:rgba(239,159,39,0.3)">
+            <div class="panel-head" style="background:rgba(239,159,39,0.05)"><span class="panel-title">⚠️ 3 cases need compliance review</span></div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><span class="panel-title">J. Patel — KOF-0312</span><span class="status s-factfind">Fact-Find</span></div>
+            <div class="panel-body">
+              <div style="font-size:12px;color:var(--ink-60);margin-bottom:16px">Purchase · £320,000 · Adviser: S. Davies</div>
+              <div class="compliance-stages">
+                <div class="comp-stage done"><div class="comp-check-mark">✓</div><div class="comp-stage-label">Initial Disclosure</div><div class="comp-stage-date">12 Mar</div></div>
+                <div class="comp-stage done"><div class="comp-check-mark">✓</div><div class="comp-stage-label">Fact-Find</div><div class="comp-stage-date">15 Mar</div></div>
+                <div class="comp-stage current"><div class="comp-stage-label">Research</div><div class="comp-stage-date">In progress</div></div>
+                <div class="comp-stage"><div class="comp-stage-label">ESIS</div><div class="comp-stage-date">—</div></div>
+                <div class="comp-stage"><div class="comp-stage-label">Suitability Report</div><div class="comp-stage-date">—</div></div>
+              </div>
+              <div style="display:flex;gap:10px;align-items:center">
+                <button class="btn btn-primary btn-sm">Advance to Research →</button>
+                <button class="btn btn-ghost btn-sm" style="color:var(--ink)">View audit trail</button>
+                <div style="margin-left:auto">
+                  <div class="inline-msg-bar" style="max-width:400px">
+                    <input class="inline-msg-input" placeholder="Send update to client…">
+                    <button class="inline-msg-send" onclick="showTab('messages')">Send ↗</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><span class="panel-title">Audit Trail</span></div>
+            <table>
+              <thead><tr><th>Time</th><th>User</th><th>Action</th><th>Entity</th><th>Notification</th></tr></thead>
+              <tbody>
+                <tr><td style="color:var(--ink-60);font-size:12px">Today 09:41</td><td>S. Davies</td><td><span class="status s-done">Fact-find completed</span></td><td style="color:var(--ink-60)">KOF-0312</td><td><span class="accent accent-blue">Email sent to client</span></td></tr>
+                <tr><td style="color:var(--ink-60);font-size:12px">Today 09:12</td><td>S. Davies</td><td><span class="status s-active">Document uploaded</span></td><td style="color:var(--ink-60)">KOC-0186</td><td style="color:var(--ink-60)">—</td></tr>
+                <tr><td style="color:var(--ink-60);font-size:12px">Yesterday 16:30</td><td>J. Osei</td><td><span class="status s-pending">Stage advanced</span></td><td style="color:var(--ink-60)">KOF-0308</td><td><span class="accent accent-blue">SMS + email sent</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── AI REPORTS ── -->
+      <div id="tab-ai" class="hidden">
+        <div class="dash-topbar">
+          <div class="dash-topbar-title">AI Report Generation</div>
+          <div class="dash-topbar-actions"><span class="ai-badge">✍️ Powered by Claude AI</span></div>
+        </div>
+        <div class="dash-content">
+          <div class="panel">
+            <div class="panel-body" style="padding:14px 20px;display:flex;align-items:center;gap:14px">
+              <div style="font-size:12px;font-weight:600;color:var(--ink-60)">Case</div>
+              <select style="padding:7px 12px;border:1px solid var(--ink-20);border-radius:6px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--ink);background:var(--white);flex:1;max-width:340px"><option>M. Chen — BTL Purchase · KOF-0313</option><option>J. Patel — Purchase · KOF-0312</option><option>S. Williams — Remortgage · KOF-0311</option></select>
+              <div style="font-size:12px;color:var(--ink-60)">Status:</div>
+              <span class="status s-pending">Draft generated</span>
+            </div>
+          </div>
+          <div class="report-layout">
+            <div style="display:flex;flex-direction:column;gap:12px">
+              <div class="panel">
+                <div class="panel-head"><span class="panel-title">Report type</span></div>
+                <div class="panel-body" style="padding:10px 12px">
+                  <div class="template-list">
+                    <div class="template-item" onclick="selectTemplate(this)">First-time buyer <span class="tmpl-badge">MVP</span></div>
+                    <div class="template-item active" onclick="selectTemplate(this)">Buy-to-let <span class="tmpl-badge">MVP</span></div>
+                    <div class="template-item" onclick="selectTemplate(this)">Remortgage <span class="tmpl-badge">MVP</span></div>
+                    <div class="template-item" onclick="selectTemplate(this)">Home mover <span class="tmpl-badge">MVP</span></div>
+                    <div class="template-item" onclick="selectTemplate(this)">Product transfer <span class="tmpl-badge">MVP</span></div>
+                    <div class="template-item" onclick="selectTemplate(this)">Divorce/separation <span class="tmpl-badge">MVP</span></div>
+                    <div class="template-item" onclick="selectTemplate(this)">Self-employed income <span class="tmpl-badge">MVP</span></div>
+                    <div class="template-item" style="border-top:1px solid var(--ink-08);margin-top:4px;padding-top:10px" onclick="selectTemplate(this)">Vulnerable customer overlay <span class="tmpl-badge">MVP</span></div>
+                    <div class="template-item" style="opacity:.5;pointer-events:none">Equity release <span class="tmpl-phase">Phase 2</span></div>
+                  </div>
+                </div>
+              </div>
+              <div class="panel">
+                <div class="panel-head"><span class="panel-title">Data sources</span></div>
+                <div class="panel-body">
+                  <div class="data-check">
+                    <div class="data-check-row"><div class="check-icon check-pass">✓</div><span>Fact-find complete</span></div>
+                    <div class="data-check-row"><div class="check-icon check-pass">✓</div><span>Income verified</span></div>
+                    <div class="data-check-row"><div class="check-icon check-pass">✓</div><span>Products considered (4)</span></div>
+                    <div class="data-check-row"><div class="check-icon check-pass">✓</div><span>Product selected</span></div>
+                    <div class="data-check-row"><div class="check-icon check-warn">!</div><span style="color:#7a4e08">Vulnerability check — review</span></div>
+                  </div>
+                  <div style="border-top:1px solid var(--ink-08);padding-top:12px;margin-top:4px">
+                    <div style="font-size:11px;font-weight:600;color:var(--ink-60);margin-bottom:8px">Notify client on approval</div>
+                    <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer"><input type="checkbox" checked style="accent-color:var(--teal-500)"> Email suitability report</label>
+                    <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;margin-top:5px"><input type="checkbox" style="accent-color:var(--teal-500)"> SMS summary</label>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:12px">
+              <div class="panel">
+                <div class="panel-head"><span class="panel-title">Product selection record</span><span style="font-size:11px;color:var(--ink-60)">Recorded manually</span></div>
+                <div class="panel-body">
+                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+                    <div class="product-field"><label>Selected lender</label><input type="text" value="Halifax"></div>
+                    <div class="product-field"><label>Product name</label><input type="text" value="BTL Fixed 2yr — HBTL224"></div>
+                    <div class="product-field"><label>Initial rate</label><input type="text" value="4.89%"></div>
+                    <div class="product-field"><label>Monthly payment</label><input type="text" value="£1,811 (interest only)"></div>
+                  </div>
+                  <div class="product-field"><label>Adviser research notes</label><textarea>Marcus Chen has been a property investor for 3 years. Halifax selected on lowest total cost of credit, acceptance of 2-year SA302, and client preference for 2-year fixed rate.</textarea></div>
+                </div>
+              </div>
+              <div class="panel">
+                <div class="panel-head"><span class="panel-title">Generated report draft</span><div style="display:flex;gap:8px;align-items:center"><span style="font-size:11px;color:var(--ink-60)">Generated 09:47 · claude-sonnet-4-6</span><button class="btn btn-ghost btn-sm" style="color:var(--ink);background:var(--surface);border:1px solid var(--ink-20)" onclick="triggerGenerate()">↻ Regenerate all</button></div></div>
+                <div class="panel-body" id="report-body">
+                  <div id="generating-state" style="display:none"><div style="display:flex;flex-direction:column;align-items:center;padding:60px 20px;gap:16px"><div class="spinner"></div><div style="font-size:13px;color:var(--ink-60)" id="gen-step-label">Extracting fact-find data…</div></div></div>
+                  <div id="report-sections">
+                    <div class="report-section"><div class="report-section-head" onclick="toggleSection(this)"><span class="rs-title">1. Client introduction</span><div class="rs-actions"><span class="rs-flag rs-flag-green">✓ Compliant</span><button class="rs-btn regen" onclick="event.stopPropagation()">↻ Regen</button><button class="rs-btn" onclick="event.stopPropagation();openEditor('Section 1 — Client introduction','Marcus Chen (38) is a self-employed software consultant operating through MC Tech Solutions Ltd, where he holds 100% of shares. He has been trading for 3 years, with income verified through SA302 documents and company accounts.')">Edit</button></div></div><div class="report-section-body">Marcus Chen (38) is a self-employed software consultant operating through his limited company, MC Tech Solutions Ltd. He has been trading for 3 years, with annual income verified through SA302 documents provided by his accountant, Edward Lawson FCA.<br><br>Marcus is purchasing an investment property at 14 Beech Grove, Manchester M14 7QR. This is his second buy-to-let property.</div></div>
+                    <div class="report-section"><div class="report-section-head" onclick="toggleSection(this)"><span class="rs-title">2. Property details</span><div class="rs-actions"><span class="rs-flag rs-flag-green">✓ Compliant</span><button class="rs-btn regen" onclick="event.stopPropagation()">↻ Regen</button><button class="rs-btn" onclick="event.stopPropagation()">Edit</button></div></div><div class="report-section-body collapsed">Three-bedroom semi-detached house, Manchester M14 7QR. Purchase price £445,000, estimated value £635,000, LTV 70.1%. Expected rental income £2,200/month confirmed by local letting agent.</div></div>
+                    <div class="report-section"><div class="report-section-head" onclick="toggleSection(this)"><span class="rs-title">3. BTL affordability assessment</span><div class="rs-actions"><span class="rs-flag rs-flag-amber">⚠ Review</span><button class="rs-btn regen" onclick="event.stopPropagation()">↻ Regen</button><button class="rs-btn" onclick="event.stopPropagation()">Edit</button></div></div><div class="report-section-body collapsed">ICR stress test requires £2,958/month rental; projected £2,200/month. Top-slicing applies as Marcus's personal income exceeds £75,000 p.a. Total assessed income supports borrowing requested.</div></div>
+                    <div class="report-section"><div class="report-section-head" onclick="toggleSection(this)"><span class="rs-title">4. Product research & recommendation</span><div class="rs-actions"><span class="rs-flag rs-flag-green">✓ Compliant</span><button class="rs-btn regen" onclick="event.stopPropagation()">↻ Regen</button><button class="rs-btn" onclick="event.stopPropagation()">Edit</button></div></div><div class="report-section-body collapsed">Four products considered. Halifax HBTL224 (4.89%, 2yr fixed) selected: lowest total cost, accepts 2-year SA302, meets client's preference for rate certainty. Three alternatives reviewed and not recommended.</div></div>
+                    <div class="report-section"><div class="report-section-head" onclick="toggleSection(this)"><span class="rs-title">5. Risks & consumer duty statement</span><div class="rs-actions"><span class="rs-flag rs-flag-green">✓ Compliant</span><button class="rs-btn regen" onclick="event.stopPropagation()">↻ Regen</button><button class="rs-btn" onclick="event.stopPropagation()">Edit</button></div></div><div class="report-section-body collapsed">Risks discussed: rate risk at reversion, void periods, regulatory changes. Consumer Duty: product meets Marcus's needs, provides fair value, adviser satisfied client understands all risks.</div></div>
+                  </div>
+                  <div class="compliance-checks" style="margin-top:4px">
+                    <div style="font-size:11px;font-weight:700;color:var(--ink-60);letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px">Pre-finalisation checks</div>
+                    <div class="cc-row"><span style="font-size:13px">✅</span><span>All sections populated · Consumer Duty language present</span></div>
+                    <div class="cc-row"><span style="font-size:13px">✅</span><span>4 products considered and documented</span></div>
+                    <div class="cc-row"><span style="font-size:13px">⚠️</span><span style="color:#7a4e08">Section 3 — ICR top-slicing: adviser review recommended</span></div>
+                  </div>
+                  <div style="display:flex;gap:8px;margin-top:14px">
+                    <button class="btn btn-primary" style="flex:1" onclick="alert('Report approved. PDF generation queued. Client notification scheduled.')">Approve & finalise</button>
+                    <button class="btn btn-ghost btn-sm" style="color:var(--ink);background:var(--surface);border:1px solid var(--ink-20)">Export draft PDF</button>
+                    <button class="btn btn-ghost btn-sm" style="color:#185FA5;background:var(--c-enquiry-bg);border:1px solid var(--c-enquiry-border)" onclick="showTab('messages')">💬 Message client</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── CALCULATORS ── -->
+      <div id="tab-calculators" class="hidden">
+        <div class="dash-topbar"><div class="dash-topbar-title">Mortgage Calculators</div></div>
+        <div class="dash-content">
+          <div class="panel">
+            <div class="panel-head"><span class="panel-title">Select a calculator</span></div>
+            <div class="panel-body">
+              <div class="calc-grid">
+                <div class="calc-card active" onclick="selectCalc('affordability',this)"><div class="calc-card-icon">🏠</div><div class="calc-card-name">Affordability</div><div class="calc-card-desc">Max loan from income</div></div>
+                <div class="calc-card" onclick="selectCalc('repayment',this)"><div class="calc-card-icon">📅</div><div class="calc-card-name">Monthly Payment</div><div class="calc-card-desc">Repayment & interest only</div></div>
+                <div class="calc-card" onclick="selectCalc('stamp',this)"><div class="calc-card-icon">🏛</div><div class="calc-card-name">Stamp Duty</div><div class="calc-card-desc">UK 2024 thresholds</div></div>
+                <div class="calc-card" onclick="selectCalc('ltv',this)"><div class="calc-card-icon">📊</div><div class="calc-card-name">LTV Calculator</div><div class="calc-card-desc">Loan to value ratio</div></div>
+                <div class="calc-card" onclick="selectCalc('yield',this)"><div class="calc-card-icon">📈</div><div class="calc-card-name">Rental Yield</div><div class="calc-card-desc">Gross & net yield</div></div>
+                <div class="calc-card" onclick="selectCalc('erc',this)"><div class="calc-card-icon">⚖️</div><div class="calc-card-name">ERC Calculator</div><div class="calc-card-desc">Early repayment charge</div></div>
+                <div class="calc-card" onclick="selectCalc('remortgage',this)"><div class="calc-card-icon">🔄</div><div class="calc-card-name">Remortgage Saving</div><div class="calc-card-desc">Rate switch saving</div></div>
+                <div class="calc-card" onclick="selectCalc('debt',this)"><div class="calc-card-icon">💳</div><div class="calc-card-name">Debt Consolidation</div><div class="calc-card-desc">Monthly saving analysis</div></div>
+              </div>
+              <div class="calc-active">
+                <div class="calc-active-title" id="calc-title">Affordability Calculator</div>
+                <div class="calc-fields">
+                  <div class="calc-field"><label>Annual gross income (£)</label><input type="number" id="c-income" value="72000" oninput="calcRun()"></div>
+                  <div class="calc-field"><label>Monthly commitments (£)</label><input type="number" id="c-commit" value="800" oninput="calcRun()"></div>
+                  <div class="calc-field"><label>Income multiplier</label><select id="c-mult" onchange="calcRun()"><option value="4">4×</option><option value="4.5" selected>4.5×</option><option value="5">5×</option><option value="5.5">5.5×</option></select></div>
+                  <div class="calc-field"><label>Joint applicant income (£)</label><input type="number" id="c-joint" value="0" oninput="calcRun()"></div>
+                </div>
+                <div class="calc-result"><div><div class="calc-result-label">Maximum loan amount</div><div style="font-size:12px;opacity:.65;margin-top:3px">Based on combined income × multiplier</div></div><div class="calc-result-val" id="calc-output">£324,000</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<!-- Section editor modal -->
+<div class="section-editor" id="section-editor">
+  <div class="editor-modal">
+    <div class="editor-head"><span class="editor-title" id="editor-section-title">Editing section</span><span class="editor-close" onclick="closeEditor()">✕</span></div>
+    <div class="editor-body">
+      <textarea class="editor-textarea" id="editor-content" rows="8"></textarea>
+      <div class="editor-context"><label>Additional context for regeneration (optional)</label><input type="text" placeholder="e.g. Emphasise the client's strong rental portfolio track record"></div>
+    </div>
+    <div class="editor-foot"><button class="btn btn-ghost btn-sm" style="color:var(--ink)" onclick="closeEditor()">Cancel</button><button class="rs-btn regen" style="padding:7px 14px;font-size:12px" onclick="closeEditor()">↻ Regenerate with context</button><button class="btn btn-primary btn-sm" onclick="closeEditor()">Save changes</button></div>
+  </div>
+</div>
+
+<script>
+// ── Case data
+const cases = {
+  adeyemi: {
+    name: 'T. Adeyemi', ref: 'KOF-0310', type: 'Purchase', stage: 'enquiry', stageLabel: 'Enquiry',
+    amount: '£385,000', ltv: '78%', adviser: 'J. Osei', lender: 'TBC',
+    client: 'Tobi Adeyemi', email: 'tobi.adeyemi@email.com', phone: '07700 900123',
+    property: '22 Elm Street, London N1 2AB', employment: 'Employed', income: '£58,000',
+    notes: 'First contact made 3 days ago. Interested in 2-bedroom purchase in Islington area. Pre-approval discussion scheduled.',
+    stageColor: 'var(--c-enquiry-text)', stageBg: 'var(--c-enquiry-bg)', stageBorder: 'var(--c-enquiry-border)',
+    timeline: [
+      {title:'Initial enquiry received', time:'3 days ago', color:'var(--c-enquiry-dot)', msg: true},
+      {title:'KYC checks initiated', time:'3 days ago', color:'var(--ink-20)', msg: false},
+      {title:'Fact-find appointment booked — 8 Apr 10:00', time:'2 days ago', color:'var(--teal-500)', msg: true},
+    ],
+    msgs: [
+      {from:'S. Davies', dir:'outbound', text:'Hi Tobi, great to connect today. I\'ve noted your requirements and have booked your fact-find for 8 April at 10am. Please bring your last 3 months\' payslips and a bank statement.', time:'3 days ago', type:'outbound'},
+      {from:'Tobi Adeyemi', dir:'inbound', text:'Thank you Sarah, I\'ll make sure I have everything ready. Looking forward to it!', time:'3 days ago', type:'inbound'},
+    ]
+  },
+  patel: {
+    name: 'J. Patel', ref: 'KOF-0312', type: 'Purchase', stage: 'factfind', stageLabel: 'Fact-Find',
+    amount: '£320,000', ltv: '80%', adviser: 'S. Davies', lender: 'TBC',
+    client: 'James Patel', email: 'j.patel@email.com', phone: '07700 900456',
+    property: '14 Oak Avenue, Bristol BS1 4TR', employment: 'Employed', income: '£65,000',
+    notes: 'Fact-find completed 15 Mar. Research phase started. Client replied to update email — see messages.',
+    stageColor: 'var(--c-factfind-text)', stageBg: 'var(--c-factfind-bg)', stageBorder: 'var(--c-factfind-border)',
+    timeline: [
+      {title:'Enquiry received', time:'20 Mar', color:'var(--c-enquiry-dot)', msg: false},
+      {title:'Initial disclosure completed', time:'21 Mar', color:'var(--teal-500)', msg: false},
+      {title:'Fact-find completed', time:'15 Mar', color:'var(--teal-500)', msg: true},
+      {title:'Update email sent to client', time:'16 Mar', color:'var(--blue)', msg: true},
+      {title:'Client replied — 1 new message', time:'Today 09:52', color:'var(--red)', msg: true},
+    ],
+    msgs: [
+      {from:'S. Davies', dir:'outbound', text:'Hi James, I\'m pleased to confirm your fact-find is now complete. I\'m currently researching mortgage products that fit your profile. I\'ll be in touch shortly with my recommendation. In the meantime, please let me know if you have any questions.', time:'16 Mar', type:'outbound'},
+      {from:'James Patel', dir:'inbound', text:'Thank you for the update! Quick question — does the product you recommend need to be a 5-year fix? We\'re open to 2 or 3 years too if the rate is better.', time:'Today 09:52', type:'inbound'},
+    ]
+  },
+  williams: {
+    name: 'S. Williams', ref: 'KOF-0311', type: 'Remortgage', stage: 'factfind', stageLabel: 'Fact-Find',
+    amount: '£210,000', ltv: '55%', adviser: 'S. Davies', lender: 'TBC',
+    client: 'Sarah Williams', email: 's.williams@email.com', phone: '07700 900789',
+    property: '8 Birch Close, Manchester M20 3LG', employment: 'Employed', income: '£48,000',
+    notes: 'Current fixed rate expiring June 2025. Remortgage to reduce monthly costs. Client has 2 unread messages.',
+    stageColor: 'var(--c-factfind-text)', stageBg: 'var(--c-factfind-bg)', stageBorder: 'var(--c-factfind-border)',
+    timeline: [
+      {title:'Remortgage enquiry received', time:'5 days ago', color:'var(--c-enquiry-dot)', msg: false},
+      {title:'Fact-find appointment completed', time:'3 days ago', color:'var(--teal-500)', msg: false},
+      {title:'Current mortgage details verified', time:'2 days ago', color:'var(--teal-500)', msg: false},
+      {title:'Client emailed 2 questions', time:'2 hrs ago', color:'var(--red)', msg: true},
+    ],
+    msgs: [
+      {from:'Sarah Williams', dir:'inbound', text:'Hi, I just wanted to double check — my current deal ends on 1st June. Is that enough time to get everything sorted?', time:'3 hrs ago', type:'inbound'},
+      {from:'Sarah Williams', dir:'inbound', text:'Also, would it be worth overpaying a bit before we remortgage to bring the LTV down? Thanks', time:'2 hrs ago', type:'inbound'},
+    ]
+  },
+  chen: {
+    name: 'M. Chen', ref: 'KOF-0313', type: 'BTL Purchase', stage: 'research', stageLabel: 'Research',
+    amount: '£445,000', ltv: '70%', adviser: 'J. Osei', lender: 'Halifax',
+    client: 'Marcus Chen', email: 'm.chen@email.com', phone: '07700 900321',
+    property: '14 Beech Grove, Manchester M14 7QR', employment: 'Self-employed', income: '£95,000',
+    notes: 'Product selected: Halifax HBTL224, 4.89% fixed 2yr. Suitability report draft generated by AI — awaiting adviser review.',
+    stageColor: 'var(--c-research-text)', stageBg: 'var(--c-research-bg)', stageBorder: 'var(--c-research-border)',
+    timeline: [
+      {title:'BTL enquiry received', time:'10 days ago', color:'var(--c-enquiry-dot)', msg: false},
+      {title:'Fact-find completed', time:'7 days ago', color:'var(--teal-500)', msg: true},
+      {title:'Product research completed', time:'2 days ago', color:'var(--teal-500)', msg: false},
+      {title:'Halifax HBTL224 selected manually', time:'Yesterday', color:'var(--c-research-dot)', msg: false},
+      {title:'AI suitability report generated', time:'Yesterday 09:47', color:'#EF9F27', msg: false},
+      {title:'Awaiting adviser sign-off on report', time:'Now', color:'var(--amber)', msg: false},
+    ],
+    msgs: [
+      {from:'J. Osei', dir:'outbound', text:'Hi Marcus, I\'ve completed your research phase and selected the Halifax BTL Fixed 2yr product at 4.89%. I\'m now preparing your suitability report. I\'ll send it over for your review shortly.', time:'Yesterday', type:'outbound'},
+      {from:'Marcus Chen', dir:'inbound', text:'Great news! One thing — can you also confirm the total stamp duty I\'ll be paying including the 3% surcharge?', time:'Yesterday', type:'inbound'},
+      {from:'AI Report System', dir:'system', text:'BTL Suitability Report draft generated for KOF-0313 (M. Chen). Template: Buy-to-let. 5 sections generated. Section 3 (ICR top-slicing) flagged for adviser review. Adviser approval required before PDF export.', time:'Yesterday 09:47', type:'ai'},
+    ]
+  },
+  johnson: {
+    name: 'R. Johnson', ref: 'KOF-0314', type: 'Purchase', stage: 'dip', stageLabel: 'DIP',
+    amount: '£580,000', ltv: '75%', adviser: 'S. Davies', lender: 'Barclays',
+    client: 'Ruth Johnson', email: 'r.johnson@email.com', phone: '07700 900654',
+    property: '45 Maple Road, London SW4 8RX', employment: 'Employed', income: '£95,000',
+    notes: 'DIP submitted to Barclays 3 hours ago. Awaiting decision in principle response. Client updated by SMS.',
+    stageColor: 'var(--c-dip-text)', stageBg: 'var(--c-dip-bg)', stageBorder: 'var(--c-dip-border)',
+    timeline: [
+      {title:'Purchase enquiry received', time:'2 weeks ago', color:'var(--c-enquiry-dot)', msg: false},
+      {title:'Fact-find and research completed', time:'1 week ago', color:'var(--teal-500)', msg: true},
+      {title:'Barclays product selected', time:'4 days ago', color:'var(--teal-500)', msg: false},
+      {title:'Suitability report approved', time:'Yesterday', color:'var(--teal-500)', msg: true},
+      {title:'DIP submitted to Barclays', time:'3 hrs ago', color:'var(--c-dip-dot)', msg: true},
+      {title:'Awaiting DIP decision', time:'Now', color:'var(--amber)', msg: false},
+    ],
+    msgs: [
+      {from:'S. Davies', dir:'outbound', text:'Hi Ruth, I\'ve just submitted your Decision in Principle to Barclays. This typically takes 24–48 hours. I\'ll update you as soon as I have a response. Your reference is KOF-0314.', time:'3 hrs ago', type:'outbound'},
+    ]
+  },
+  okafor: {
+    name: 'A. Okafor', ref: 'KOF-0315', type: 'Remortgage', stage: 'offer', stageLabel: 'Offer Received',
+    amount: '£195,000', ltv: '48%', adviser: 'J. Osei', lender: 'Santander',
+    client: 'Adisa Okafor', email: 'a.okafor@email.com', phone: '07700 900987',
+    property: '3 Cedar Lane, Leeds LS1 2HT', employment: 'Employed', income: '£54,000',
+    notes: 'Santander mortgage offer received. Solicitors instructed. Completion targeted for 28 April.',
+    stageColor: 'var(--c-offer-text)', stageBg: 'var(--c-offer-bg)', stageBorder: 'var(--c-offer-border)',
+    timeline: [
+      {title:'Remortgage enquiry', time:'3 weeks ago', color:'var(--c-enquiry-dot)', msg: false},
+      {title:'Fact-find & research completed', time:'2 weeks ago', color:'var(--teal-500)', msg: true},
+      {title:'Santander product selected', time:'10 days ago', color:'var(--teal-500)', msg: false},
+      {title:'Suitability report signed off', time:'8 days ago', color:'var(--teal-500)', msg: true},
+      {title:'DIP approved', time:'6 days ago', color:'var(--teal-500)', msg: true},
+      {title:'Full application submitted', time:'4 days ago', color:'var(--c-dip-dot)', msg: false},
+      {title:'Mortgage offer received', time:'2 hrs ago', color:'var(--c-offer-dot)', msg: true},
+    ],
+    msgs: [
+      {from:'J. Osei', dir:'outbound', text:'🎉 Great news Adisa! Santander have issued your formal mortgage offer. I\'ve instructed your solicitors at Parker & Jones. Targeted completion date is 28 April. Please check your email for the offer document.', time:'2 hrs ago', type:'outbound'},
+      {from:'Adisa Okafor', dir:'inbound', text:'Amazing! Thank you so much for all your work on this. I\'ll call the solicitors today.', time:'1 hr ago', type:'inbound'},
+    ]
+  }
+};
+
+// ── Thread data
+const threads = {
+  patel: {name:'James Patel', sub:'KOF-0312 · Purchase · £320K', msgs:[
+    {dir:'outbound',from:'S. Davies',text:'Hi James, I\'m pleased to confirm your fact-find is now complete. I\'m currently researching mortgage products that fit your profile. I\'ll be in touch shortly with my recommendation.', time:'16 Mar 14:30',type:'outbound'},
+    {dir:'inbound',from:'James Patel',text:'Thank you for the update! Quick question — does the product you recommend need to be a 5-year fix? We\'re open to 2 or 3 years too if the rate is better.', time:'Today 09:52',type:'inbound'},
+  ]},
+  williams: {name:'Sarah Williams', sub:'KOF-0311 · Remortgage · £210K', msgs:[
+    {dir:'outbound',from:'S. Davies',text:'Hi Sarah, your fact-find is complete and I\'ve noted your current deal expires 1 June. I\'m researching rates now — you\'re in a strong position at 55% LTV.', time:'3 days ago',type:'outbound'},
+    {dir:'inbound',from:'Sarah Williams',text:'Hi, I just wanted to double check — my current deal ends 1st June. Is that enough time to get everything sorted?', time:'3 hrs ago',type:'inbound'},
+    {dir:'inbound',from:'Sarah Williams',text:'Also, would it be worth overpaying before we remortgage to bring the LTV down? Thanks', time:'2 hrs ago',type:'inbound'},
+  ]},
+  chen: {name:'Marcus Chen', sub:'KOF-0313 · BTL Purchase · £445K', msgs:[
+    {dir:'outbound',from:'J. Osei',text:'Hi Marcus, research complete — Halifax BTL Fixed 2yr at 4.89% selected. Preparing your suitability report now.', time:'Yesterday',type:'outbound'},
+    {dir:'inbound',from:'Marcus Chen',text:'Great! Can you also confirm total stamp duty including the 3% BTL surcharge?', time:'Yesterday',type:'inbound'},
+    {dir:'system',from:'AI Report System',text:'BTL Suitability Report draft generated for KOF-0313. 5 sections generated. Section 3 flagged for review. Adviser approval required.',time:'Yesterday 09:47',type:'ai'},
+  ]},
+  compliance: {name:'Compliance System', sub:'Automated notification', msgs:[
+    {dir:'inbound',from:'Compliance System',text:'KOF-0312 (J. Patel) — Research stage is now due. Fact-find was completed 15 March. Please advance the case stage and commence lender research.', time:'34 min ago',type:'compliance'},
+    {dir:'inbound',from:'Compliance System',text:'Reminder: 3 cases have compliance actions overdue. KOF-0312, KOF-0311, KOF-0308. Please review before end of day.', time:'1 hr ago',type:'compliance'},
+  ]},
+  okafor: {name:'A. Okafor — KOF-0315', sub:'Remortgage · Offer stage', msgs:[
+    {dir:'outbound',from:'J. Osei',text:'🎉 Great news Adisa! Santander mortgage offer received. Solicitors instructed at Parker & Jones. Completion targeted 28 April.',time:'2 hrs ago',type:'outbound'},
+    {dir:'inbound',from:'Adisa Okafor',text:'Amazing! Thank you so much for all your work on this.',time:'1 hr ago',type:'inbound'},
+  ]},
+  johnson: {name:'R. Johnson — KOF-0314', sub:'Purchase · DIP stage', msgs:[
+    {dir:'outbound',from:'S. Davies',text:'Hi Ruth, DIP submitted to Barclays. Response expected 24–48 hours. Ref: KOF-0314.',time:'3 hrs ago',type:'outbound'},
+  ]},
+  adeyemi: {name:'T. Adeyemi — KOF-0310', sub:'Purchase · Enquiry stage', msgs:[
+    {dir:'outbound',from:'S. Davies',text:'Hi Tobi, great to connect! Fact-find booked for 8 April at 10am. Please bring last 3 months\' payslips and a bank statement.',time:'3 days ago',type:'outbound'},
+    {dir:'inbound',from:'Tobi Adeyemi',text:'Thank you Sarah, I\'ll make sure I have everything ready!',time:'3 days ago',type:'inbound'},
+  ]},
+  'sys-report': {name:'AI Report System', sub:'Automated notifications', msgs:[
+    {dir:'inbound',from:'AI Report System',text:'BTL Suitability Report generated for KOF-0313 (Marcus Chen). Template: Buy-to-let. 5/5 sections generated. Consumer Duty compliant. Section 3 (ICR top-slicing) flagged for adviser review before finalisation.',time:'Yesterday 09:47',type:'ai'},
+    {dir:'inbound',from:'AI Report System',text:'Reminder: KOF-0313 report has been in draft state for 18 hours. Adviser approval pending.',time:'Today 09:47',type:'ai'},
+  ]}
+};
+
+// ── Navigation
+function showView(v) {
+  document.querySelectorAll('.view').forEach(el=>el.classList.remove('active'));
+  document.getElementById(v).classList.add('active');
+  window.scrollTo(0,0);
+}
+function showTab(t) {
+  document.querySelectorAll('[id^="tab-"]').forEach(el=>el.classList.add('hidden'));
+  document.getElementById('tab-'+t).classList.remove('hidden');
+  document.querySelectorAll('.dash-nav-item').forEach(el=>el.classList.remove('active'));
+  const map={overview:0,clients:1,cases:2,messages:3,compliance:4,ai:5,calculators:6};
+  const items=document.querySelectorAll('.dash-nav-item');
+  if(map[t]!==undefined) items[map[t]].classList.add('active');
+  showView('dashboard');
+  if(t==='messages') switchThread('patel');
+}
+function scrollToSection(id) { document.getElementById(id)?.scrollIntoView({behavior:'smooth'}); }
+
+// ── Cases view toggle
+function switchCasesView(v) {
+  if(v==='kanban'){
+    document.getElementById('cases-kanban-view').classList.remove('hidden');
+    document.getElementById('cases-table-view').classList.add('hidden');
+    document.getElementById('cases-kanban-tab').classList.add('active');
+    document.getElementById('cases-table-tab').classList.remove('active');
+  } else {
+    document.getElementById('cases-kanban-view').classList.add('hidden');
+    document.getElementById('cases-table-view').classList.remove('hidden');
+    document.getElementById('cases-kanban-tab').classList.remove('active');
+    document.getElementById('cases-table-tab').classList.add('active');
+  }
+}
+
+// ── Open case detail
+function openCase(id) {
+  const c = cases[id]; if(!c) return;
+  const stageClass = {enquiry:'s-enquiry',factfind:'s-factfind',research:'s-research',dip:'s-dip',offer:'s-offer'}[c.stage]||'s-active';
+  const tlHtml = c.timeline.map((t,i)=>`
+    <div class="tl-item">
+      <div>
+        <div class="tl-dot" style="background:${t.color}"></div>
+        ${i<c.timeline.length-1?`<div style="width:1px;background:var(--ink-20);margin:2px 0 0 4.5px;height:30px"></div>`:''}
+      </div>
+      <div class="tl-content">
+        <div class="tl-title">${t.title}</div>
+        <div class="tl-time">${t.time}${t.msg?' · <span style="color:#185FA5">notification sent</span>':''}</div>
+      </div>
+    </div>`).join('');
+
+  const msgPrev = c.msgs.slice(-2).map(m=>`
+    <div class="msg-hist-item">
+      <div class="msg-hist-dot" style="background:${m.type==='inbound'?'var(--c-enquiry-dot)':m.type==='ai'?'var(--amber)':'var(--teal-500)'}"></div>
+      <div class="msg-hist-content">
+        <div class="msg-hist-title">${m.from} <span style="font-weight:400;color:var(--ink-60);font-size:11px">${m.time}</span></div>
+        <div class="msg-hist-sub">${m.text.substring(0,80)}${m.text.length>80?'…':''}</div>
+      </div>
+    </div>`).join('');
+
+  document.getElementById('case-detail-content').innerHTML = `
+    <div class="case-detail-header">
+      <div class="case-back" onclick="showTab('cases')">← Cases</div>
+      <div style="flex:1">
+        <div class="case-title">${c.client} — ${c.ref}</div>
+        <div class="case-meta">${c.type} · ${c.amount} · LTV ${c.ltv} · ${c.adviser}</div>
+      </div>
+      <span class="status ${stageClass}">${c.stageLabel}</span>
+      <button class="btn btn-ghost btn-sm btn-ink" style="margin-left:8px" onclick="switchMsgThread('${id}')">💬 Messages</button>
+    </div>
+    <div class="case-tabs">
+      <div class="case-tab active" onclick="switchCaseTab(this,'overview-${id}')">Overview</div>
+      <div class="case-tab" onclick="switchCaseTab(this,'docs-${id}')">Documents</div>
+      <div class="case-tab" onclick="switchCaseTab(this,'compliance-${id}')">Compliance</div>
+      <div class="case-tab" onclick="switchCaseTab(this,'msgs-${id}')">Messages <span style="background:var(--c-enquiry-bg);color:var(--c-enquiry-text);font-size:10px;font-weight:700;padding:1px 6px;border-radius:100px;margin-left:4px">${c.msgs.filter(m=>m.type==='inbound').length}</span></div>
+      <div class="case-tab" onclick="switchCaseTab(this,'report-${id}')">AI Report</div>
+    </div>
+    <div id="caseview-overview-${id}" class="case-body">
+      <div class="two-col">
+        <div class="panel">
+          <div class="panel-head"><span class="panel-title">Case details</span></div>
+          <div class="panel-body">
+            <div class="info-row"><div class="info-label">Reference</div><div class="info-val">${c.ref}</div></div>
+            <div class="info-row"><div class="info-label">Transaction type</div><div class="info-val">${c.type}</div></div>
+            <div class="info-row"><div class="info-label">Loan amount</div><div class="info-val">${c.amount}</div></div>
+            <div class="info-row"><div class="info-label">LTV</div><div class="info-val">${c.ltv}</div></div>
+            <div class="info-row"><div class="info-label">Lender</div><div class="info-val">${c.lender}</div></div>
+            <div class="info-row"><div class="info-label">Adviser</div><div class="info-val">${c.adviser}</div></div>
+            <div class="info-row"><div class="info-label">Stage</div><div class="info-val"><span class="status ${stageClass}">${c.stageLabel}</span></div></div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><span class="panel-title">Client details</span></div>
+          <div class="panel-body">
+            <div class="info-row"><div class="info-label">Full name</div><div class="info-val">${c.client}</div></div>
+            <div class="info-row"><div class="info-label">Email</div><div class="info-val">${c.email}</div></div>
+            <div class="info-row"><div class="info-label">Phone</div><div class="info-val">${c.phone}</div></div>
+            <div class="info-row"><div class="info-label">Property</div><div class="info-val">${c.property}</div></div>
+            <div class="info-row"><div class="info-label">Employment</div><div class="info-val">${c.employment}</div></div>
+            <div class="info-row"><div class="info-label">Annual income</div><div class="info-val">${c.income}</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="two-col">
+        <div class="panel">
+          <div class="panel-head"><span class="panel-title">Case timeline</span></div>
+          <div class="panel-body"><div class="timeline">${tlHtml}</div></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><span class="panel-title">Recent messages</span><button class="btn btn-ghost btn-sm" style="color:var(--ink-60);background:var(--surface);font-size:12px" onclick="switchCaseTab(document.querySelector('.case-tab:nth-child(4)'), 'msgs-${id}')">View all</button></div>
+          <div class="panel-body">
+            ${msgPrev}
+            <div style="margin-top:12px">
+              <div class="inline-msg-bar">
+                <input class="inline-msg-input" placeholder="Send update to ${c.client}…">
+                <button class="inline-msg-send" onclick="switchMsgThread('${id}')">Send ↗</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="panel" style="border-color:rgba(13,31,26,0.08)">
+        <div class="panel-head"><span class="panel-title">Adviser notes</span></div>
+        <div class="panel-body"><p style="font-size:13px;color:var(--ink-60);line-height:1.65">${c.notes}</p></div>
+      </div>
+    </div>
+    <div id="caseview-docs-${id}" class="case-body hidden">
+      <div class="panel">
+        <div class="panel-head"><span class="panel-title">Documents</span><button class="btn btn-primary btn-sm">+ Upload</button></div>
+        <table>
+          <thead><tr><th>Document</th><th>Type</th><th>Uploaded by</th><th>Date</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr><td style="font-weight:600">Passport — ${c.client}</td><td style="color:var(--ink-60)">ID</td><td style="color:var(--ink-60)">${c.adviser}</td><td style="font-size:12px;color:var(--ink-60)">10 days ago</td><td><span class="status s-done">Verified</span></td></tr>
+            <tr><td style="font-weight:600">Bank statements (3 months)</td><td style="color:var(--ink-60)">Financial</td><td style="color:var(--ink-60)">${c.adviser}</td><td style="font-size:12px;color:var(--ink-60)">8 days ago</td><td><span class="status s-done">Received</span></td></tr>
+            <tr><td style="font-weight:600">Payslips (3 months)</td><td style="color:var(--ink-60)">Income</td><td style="color:var(--ink-60)">${c.adviser}</td><td style="font-size:12px;color:var(--ink-60)">8 days ago</td><td><span class="status s-done">Received</span></td></tr>
+            ${c.lender!=='TBC'?`<tr><td style="font-weight:600">Mortgage offer — ${c.lender}</td><td style="color:var(--ink-60)">Lender</td><td style="color:var(--ink-60)">System</td><td style="font-size:12px;color:var(--ink-60)">Today</td><td><span class="status s-offer">Received</span></td></tr>`:''}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div id="caseview-compliance-${id}" class="case-body hidden">
+      <div class="panel">
+        <div class="panel-head"><span class="panel-title">Compliance status</span></div>
+        <div class="panel-body">
+          <div class="compliance-stages">
+            <div class="comp-stage ${['enquiry','factfind','research','dip','offer'].indexOf(c.stage)>=0?'done':''}"><div class="comp-check-mark">✓</div><div class="comp-stage-label">Initial Disclosure</div><div class="comp-stage-date">Completed</div></div>
+            <div class="comp-stage ${['factfind','research','dip','offer'].indexOf(c.stage)>=0?'done':c.stage==='enquiry'?'current':''}">
+              ${['factfind','research','dip','offer'].indexOf(c.stage)>=0?'<div class="comp-check-mark">✓</div>':''}
+              <div class="comp-stage-label">Fact-Find</div><div class="comp-stage-date">${['factfind','research','dip','offer'].indexOf(c.stage)>=0?'Completed':'Pending'}</div></div>
+            <div class="comp-stage ${['research','dip','offer'].indexOf(c.stage)>=0?'done':c.stage==='factfind'?'current':''}">
+              ${['research','dip','offer'].indexOf(c.stage)>=0?'<div class="comp-check-mark">✓</div>':''}
+              <div class="comp-stage-label">Research</div><div class="comp-stage-date">${['research','dip','offer'].indexOf(c.stage)>=0?'Completed':'Pending'}</div></div>
+            <div class="comp-stage ${['dip','offer'].indexOf(c.stage)>=0?'done':c.stage==='research'?'current':''}">
+              ${['dip','offer'].indexOf(c.stage)>=0?'<div class="comp-check-mark">✓</div>':''}
+              <div class="comp-stage-label">ESIS</div><div class="comp-stage-date">${['dip','offer'].indexOf(c.stage)>=0?'Completed':'Pending'}</div></div>
+            <div class="comp-stage ${c.stage==='offer'?'done':c.stage==='dip'?'current':''}">
+              ${c.stage==='offer'?'<div class="comp-check-mark">✓</div>':''}
+              <div class="comp-stage-label">Suitability Report</div><div class="comp-stage-date">${c.stage==='offer'?'Completed':'Pending'}</div></div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <button class="btn btn-primary btn-sm">Advance stage</button>
+            <div style="margin-left:auto">
+              <div class="inline-msg-bar" style="max-width:360px">
+                <input class="inline-msg-input" placeholder="Send compliance update to client…">
+                <button class="inline-msg-send" onclick="switchMsgThread('${id}')">Send ↗</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div id="caseview-msgs-${id}" class="case-body hidden">
+      <div class="panel" style="height:480px;display:flex;flex-direction:column">
+        <div class="panel-head"><span class="panel-title">Messages — ${c.client}</span><span style="font-size:12px;color:var(--ink-60)">Case ${c.ref}</span></div>
+        <div style="flex:1;overflow-y:auto;padding:16px;background:var(--surface);display:flex;flex-direction:column;gap:12px">
+          ${c.msgs.map(m=>{
+            if(m.type==='outbound') return `<div class="msg-bubble-wrap outbound"><div class="msg-avatar-sm" style="background:var(--teal-100);color:var(--teal-800)">${m.from.split(' ').map(w=>w[0]).join('').substring(0,2)}</div><div><div class="msg-bubble outbound">${m.text}</div><div class="msg-bubble-time">${m.time}</div></div></div>`;
+            if(m.type==='ai') return `<div style="max-width:90%;align-self:center"><div class="msg-bubble ai-note">🤖 ${m.text}</div><div style="font-size:10px;color:var(--ink-60);text-align:center;margin-top:4px">${m.time}</div></div>`;
+            return `<div class="msg-bubble-wrap"><div class="msg-avatar-sm" style="background:var(--c-enquiry-bg);color:var(--c-enquiry-text)">${m.from.split(' ').map(w=>w[0]).join('').substring(0,2)}</div><div><div class="msg-bubble inbound">${m.text}</div><div class="msg-bubble-time">${m.time}</div></div></div>`;
+          }).join('')}
+        </div>
+        <div class="msg-input-area" style="border-top:1px solid var(--ink-20)">
+          <textarea class="msg-input" placeholder="Reply to ${c.client}…" rows="1"></textarea>
+          <button class="msg-send-btn">Send</button>
+        </div>
+      </div>
+    </div>
+    <div id="caseview-report-${id}" class="case-body hidden">
+      <div class="panel">
+        <div class="panel-head"><span class="panel-title">AI Suitability Report</span><div style="display:flex;gap:8px"><button class="btn btn-ghost btn-sm" style="color:var(--ink);background:var(--surface);border:1px solid var(--ink-20)" onclick="triggerGenerate()">↻ Regenerate</button><button class="btn btn-primary btn-sm" onclick="showTab('ai')">Full report editor ↗</button></div></div>
+        <div class="panel-body">
+          ${c.lender!=='TBC'?`<div style="background:var(--teal-50);border:1px solid rgba(15,110,86,0.2);border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:var(--teal-700)">✍️ Report draft generated by AI · claude-sonnet-4-6 · Awaiting adviser approval</div>`:`<div style="background:rgba(239,159,39,0.08);border:1px solid rgba(239,159,39,0.2);border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:#7a4e08">⚠️ Report cannot be generated — product not yet selected</div>`}
+          <div style="font-size:13px;color:var(--ink-60);line-height:1.65">
+            ${c.lender!=='TBC'?`<p>Report template: <strong>${c.type === 'BTL Purchase' ? 'Buy-to-let' : c.type === 'Remortgage' ? 'Remortgage' : 'First-time buyer'}</strong> · 5 sections · Consumer Duty compliant</p><br><p>To review sections, edit content, or approve the report, use the <strong>Full report editor</strong>.</p>`:`<p>Complete the research phase and select a product to enable AI report generation.</p>`}
+          </div>
+        </div>
+      </div>
+    </div>`;
+
+  document.querySelectorAll('[id^="tab-"]').forEach(el=>el.classList.add('hidden'));
+  document.getElementById('tab-case-detail').classList.remove('hidden');
+  document.querySelectorAll('.dash-nav-item').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.dash-nav-item')[2].classList.add('active');
+  showView('dashboard');
+}
+
+function switchCaseTab(el, viewId) {
+  // deactivate all case tabs
+  el.closest('.case-tabs').querySelectorAll('.case-tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  // hide all case views
+  const prefix = viewId.split('-').slice(0,-1).join('-');
+  document.querySelectorAll(`[id^="caseview-"]`).forEach(v=>v.classList.add('hidden'));
+  document.getElementById('caseview-'+viewId)?.classList.remove('hidden');
+}
+
+function switchMsgThread(id) {
+  showTab('messages');
+  setTimeout(()=>switchThread(id), 50);
+}
+
+// ── Messages
+function switchThread(id) {
+  document.querySelectorAll('.msg-item').forEach(i=>i.classList.remove('active'));
+  const thread = threads[id]; if(!thread) return;
+  // activate list item
+  const idx = Object.keys(threads).indexOf(id);
+  const items = document.querySelectorAll('.msg-item');
+  if(items[idx]) items[idx].classList.add('active');
+
+  const bubbles = thread.msgs.map(m=>{
+    if(m.type==='outbound') return `<div class="msg-bubble-wrap outbound"><div class="msg-avatar-sm" style="background:var(--teal-100);color:var(--teal-800)">${m.from.split(' ').map(w=>w[0]).join('').substring(0,2)}</div><div><div class="msg-bubble outbound">${m.text}</div><div class="msg-bubble-time">${m.time}</div></div></div>`;
+    if(m.type==='ai') return `<div style="max-width:90%;align-self:center"><div class="msg-bubble ai-note">🤖 ${m.text}</div><div style="font-size:10px;color:var(--ink-60);text-align:center;margin-top:4px">${m.time}</div></div>`;
+    if(m.type==='compliance') return `<div style="max-width:90%;align-self:center"><div class="msg-bubble compliance-note">🛡 ${m.text}</div><div style="font-size:10px;color:var(--ink-60);text-align:center;margin-top:4px">${m.time}</div></div>`;
+    return `<div class="msg-bubble-wrap"><div class="msg-avatar-sm" style="background:var(--c-enquiry-bg);color:var(--c-enquiry-text)">${m.from.split(' ').map(w=>w[0]).join('').substring(0,2)}</div><div><div class="msg-bubble inbound">${m.text}</div><div class="msg-bubble-time">${m.time}</div></div></div>`;
+  }).join('');
+
+  document.getElementById('msg-thread-area').innerHTML = `
+    <div class="msg-thread-head">
+      <div><div class="msg-thread-name">${thread.name}</div><div class="msg-thread-sub">${thread.sub}</div></div>
+      <div style="display:flex;gap:8px">
+        <span class="msg-source-badge ${id==='compliance'?'src-compliance':id.includes('sys')?'src-ai':'src-client'}" style="font-size:12px;padding:4px 10px">${id==='compliance'?'Compliance':id.includes('sys')?'AI System':'Client thread'}</span>
+      </div>
+    </div>
+    <div class="msg-thread-body">${bubbles}</div>
+    <div class="msg-input-area">
+      <textarea class="msg-input" placeholder="Reply…" rows="1"></textarea>
+      <button class="msg-send-btn">Send</button>
+    </div>`;
+}
+
+// ── Report
+function selectTemplate(el) {
+  document.querySelectorAll('.template-item').forEach(i=>i.classList.remove('active'));
+  el.classList.add('active');
+}
+function toggleSection(h) { h.nextElementSibling.classList.toggle('collapsed'); }
+function openEditor(title,content) {
+  document.getElementById('editor-section-title').textContent='Editing: '+title;
+  document.getElementById('editor-content').value=content;
+  document.getElementById('section-editor').classList.add('open');
+}
+function closeEditor() { document.getElementById('section-editor').classList.remove('open'); }
+function triggerGenerate() {
+  const sec=document.getElementById('report-sections'), gen=document.getElementById('generating-state'), lbl=document.getElementById('gen-step-label');
+  const steps=['Extracting fact-find data…','Selecting template…','Generating narratives…','Applying compliance checks…','Done'];
+  sec.style.display='none'; gen.style.display='block'; let i=0; lbl.textContent=steps[0];
+  const iv=setInterval(()=>{ i++; if(i<steps.length){lbl.textContent=steps[i];}else{clearInterval(iv);gen.style.display='none';sec.style.display='block';}},600);
+}
+
+// ── Calculators
+function selectCalc(type,el) {
+  document.querySelectorAll('.calc-card').forEach(c=>c.classList.remove('active'));
+  el.classList.add('active');
+  const titles={affordability:'Affordability Calculator',repayment:'Monthly Payment Calculator',stamp:'Stamp Duty Calculator',ltv:'LTV Calculator',yield:'Rental Yield Calculator',erc:'Early Repayment Charge',remortgage:'Remortgage Saving Calculator',debt:'Debt Consolidation Calculator'};
+  document.getElementById('calc-title').textContent=titles[type]||'Calculator';
+  calcRun();
+}
+function calcRun() {
+  const inc=parseFloat(document.getElementById('c-income').value)||0;
+  const mul=parseFloat(document.getElementById('c-mult').value)||4.5;
+  const jo=parseFloat(document.getElementById('c-joint').value)||0;
+  const max=Math.round((inc+jo)*mul/1000)*1000;
+  document.getElementById('calc-output').textContent='£'+max.toLocaleString('en-GB');
+}
+calcRun();
+</script>
+</body>
+</html>

@@ -1,0 +1,40 @@
+# KO Broker Platform — Docker Compose (Local Development)
+# PRD-14: DevOps, Docker & Deployment
+#
+# Usage: docker compose up -d
+# This provides a local PostgreSQL instance for offline development.
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    ports:
+      - '5432:5432'
+    environment:
+      POSTGRES_DB: ko_broker
+      POSTGRES_USER: ko_user
+      POSTGRES_PASSWORD: ko_local_password
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ko_user -d ko_broker']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Optional: run the app in Docker for full-stack local dev
+  # app:
+  #   build:
+  #     context: ..
+  #     dockerfile: docker/Dockerfile
+  #   ports:
+  #     - '3000:3000'
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #   env_file:
+  #     - ../.env.local
+  #   command: pnpm dev
+
+volumes:
+  postgres-data:

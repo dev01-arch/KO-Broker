@@ -1,0 +1,13 @@
+packages:
+  - apps/*
+  - packages/*
+  - tooling/*
+
+onlyBuiltDependencies:
+  - '@clerk/shared'
+  - '@prisma/client'
+  - '@prisma/engines'
+  - esbuild
+  - prisma
+  - sharp
+  - unrs-resolver

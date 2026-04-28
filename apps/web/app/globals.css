@@ -1,0 +1,80 @@
+@import 'tailwindcss';
+
+/* ============================================
+   KO PLATFORM — DESIGN SYSTEM TOKENS
+   PRD-01: Colour, Typography, Stage Colourways
+   ============================================ */
+
+@theme inline {
+  /* ── Brand Teal Scale ── */
+  --color-brand-teal-900: #04342C;
+  --color-brand-teal-800: #085041;
+  --color-brand-teal-700: #0F6E56;
+  --color-brand-teal-500: #1D9E75;
+  --color-brand-teal-400: #5DCAA5;
+  --color-brand-teal-100: #9FE1CB;
+  --color-brand-teal-50: #E1F5EE;
+
+  /* ── Ink & Surface ── */
+  --color-ink: #0D1F1A;
+  --color-ink-60: rgba(13, 31, 26, 0.6);
+  --color-ink-20: rgba(13, 31, 26, 0.12);
+  --color-ink-08: rgba(13, 31, 26, 0.06);
+  --color-surface: #F7FBF9;
+
+  /* ── Accent Colours ── */
+  --color-amber: #EF9F27;
+  --color-red: #E24B4A;
+  --color-blue: #378ADD;
+
+  /* ── Stage: Enquiry ── */
+  --color-stage-enquiry-bg: #EFF6FF;
+  --color-stage-enquiry-border: #BFDBFE;
+  --color-stage-enquiry-text: #1D4ED8;
+  --color-stage-enquiry-dot: #3B82F6;
+
+  /* ── Stage: Fact-Find ── */
+  --color-stage-factfind-bg: #FFF7ED;
+  --color-stage-factfind-border: #FED7AA;
+  --color-stage-factfind-text: #C2410C;
+  --color-stage-factfind-dot: #F97316;
+
+  /* ── Stage: Research ── */
+  --color-stage-research-bg: #F0FDF4;
+  --color-stage-research-border: #BBF7D0;
+  --color-stage-research-text: #166534;
+  --color-stage-research-dot: #22C55E;
+
+  /* ── Stage: DIP ── */
+  --color-stage-dip-bg: #FAF5FF;
+  --color-stage-dip-border: #E9D5FF;
+  --color-stage-dip-text: #7E22CE;
+  --color-stage-dip-dot: #A855F7;
+
+  /* ── Stage: Offer ── */
+  --color-stage-offer-bg: #FFF1F2;
+  --color-stage-offer-border: #FECDD3;
+  --color-stage-offer-text: #BE123C;
+  --color-stage-offer-dot: #F43F5E;
+
+  /* ── Typography ── */
+  --font-heading: var(--font-syne), 'Syne', sans-serif;
+  --font-body: var(--font-dm-sans), 'DM Sans', sans-serif;
+  --font-mono: 'Courier New', monospace;
+
+  /* ── Border Radius ── */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+}
+
+/* ── Base styles ── */
+body {
+  font-family: var(--font-body);
+  color: var(--color-ink);
+  background: var(--color-surface);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+}

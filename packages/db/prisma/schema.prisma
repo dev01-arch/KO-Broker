@@ -1,0 +1,346 @@
+// KO Broker Platform — Prisma Schema
+// PRD-03: Database Schema & Supabase Setup
+// All IDs use @default(cuid()). All timestamps use @default(now()).
+// Every table has orgId except User and LenderCriteria.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ── Enums ──────────────────────────────────────
+
+enum Plan {
+  STARTER
+  PROFESSIONAL
+  ENTERPRISE
+}
+
+enum Role {
+  ADMIN
+  ADVISER
+  COMPLIANCE
+  VIEWER
+}
+
+enum EmploymentStatus {
+  EMPLOYED
+  SELF_EMPLOYED
+  CONTRACTOR
+  RETIRED
+  UNEMPLOYED
+}
+
+enum CaseType {
+  PURCHASE
+  REMORTGAGE
+  BTL
+  FURTHER_ADVANCE
+  PRODUCT_TRANSFER
+}
+
+enum CaseStage {
+  ENQUIRY
+  FACT_FIND
+  RESEARCH
+  DIP
+  OFFER
+  COMPLETION
+  ARCHIVED
+}
+
+enum ReportTemplate {
+  BTL
+  FTB
+  REMORTGAGE
+  HOME_MOVER
+  PRODUCT_TRANSFER
+  DIVORCE
+  SELF_EMPLOYED
+  VULNERABLE_OVERLAY
+}
+
+enum ReportStatus {
+  DRAFT
+  ADVISER_REVIEW
+  APPROVED
+  FINALISED
+}
+
+enum MessageDirection {
+  INBOUND
+  OUTBOUND
+  SYSTEM
+}
+
+enum MessageChannel {
+  EMAIL
+  SMS
+  IN_APP
+}
+
+enum MessageSource {
+  CASE_UPDATE
+  COMPLIANCE
+  AI_REPORT
+  CLIENT_REPLY
+  SYSTEM
+}
+
+enum DocumentType {
+  ID
+  INCOME
+  FINANCIAL
+  LENDER
+  COMPLIANCE
+  OTHER
+}
+
+// ── Models ─────────────────────────────────────
+
+model Organisation {
+  id               String   @id @default(cuid())
+  name             String
+  slug             String   @unique
+  plan             Plan     @default(STARTER)
+  stripeCustomerId String?
+  settings         Json?    @default("{}")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  users   User[]
+  clients Client[]
+  cases   Case[]
+
+  @@map("organisations")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  clerkId   String   @unique
+  email     String
+  firstName String?
+  lastName  String?
+  role      Role     @default(ADVISER)
+  isActive  Boolean  @default(true)
+  orgId     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  organisation       Organisation?      @relation(fields: [orgId], references: [id])
+  assignedCases      Case[]             @relation("CaseAdviser")
+  complianceRecords  ComplianceRecord[]
+  suitabilityReports SuitabilityReport[]
+  auditLogs          AuditLog[]
+
+  @@map("users")
+}
+
+model Client {
+  id               String           @id @default(cuid())
+  orgId            String
+  referenceNumber  String           @unique
+  title            String?
+  firstName        String
+  lastName         String
+  email            String
+  phone            String?
+  dateOfBirth      DateTime?
+  niNumber         String?
+  address          Json?
+  employmentStatus EmploymentStatus @default(EMPLOYED)
+  annualIncome     Float?
+  isVulnerable     Boolean          @default(false)
+  vulnerabilityNotes String?
+  portalEnabled    Boolean          @default(false)
+  portalAccessToken String?         @unique
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  organisation Organisation @relation(fields: [orgId], references: [id])
+  cases        Case[]
+  documents    Document[]
+  messages     Message[]
+
+  @@map("clients")
+}
+
+model Case {
+  id              String    @id @default(cuid())
+  orgId           String
+  clientId        String
+  referenceNumber String    @unique
+  type            CaseType
+  stage           CaseStage @default(ENQUIRY)
+  propertyValue   Float?
+  loanAmount      Float?
+  ltv             Float?
+  termYears       Int?
+  selectedLender  String?
+  selectedProduct String?
+  selectedRate    Float?
+  selectedFee     Float?
+  adviserNotes    String?
+  assignedAdviserId String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  organisation      Organisation       @relation(fields: [orgId], references: [id])
+  client            Client             @relation(fields: [clientId], references: [id])
+  adviser           User?              @relation("CaseAdviser", fields: [assignedAdviserId], references: [id])
+  factFind          FactFind?
+  productsConsidered ProductConsidered[]
+  complianceRecords  ComplianceRecord[]
+  suitabilityReports SuitabilityReport[]
+  messages           Message[]
+  documents          Document[]
+
+  @@map("cases")
+}
+
+model FactFind {
+  id                  String   @id @default(cuid())
+  caseId              String   @unique
+  personalDetails     Json?
+  employmentDetails   Json?
+  incomeDetails       Json?
+  expenditureDetails  Json?
+  propertyDetails     Json?
+  existingMortgages   Json?
+  clientPreferences   Json?
+  completedAt         DateTime?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  case Case @relation(fields: [caseId], references: [id])
+
+  @@map("fact_finds")
+}
+
+model ProductConsidered {
+  id                String  @id @default(cuid())
+  caseId            String
+  lenderName        String
+  productName       String
+  rate              Float?
+  fee               Float?
+  isSelected        Boolean @default(false)
+  reasonNotSelected String?
+  createdAt         DateTime @default(now())
+
+  case Case @relation(fields: [caseId], references: [id])
+
+  @@map("products_considered")
+}
+
+model ComplianceRecord {
+  id          String   @id @default(cuid())
+  caseId      String
+  stage       String
+  completedAt DateTime @default(now())
+  documentUrl String?
+  isApproved  Boolean  @default(false)
+  userId      String?
+  createdAt   DateTime @default(now())
+
+  case Case  @relation(fields: [caseId], references: [id])
+  user User? @relation(fields: [userId], references: [id])
+
+  @@map("compliance_records")
+}
+
+model SuitabilityReport {
+  id           String       @id @default(cuid())
+  caseId       String
+  templateType ReportTemplate
+  status       ReportStatus @default(DRAFT)
+  sections     Json?
+  pdfUrl       String?
+  generatedBy  String?
+  approvedBy   String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  case      Case  @relation(fields: [caseId], references: [id])
+  generator User? @relation(fields: [generatedBy], references: [id])
+
+  @@map("suitability_reports")
+}
+
+model Message {
+  id         String           @id @default(cuid())
+  orgId      String
+  caseId     String?
+  clientId   String?
+  direction  MessageDirection
+  channel    MessageChannel   @default(EMAIL)
+  sourceType MessageSource    @default(SYSTEM)
+  subject    String?
+  body       String
+  isRead     Boolean          @default(false)
+  threadId   String?
+  createdAt  DateTime         @default(now())
+
+  case   Case?   @relation(fields: [caseId], references: [id])
+  client Client? @relation(fields: [clientId], references: [id])
+
+  @@map("messages")
+}
+
+model Document {
+  id           String       @id @default(cuid())
+  orgId        String
+  caseId       String?
+  clientId     String?
+  name         String
+  documentType DocumentType @default(OTHER)
+  storageUrl   String
+  mimeType     String?
+  sizeBytes    Int?
+  uploadedBy   String?
+  createdAt    DateTime     @default(now())
+
+  case   Case?   @relation(fields: [caseId], references: [id])
+  client Client? @relation(fields: [clientId], references: [id])
+
+  @@map("documents")
+}
+
+model AuditLog {
+  id               String   @id @default(cuid())
+  orgId            String
+  userId           String?
+  entityType       String
+  entityId         String
+  action           String
+  diff             Json?
+  notificationSent Boolean  @default(false)
+  createdAt        DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id])
+
+  // NOTE: No updatedAt — AuditLog is INSERT-ONLY per PRD-07
+  @@map("audit_logs")
+}
+
+model LenderCriteria {
+  id                     String   @id @default(cuid())
+  lenderName             String   @unique
+  maxLtv                 Float?
+  minIncome              Float?
+  maxLoanAmount          Float?
+  acceptedEmploymentTypes String[]
+  minCreditScore         Int?
+  specialConditions      Json?
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  // NOTE: Global reference data — no orgId
+
+  @@map("lender_criteria")
+}

@@ -1,0 +1,43 @@
+# dependencies
+node_modules/
+.pnpm-store/
+
+# next.js
+.next/
+out/
+
+# production
+build/
+dist/
+
+# env files
+.env
+.env.local
+.env.*.local
+
+# debug
+npm-debug.log*
+pnpm-debug.log*
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# prisma
+packages/db/prisma/*.db
+packages/db/prisma/*.db-journal
+
+# turbo
+.turbo/
+
+# vercel
+.vercel/
+
+# docker
+postgres-data/
