@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { MarketingAuthLayout } from '@/components/auth/site-auth-guard';
 
 export const metadata: Metadata = {
   title: 'KO Platform — The Smarter Broker Platform',
@@ -7,5 +8,9 @@ export const metadata: Metadata = {
 };
 
 export default function MarketingLayout({ children }: { children: React.ReactNode }) {
-  return <>{children}</>;
+  return (
+    <div className="marketing-site min-h-screen bg-brand-bg font-body text-ink">
+      <MarketingAuthLayout>{children}</MarketingAuthLayout>
+    </div>
+  );
 }

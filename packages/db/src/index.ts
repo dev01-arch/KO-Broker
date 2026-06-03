@@ -1,12 +1,14 @@
-/**
- * Database client export — PRD-03
- *
- * Re-exports the Prisma client for use across the app.
- * Import as: import { prisma } from '@ko/db';
- */
+import { PrismaClient } from '@prisma/client';
 
-// TODO (PRD-03): Export Prisma client singleton after prisma generate
-// export { PrismaClient } from '@prisma/client';
-// export type * from '@prisma/client';
+const globalForPrisma = globalThis as unknown as {
+  prisma: PrismaClient | undefined;
+};
 
-export {};
+export const prisma = globalForPrisma.prisma ?? new PrismaClient();
+
+if (process.env.NODE_ENV !== 'production') {
+  globalForPrisma.prisma = prisma;
+}
+
+export { PrismaClient } from '@prisma/client';
+export type * from '@prisma/client';

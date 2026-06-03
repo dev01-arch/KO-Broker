@@ -78,3 +78,44 @@ body {
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-heading);
 }
+
+/* ── Marketing / landing (PRD-01 v2a prototype) ── */
+@theme inline {
+  --color-brand-green: #0f6e56;
+  --color-brand-orange: #ce652d;
+  --color-brand-purple: #9144cb;
+  --color-brand-blue: #345ac9;
+  --color-brand-green-mid: #5dcaa5;
+  --color-brand-green-light: #aee5d2;
+  --color-brand-yellow: #f2dda1;
+  --color-brand-green-tint: #e6f4f0;
+  --color-brand-orange-tint: #faeee6;
+  --color-brand-purple-tint: #f1e8fa;
+  --color-brand-blue-tint: #e4eafb;
+  --color-hero-accent: #16856f;
+  --color-hero-dark: #061f18;
+  --color-brand-teal: var(--color-brand-teal-700);
+  --color-brand-teal-light: var(--color-brand-teal-400);
+  --color-brand-bg: #f8faf9;
+  --color-brand-accent: #e0f0ea;
+  --font-display: var(--font-heading);
+}
+
+.marketing-site .heading-bold {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+}
+
+.marketing-site .hero-heading {
+  font-family: var(--font-heading);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+}
+
+/* Calculator borders — match kanban overview case cards (border-ink-08) */
+.mortgage-calculators {
+  --color-border: rgba(13, 31, 26, 0.06);
+}

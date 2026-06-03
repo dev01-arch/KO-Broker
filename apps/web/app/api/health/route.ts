@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { prisma } from '@/lib/db';
 
 /**
  * GET /api/health
@@ -8,25 +9,30 @@ import { NextResponse } from 'next/server';
  */
 export async function GET() {
   const health = {
-    status: 'ok',
+    status: 'ok' as 'ok' | 'degraded',
     timestamp: new Date().toISOString(),
     services: {
-      db: false, // Will be true once Prisma client is connected (PRD-03)
-      ai: false, // Will be true once Azure AI Foundry API key is set (PRD-09)
+      db: false,
+      ai: Boolean(process.env.AZURE_AI_FOUNDRY_API_KEY),
     },
     version: '0.1.0',
   };
 
-  // TODO (PRD-03): Check DB connectivity
-  // try {
-  //   await prisma.$queryRaw`SELECT 1`;
-  //   health.services.db = true;
-  // } catch {}
+  if (process.env.DATABASE_URL) {
+    try {
+      await Promise.race([
+        prisma.$queryRaw`SELECT 1`,
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('db timeout')), 2000),
+        ),
+      ]);
+      health.services.db = true;
+    } catch {
+      health.status = 'degraded';
+    }
+  }
 
-  // TODO (PRD-09): Check AI connectivity
-  // if (process.env.AZURE_AI_FOUNDRY_API_KEY) {
-  //   health.services.ai = true;
-  // }
-
-  return NextResponse.json(health, { status: 200 });
+  return NextResponse.json(health, {
+    status: health.status === 'ok' ? 200 : 503,
+  });
 }
