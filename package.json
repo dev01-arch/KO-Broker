@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "pnpm --filter @ko/web dev",
-    "build": "pnpm --filter @ko/web build",
+    "build": "pnpm db:generate && pnpm --filter @ko/web build",
     "lint": "pnpm -r run lint",
     "typecheck": "pnpm -r run typecheck",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,css}\"",
