@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/db';
 import { devStore } from '@/lib/api/dev-store';
 import { isPrismaConnectionError } from '@/lib/api/prisma-errors';
+import type { Prisma } from '@ko/db';
 
 function useDevStore(error: unknown) {
   return process.env.NODE_ENV === 'development' && isPrismaConnectionError(error);
@@ -53,7 +54,7 @@ export async function addTimelineEntry(entry: {
         entityType: entry.entityType,
         entityId: entry.entityId,
         action: entry.action,
-        diff: entry.diff,
+        diff: entry.diff as Prisma.InputJsonValue | undefined,
         ...(entry.userId ? { user: { connect: { id: entry.userId } } } : {}),
       },
     });

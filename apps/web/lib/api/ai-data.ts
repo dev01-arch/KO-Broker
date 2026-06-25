@@ -2,6 +2,7 @@ import { prisma } from '@/lib/db';
 import { devStore } from '@/lib/api/dev-store';
 import { isPrismaConnectionError } from '@/lib/api/prisma-errors';
 import type { ReportTemplate } from '@ko/types';
+import type { Prisma } from '@ko/db';
 
 function useDevStore(error: unknown) {
   return process.env.NODE_ENV === 'development' && isPrismaConnectionError(error);
@@ -105,7 +106,7 @@ export async function regenerateReportSection(
     return await prisma.suitabilityReport.update({
       where: { id: reportId },
       data: {
-        sections: { ...currentSections, [sectionKey]: content } as Record<string, unknown>,
+        sections: { ...currentSections, [sectionKey]: content } as Prisma.InputJsonValue,
         updatedAt: new Date(),
       },
     });

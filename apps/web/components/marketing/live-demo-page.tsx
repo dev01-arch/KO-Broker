@@ -1753,7 +1753,12 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
   };
 
   // Attach iframe handlers so prototype onclick="generateCaseReport(id)" calls the live API.
-  function hookAiReportHandlers(iwin: Window & { generateCaseReport?: (id: string) => void }) {
+  function hookAiReportHandlers(
+    iwin: Window & {
+      generateCaseReport?: (id: string) => void;
+      regenerateCaseReportSection?: () => void;
+    },
+  ) {
     if (!isPersonalDashboard) return;
     iwin.generateCaseReport = (id: string) => {
       const idoc = iframeRef.current?.contentDocument;
@@ -1783,7 +1788,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const iwin = iframeRef.current?.contentWindow as any;
     const protoState = iwin?.caseAiReportState?.[caseId] as
-      | { template?: string; checklist?: boolean[] }
+      | { template?: string; checklist?: boolean[]; phase?: string }
       | undefined;
     if (protoState && !protoState.checklist?.every(Boolean)) return;
     if (protoState && !protoState.template) return;
