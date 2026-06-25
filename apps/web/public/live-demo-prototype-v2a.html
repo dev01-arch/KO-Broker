@@ -4,7 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>KO Platform — Prototype v2a</title>
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&display=block" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
 <style>
 :root {
   --teal-900:#04342C; --teal-800:#085041; --teal-700:#0F6E56; --teal-500:#1D9E75; --teal-400:#5DCAA5; --teal-100:#9FE1CB; --teal-50:#E1F5EE;
@@ -147,24 +150,25 @@ footer{border-top:1px solid rgba(255,255,255,0.07);padding:40px 80px;display:fle
 .dash-top-strip{height:75px;flex-shrink:0;background:#FFF;border-bottom:1px solid #E4E4E4}
 .dash-greet-section{display:flex;flex-direction:column;align-items:stretch;gap:8px;padding:20px 28px 16px}
 .dash-greet-date{font-family:'DM Sans',sans-serif;font-size:16px;font-weight:500;font-style:normal;line-height:normal;letter-spacing:0.96px;text-transform:uppercase;color:#0F6E56;align-self:stretch}
-.dash-greet-name{font-family:'Syne',sans-serif;font-size:24px;font-weight:800;font-style:normal;line-height:normal;color:#061F18}
+.dash-greet-name{font-family:'Syne',sans-serif;font-size:24px;font-weight:800;font-style:normal;line-height:normal;color:#061F18;font-synthesis:none;-webkit-font-smoothing:antialiased}
+#dashboard .dash-greet-name,.dash-greet-section .dash-greet-name{font-family:'Syne',sans-serif}
 .dash-content{padding:24px 28px;display:flex;flex-direction:column;gap:20px}
 
 /* Overview — section title + KPI strip */
 #tab-overview .ov-overview-heading{font-family:'Syne',sans-serif;font-size:16px;font-weight:700;font-style:normal;line-height:normal;color:#061F18;margin:0 0 16px}
-#tab-overview .ov-kpi-row{display:inline-flex;flex-wrap:wrap;align-items:center;gap:36px}
-#tab-overview .ov-kpi-card{display:flex;width:230px;padding:20px 18px;flex-direction:column;align-items:flex-start;gap:12px;flex-shrink:0;border-radius:15.031px;border:0.626px solid #AEC9CE;background:linear-gradient(207deg,#DBFAFF -9.75%,#FFF 38.67%);box-shadow:0 3.758px 6.764px 0 rgba(190,200,202,0.19)}
-#tab-overview .ov-kpi-card--cases{border-radius:15.03px;border:0.63px solid #A19BBF;background:linear-gradient(207deg,#E9ECFF -9.75%,#FFF 38.67%);box-shadow:0 6.421px 11.558px 0 #F0F2FF}
-#tab-overview .ov-kpi-card--pipeline{border-radius:15.031px;border:0.626px solid #AECEC0;background:linear-gradient(207deg,#D5FBEE -9.75%,#FFF 38.67%);box-shadow:0 3.758px 6.764px 0 rgba(190, 200, 202, 0.19)}
-#tab-overview .ov-kpi-card--msgs{border-radius:15.031px;border:0.626px solid #CEAEC8;background:linear-gradient(207deg,#F9C5DC -9.75%,#FFF 38.67%);box-shadow:0 3.758px 6.764px 0 rgba(190, 200, 202, 0.19)}
-#tab-overview .ov-kpi-top{display:flex;width:100%;align-items:flex-start;justify-content:space-between;gap:8px}
-#tab-overview .ov-kpi-copy{display:flex;flex-direction:column;align-items:flex-start;gap:5px;min-width:0;flex:1;text-align:left}
-#tab-overview .ov-kpi-title{font-family:'Syne',sans-serif;font-size:14px;font-style:normal;font-weight:600;line-height:normal;color:#000;align-self:stretch;text-align:left}
-#tab-overview .ov-kpi-hint{font-family:'DM Sans',sans-serif;font-size:10px;font-style:normal;font-weight:400;line-height:normal;color:#535E5B;text-align:left;align-self:stretch}
-#tab-overview .ov-kpi-val{font-family:'Syne',sans-serif;font-size:26px;font-style:normal;font-weight:700;line-height:normal;color:#061F18;align-self:stretch;text-align:left}
-#tab-overview .ov-kpi-trend{font-family:'DM Sans',sans-serif;font-size:10px;font-style:normal;font-weight:400;line-height:normal;color:#16856F;text-align:left;align-self:stretch}
-#tab-overview .ov-kpi-trend span{text-align:left}
-#tab-overview .ov-kpi-icon{width:26px;height:26px;flex-shrink:0;display:block}
+#tab-overview .ov-kpi-row,#tab-ai .ov-kpi-row{display:inline-flex;flex-wrap:wrap;align-items:center;gap:36px}
+#tab-overview .ov-kpi-card,#tab-ai .ov-kpi-card{display:flex;width:230px;padding:20px 18px;flex-direction:column;align-items:flex-start;gap:12px;flex-shrink:0;border-radius:15.031px;border:0.626px solid #AEC9CE;background:linear-gradient(207deg,#DBFAFF -9.75%,#FFF 38.67%);box-shadow:0 3.758px 6.764px 0 rgba(190,200,202,0.19)}
+#tab-overview .ov-kpi-card--cases,#tab-ai .ov-kpi-card--cases{border-radius:15.03px;border:0.63px solid #A19BBF;background:linear-gradient(207deg,#E9ECFF -9.75%,#FFF 38.67%);box-shadow:0 6.421px 11.558px 0 #F0F2FF}
+#tab-overview .ov-kpi-card--pipeline,#tab-ai .ov-kpi-card--pipeline{border-radius:15.031px;border:0.626px solid #AECEC0;background:linear-gradient(207deg,#D5FBEE -9.75%,#FFF 38.67%);box-shadow:0 3.758px 6.764px 0 rgba(190, 200, 202, 0.19)}
+#tab-overview .ov-kpi-card--msgs,#tab-ai .ov-kpi-card--msgs{border-radius:15.031px;border:0.626px solid #CEAEC8;background:linear-gradient(207deg,#F9C5DC -9.75%,#FFF 38.67%);box-shadow:0 3.758px 6.764px 0 rgba(190, 200, 202, 0.19)}
+#tab-overview .ov-kpi-top,#tab-ai .ov-kpi-top{display:flex;width:100%;align-items:flex-start;justify-content:space-between;gap:8px}
+#tab-overview .ov-kpi-copy,#tab-ai .ov-kpi-copy{display:flex;flex-direction:column;align-items:flex-start;gap:5px;min-width:0;flex:1;text-align:left}
+#tab-overview .ov-kpi-title,#tab-ai .ov-kpi-title{font-family:'Syne',sans-serif;font-size:14px;font-style:normal;font-weight:600;line-height:normal;color:#000;align-self:stretch;text-align:left}
+#tab-overview .ov-kpi-hint,#tab-ai .ov-kpi-hint{font-family:'DM Sans',sans-serif;font-size:10px;font-style:normal;font-weight:400;line-height:normal;color:#535E5B;text-align:left;align-self:stretch}
+#tab-overview .ov-kpi-val,#tab-ai .ov-kpi-val{font-family:'Syne',sans-serif;font-size:26px;font-style:normal;font-weight:700;line-height:normal;color:#061F18;align-self:stretch;text-align:left}
+#tab-overview .ov-kpi-trend,#tab-ai .ov-kpi-trend{font-family:'DM Sans',sans-serif;font-size:10px;font-style:normal;font-weight:400;line-height:normal;color:#16856F;text-align:left;align-self:stretch}
+#tab-overview .ov-kpi-trend span,#tab-ai .ov-kpi-trend span{text-align:left}
+#tab-overview .ov-kpi-icon,#tab-ai .ov-kpi-icon{width:26px;height:26px;flex-shrink:0;display:block}
 
 /* Overview — two glass containers (KPI block + pipeline block) */
 #tab-overview .ov-overview-sections{display:flex;flex-direction:column;align-items:flex-start;gap:17px;width:100%;max-width:1088px;box-sizing:border-box}
@@ -322,6 +326,24 @@ body.embedded #tab-cases{background:transparent}
 #tab-overview .ov-activity-amt{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:#16856F;flex-shrink:0;white-space:nowrap}
 @media(max-width:900px){#tab-overview .ov-bottom-row{grid-template-columns:1fr}}
 
+/* Personal dashboard (signed-in /dashboard) — KPI cards at zero + welcome empty state; no mock pipeline */
+#tab-overview.ov-personal-mode .ov-mock-only{display:none!important}
+#tab-overview.ov-personal-mode .ov-filled-dashboard{display:none!important}
+
+/* Overview — empty state */
+#tab-overview.ov-empty-mode .ov-filled-dashboard{display:none}
+#tab-overview .ov-empty-state{display:none;flex-direction:column;align-items:center;justify-content:center;width:100%;max-width:1088px;min-height:320px;padding:32px 24px 48px;box-sizing:border-box;text-align:center}
+#tab-overview.ov-empty-mode .ov-empty-state{display:flex}
+#tab-overview .ov-empty-illus{width:min(280px,72vw);height:auto;margin-bottom:24px;object-fit:contain}
+#tab-overview .ov-empty-copy{display:flex;flex-direction:column;align-items:center;gap:6px;margin-bottom:24px;width:100%}
+#tab-overview .ov-empty-title{color:#5D6764;text-align:center;font-family:'Syne',sans-serif;font-size:24px;font-style:normal;font-weight:700;line-height:normal;margin:0}
+#tab-overview .ov-empty-sub{color:#5D6764;text-align:center;font-family:'DM Sans',sans-serif;font-size:16px;font-style:normal;font-weight:400;line-height:normal;margin:0;white-space:nowrap}
+#tab-overview .ov-empty-cta-wrap{width:100%;max-width:480px;display:flex}
+#tab-overview .ov-empty-cta{display:flex;height:50px;padding:9.077px 15.56px;justify-content:center;align-items:center;gap:9px;flex:1 0 0;border:none;border-radius:32px;background:#1D9E75;box-shadow:0 9.725px 13.81px 0 rgba(22,133,111,0.24);color:#fff;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:background .2s,box-shadow .2s}
+#tab-overview .ov-empty-cta:hover{background:#16856F}
+#tab-overview .ov-empty-cta:active{transform:translateY(1px)}
+#tab-overview .ov-empty-cta-icon{width:20px;height:20px;object-fit:contain;flex-shrink:0}
+
 /* Clients page */
 #tab-clients{background:transparent}
 #tab-clients .cl-content{padding:28px 32px 40px;display:flex;flex-direction:column;gap:20px;width:100%;box-sizing:border-box}
@@ -407,14 +429,71 @@ body.embedded #tab-cases{background:transparent}
 .cl-drawer-input::placeholder{color:#a1a1aa}
 .cl-drawer-input:focus,.cl-drawer-select:focus{border-color:#1D9E75;box-shadow:0 0 0 3px rgba(29,158,117,0.15)}
 .cl-drawer-select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='none' stroke='%2371717a' stroke-width='1.5' stroke-linecap='round' d='M2 4l4 4 4-4'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:36px;cursor:pointer}
-.cl-drawer-actions{display:flex;flex-direction:column;gap:12px;margin-top:4px;padding-top:8px}
-.cl-drawer-create{display:flex;width:100%;padding:12px 16px;justify-content:center;align-items:center;gap:6px;border:none;border-radius:10px;background:#1D9E75;color:#fff;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;box-shadow:0 9.725px 13.81px 0 rgba(22,133,111,0.24);transition:background .2s,box-shadow .2s}
+.cl-drawer-actions{display:flex;flex-direction:row;align-items:center;gap:12px;margin-top:4px;padding-top:8px}
+.cl-drawer-create{display:flex;flex:1;padding:12px 16px;justify-content:center;align-items:center;gap:6px;border:none;border-radius:10px;background:#1D9E75;color:#fff;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;box-shadow:0 9.725px 13.81px 0 rgba(22,133,111,0.24);transition:background .2s,box-shadow .2s}
 .cl-drawer-create:hover{background:#16856F}
-.cl-drawer-cancel{display:flex;width:100%;padding:12px 16px;justify-content:center;align-items:center;border:1px solid #e4e4e7;border-radius:10px;background:#fff;color:#3f3f46;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;cursor:pointer;transition:background .15s,border-color .15s}
+.cl-drawer-cancel{display:flex;flex:1;padding:12px 16px;justify-content:center;align-items:center;border:1px solid #e4e4e7;border-radius:10px;background:#fff;color:#3f3f46;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;cursor:pointer;transition:background .15s,border-color .15s}
 .cl-drawer-cancel:hover{background:#fafafa;border-color:#d4d4d8}
+.cl-drawer-create:disabled,.cl-drawer-cancel:disabled{opacity:.65;cursor:not-allowed}
+.cl-drawer-error{margin:0;padding:10px 12px;border-radius:8px;background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;font-family:'DM Sans',sans-serif;font-size:13px;line-height:1.4}
+.cl-drawer-type-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.cl-drawer-type-btn{display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:12px 14px;border:1px solid #e4e4e7;border-radius:10px;background:#fff;cursor:pointer;text-align:left;transition:border-color .15s,background .15s,box-shadow .15s}
+.cl-drawer-type-btn:hover{border-color:#d4d4d8;background:#fafafa}
+.cl-drawer-type-btn.is-selected{border-color:#1D9E75;background:#f0fdf8;box-shadow:0 0 0 3px rgba(29,158,117,0.12)}
+.cl-drawer-type-label{font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;color:#18181b}
+.cl-drawer-type-desc{font-family:'DM Sans',sans-serif;font-size:11px;color:#71717a;line-height:1.35}
+.cl-drawer-section-hidden{display:none!important}
 body.cl-drawer-open{overflow:hidden}
 
 body.embedded #tab-clients{background:transparent}
+
+/* ── AI REPORTS HUB (list view) */
+#tab-ai{background:transparent}
+#tab-ai .ai-rpt-content{padding:28px 32px 40px;display:flex;flex-direction:column;gap:20px;width:100%;box-sizing:border-box}
+#tab-ai .ai-rpt-page-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap}
+#tab-ai .ai-rpt-title{font-family:'Syne',sans-serif;font-size:32px;font-weight:800;color:#061F18;line-height:1.1;margin:0;letter-spacing:-0.02em}
+#tab-ai .ai-rpt-subtitle{font-family:'DM Sans',sans-serif;font-size:14px;font-weight:400;color:#71717a;margin:6px 0 0;line-height:normal}
+#tab-ai .ai-rpt-btn-new{display:flex;padding:9px 15px;justify-content:center;align-items:center;gap:5px;border:none;border-radius:8px;background:#1D9E75;color:#fff;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;box-shadow:0 9.725px 13.81px 0 rgba(22,133,111,0.24);transition:background .2s,box-shadow .2s}
+#tab-ai .ai-rpt-btn-new:hover{background:#16856F}
+#tab-ai .ov-kpi-row{width:100%;align-self:stretch}
+#tab-ai .ai-rpt-toolbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+#tab-ai .ai-rpt-search-wrap{position:relative;flex:1 1 auto;min-width:200px;max-width:560px}
+#tab-ai .ai-rpt-search{width:100%;padding:12px 44px 12px 18px;border:none;border-radius:999px;background:#f4f4f5;font-family:'DM Sans',sans-serif;font-size:14px;color:#061F18;outline:none}
+#tab-ai .ai-rpt-search::placeholder{color:#a1a1aa}
+#tab-ai .ai-rpt-search:focus{box-shadow:0 0 0 2px rgba(0,184,217,0.25)}
+#tab-ai .ai-rpt-search-icon{position:absolute;right:16px;top:50%;transform:translateY(-50%);width:18px;height:18px;color:#a1a1aa;pointer-events:none}
+#tab-ai .ai-rpt-template-select{padding:10px 36px 10px 14px;border:1px solid #e4e4e7;border-radius:999px;background:#fff;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;color:#52525b;outline:none;cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='none' stroke='%2371717a' stroke-width='1.5' stroke-linecap='round' d='M2 4l4 4 4-4'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;flex-shrink:0}
+#tab-ai .ai-rpt-table-panel{background:#fff;border:1px solid rgba(13,31,26,0.08);border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,0.04);overflow:auto}
+#tab-ai .ai-rpt-table-actions{display:flex;align-items:center;justify-content:flex-end;gap:10px;padding:12px 16px;border-bottom:1px solid #f4f4f5;background:#fafafa}
+#tab-ai .ai-rpt-tool-btn{display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border:1px solid #e4e4e7;border-radius:8px;background:#fff;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;color:#3f3f46;cursor:pointer;transition:background .15s,border-color .15s}
+#tab-ai .ai-rpt-tool-btn:hover{background:#fafafa;border-color:#d4d4d8}
+#tab-ai .ai-rpt-tool-btn svg{width:16px;height:16px;flex-shrink:0;color:#71717a}
+#tab-ai .ai-rpt-table{width:100%;border-collapse:collapse;font-size:13px}
+#tab-ai .ai-rpt-table thead th{text-align:left;font-family:'DM Sans',sans-serif;font-size:11px;font-weight:600;color:#a1a1aa;padding:14px 16px;border-bottom:1px solid #f4f4f5;white-space:nowrap;background:#fff}
+#tab-ai .ai-rpt-table thead th.ai-rpt-th-sort{cursor:pointer;user-select:none}
+#tab-ai .ai-rpt-th-sort-inner{display:inline-flex;align-items:center;gap:4px}
+#tab-ai .ai-rpt-sort-icon{width:10px;height:10px;opacity:0.5}
+#tab-ai .ai-rpt-table tbody td{padding:14px 16px;border-bottom:1px solid #f4f4f5;color:#18181b;vertical-align:middle}
+#tab-ai .ai-rpt-table tbody tr:last-child td{border-bottom:none}
+#tab-ai .ai-rpt-table tbody tr:hover td{background:#fafafa}
+#tab-ai .ai-rpt-table tbody tr.ai-rpt-row-hidden{display:none}
+#tab-ai .ai-rpt-col-check{width:44px;padding-left:20px!important;padding-right:8px!important}
+#tab-ai .ai-rpt-checkbox{appearance:none;width:18px;height:18px;border:1.5px solid #d4d4d8;border-radius:4px;background:#fff;cursor:pointer;vertical-align:middle}
+#tab-ai .ai-rpt-checkbox:checked{background:#00B8D9;border-color:#00B8D9;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' d='M2 6l3 3 5-5'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:center;background-size:12px}
+#tab-ai .ai-rpt-client-name{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:#18181b;line-height:1.3;margin:0}
+#tab-ai .ai-rpt-client-email{font-family:'DM Sans',sans-serif;font-size:12px;color:#a1a1aa;margin-top:2px}
+#tab-ai .ai-rpt-cell-muted{font-size:13px;color:#52525b}
+#tab-ai .ai-rpt-status{display:inline-flex;padding:2px 8px 2px 6px;align-items:center;gap:5px;border-radius:12px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;white-space:nowrap}
+#tab-ai .ai-rpt-status-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+#tab-ai .ai-rpt-status--finished,#tab-ai .ai-rpt-status--active{background:#ECFDF3;color:#027A48}
+#tab-ai .ai-rpt-status--finished .ai-rpt-status-dot,#tab-ai .ai-rpt-status--active .ai-rpt-status-dot{background:#12B76A}
+#tab-ai .ai-rpt-status--inactive{background:#F2F4F7;color:#344054}
+#tab-ai .ai-rpt-status--inactive .ai-rpt-status-dot{background:#98A2B3}
+#tab-ai .ai-rpt-audit{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:999px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;white-space:nowrap}
+#tab-ai .ai-rpt-audit--pass{background:#ECFDF3;color:#027A48;border:1px solid #ABEFC6}
+#tab-ai .ai-rpt-audit--fail{background:#FEF3F2;color:#B42318;border:1px solid #FECDCA}
+#tab-ai .ai-rpt-empty-row td{padding:32px 16px;text-align:center;color:#a1a1aa;font-size:14px}
+body.embedded #tab-ai{background:transparent}
 
 /* Panels */
 .panel{background:var(--white);border:1px solid var(--ink-20);border-radius:var(--r)}
@@ -846,6 +925,10 @@ body.embedded #tab-case-detail{background:transparent}
 .msg-hub-bbl-time--in{color:#a1a1aa}
 .msg-hub-bbl-time--out{color:rgba(255,255,255,0.6);text-align:right}
 .msg-hub-composer{padding:12px 14px;border-top:1px solid #f4f4f5;display:flex;align-items:center;gap:8px;background:#fff;flex-shrink:0}
+.msg-channel-badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:999px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;white-space:nowrap}
+.msg-channel--inapp{background:#f4f4f5;color:#52525b}
+.msg-channel--email{background:#EEF4FF;color:#3B5BDB}
+.msg-channel--sms{background:#EDFFFA;color:#0F6E56}
 .msg-hub-composer-input{flex:1;padding:9px 12px;border:1px solid #e4e4e7;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;color:#18181b;outline:none}
 .msg-hub-composer-input:focus{border-color:var(--teal-500)}
 .msg-hub-composer-icon{width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#71717a;border:none;background:transparent;border-radius:6px;flex-shrink:0}
@@ -882,7 +965,7 @@ body.embedded{overflow:hidden}
 body.embedded .dash-layout{height:100vh;overflow:hidden}
 body.embedded .dash-sidebar{display:none}
 body.embedded .dash-main{height:100%;overflow-y:auto}
-body.embedded #dashboard,body.embedded .dash-layout,body.embedded #tab-overview,body.embedded #tab-clients,body.embedded #tab-cases,body.embedded .dash-content{background:transparent}
+body.embedded #dashboard,body.embedded .dash-layout,body.embedded #tab-overview,body.embedded #tab-clients,body.embedded #tab-cases,body.embedded #tab-ai,body.embedded .dash-content{background:transparent}
 body.embedded .msg-hub-body{min-height:420px}
 
 /* Compliance / AI report panels (same as v2) */
@@ -981,13 +1064,15 @@ html.ff-open,body.ff-open{overflow:hidden!important;height:100%}
 #ff-topbar-right{display:flex;align-items:center;gap:16px}
 .ff-topbar-select{font-size:12px;font-weight:600;color:rgba(24,24,27,.5);border:0;background:transparent;outline:none;cursor:pointer;font-family:inherit}
 #ff-save-status{font-size:12px;font-weight:500;min-width:48px}
+#ff-save-status.ff-offline-pill{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;border:1px solid #FCD34D;background:#FFFBEB;color:#B45309;font-size:12px;font-weight:600;min-width:0;line-height:1.2}
+#ff-save-status.ff-offline-pill svg{flex-shrink:0}
 #ff-topbar-count{font-size:12px;color:rgba(24,24,27,.35);font-weight:500}
 .ff-close-btn{width:32px;height:32px;border-radius:8px;border:1px solid #e4e4e7;background:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:15px;color:#71717a;transition:background .15s,color .15s;font-family:inherit;line-height:1}
 .ff-close-btn:hover{background:#f4f4f5;color:#18181b}
 #ff-section-strip{flex:0 0 auto;background:rgba(255,255,255,.95);backdrop-filter:blur(8px);border-bottom:1px solid rgba(228,228,231,.6);overflow-x:auto;scrollbar-width:none;z-index:2;padding-top:0}
 #ff-section-strip::-webkit-scrollbar{display:none}
-.dash-main,.dash-content,.cl-table-panel,.cs-table-panel,.msg-hub-thread-feed,.cd-body,#tab-case-detail,.ov-kanban-section{scrollbar-width:none}
-.dash-main::-webkit-scrollbar,.dash-content::-webkit-scrollbar,.cl-table-panel::-webkit-scrollbar,.cs-table-panel::-webkit-scrollbar,.msg-hub-thread-feed::-webkit-scrollbar,.cd-body::-webkit-scrollbar,#tab-case-detail::-webkit-scrollbar,.ov-kanban-section::-webkit-scrollbar{display:none}
+.dash-main,.dash-content,.cl-table-panel,.cs-table-panel,.ai-rpt-table-panel,.msg-hub-thread-feed,.cd-body,#tab-case-detail,.ov-kanban-section{scrollbar-width:none}
+.dash-main::-webkit-scrollbar,.dash-content::-webkit-scrollbar,.cl-table-panel::-webkit-scrollbar,.cs-table-panel::-webkit-scrollbar,.ai-rpt-table-panel::-webkit-scrollbar,.msg-hub-thread-feed::-webkit-scrollbar,.cd-body::-webkit-scrollbar,#tab-case-detail::-webkit-scrollbar,.ov-kanban-section::-webkit-scrollbar{display:none}
 #ff-section-inner{display:flex;align-items:center;padding:32px 56px 40px 24px;width:max-content;min-width:100%;justify-content:center}
 .ff-sg{display:flex;align-items:center}
 .ff-sg-pill{display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:99px;font-size:11px;font-weight:700;transition:all .3s;white-space:nowrap;user-select:none}
@@ -1027,9 +1112,11 @@ html.ff-open,body.ff-open{overflow:hidden!important;height:100%}
 .ff-req{color:#f87171;margin-left:2px}
 .ff-box-wrap{display:flex;align-items:center;height:40px;border-radius:10px;border:1px solid #e4e4e7;background:#fff;overflow:hidden;transition:border-color .2s,box-shadow .2s}
 .ff-box-wrap:focus-within{border-color:#0F6E56;box-shadow:0 0 0 3px rgba(15,110,86,.12)}
+.ff-box-wrap.ff-invalid{border-color:#DC2626;box-shadow:0 0 0 3px rgba(220,38,38,.12)}
 .ff-box-pfx{padding:0 12px;font-size:13px;font-weight:600;color:#71717a;border-right:1px solid #e4e4e7;background:#f4f4f5;height:100%;display:flex;align-items:center;flex-shrink:0}
 .ff-box-input{flex:1;padding:0 12px;font-size:13px;background:transparent;border:0;outline:none;color:#18181b;font-family:inherit;width:100%}
 .ff-box-input::placeholder{color:#a1a1aa}
+.ff-field-error{margin-top:6px;font-size:12px;font-weight:600;color:#DC2626}
 .ff-box-select{width:100%;height:40px;padding:0 36px 0 12px;font-size:13px;border-radius:10px;border:1px solid #e4e4e7;background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236B7280' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") no-repeat right 12px center;color:#18181b;outline:none;cursor:pointer;appearance:none;font-family:inherit;transition:border-color .2s,box-shadow .2s}
 .ff-box-select:focus{border-color:#0F6E56;box-shadow:0 0 0 3px rgba(15,110,86,.12)}
 .ff-pills-wrap{display:flex;flex-wrap:wrap;gap:8px}
@@ -1129,6 +1216,85 @@ html.ff-open,body.ff-open{overflow:hidden!important;height:100%}
 .ff-comp-reset{padding:12px 24px;background:#0F6E56;color:#fff;border-radius:12px;border:0;font-size:14px;font-weight:600;cursor:pointer;transition:background .15s;font-family:inherit;box-shadow:0 2px 4px rgba(15,110,86,.2)}
 .ff-comp-reset:hover{background:rgba(15,110,86,.9)}
 .ff-rate-section-lbl{font-size:13px;font-weight:600;color:#71717a;margin-bottom:8px}
+.ff-state-banner{display:flex;align-items:flex-start;gap:10px;margin:0 0 14px 26px;padding:12px 14px;border-radius:14px;border:1px solid #F5D38E;background:#FFF8E8;color:#B45309;max-width:672px}
+.ff-state-banner svg{width:18px;height:18px;flex-shrink:0;margin-top:1px}
+.ff-state-banner strong{display:block;font-size:16px;font-family:'Syne',sans-serif;font-weight:700;color:#92400E;margin-bottom:2px}
+.ff-state-banner span{font-size:13px;line-height:1.5}
+.ff-inline-error{display:flex;align-items:center;gap:6px;margin:10px 0 0 26px;font-size:14px;font-weight:600;color:#DC2626}
+.ff-inline-error svg{width:14px;height:14px;flex-shrink:0}
+.ff-floating-alert{position:fixed;right:22px;bottom:260px;z-index:590;display:flex;align-items:center;gap:8px;border-radius:999px;padding:10px 14px;border:1px solid transparent;box-shadow:0 10px 30px rgba(24,24,27,.16);font-size:13px;font-weight:700}
+.ff-floating-alert svg{width:14px;height:14px;flex-shrink:0}
+.ff-mini-spinner{width:12px;height:12px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;display:inline-block;animation:spin .8s linear infinite}
+.ff-floating-alert.ff-floating-alert--amber{background:#EF9F27;border-color:transparent;color:#fff}
+.ff-floating-alert.ff-floating-alert--red{background:#DC2626;border-color:transparent;color:#fff;animation:ff-alert-beep 1.1s ease-in-out infinite}
+@keyframes ff-alert-beep{0%{opacity:.45}50%{opacity:1}100%{opacity:.45}}
+.ff-state-toast{position:fixed;z-index:590;background:#fff;border-radius:14px;border:1px solid #e4e4e7;box-shadow:0 18px 40px rgba(24,24,27,.14);width:min(360px,calc(100vw - 24px));padding:14px}
+.ff-state-toast h4{font-size:16px;font-family:'Syne',sans-serif;font-weight:700;color:#18181b;margin:0 0 4px}
+.ff-state-toast p{font-size:13px;line-height:1.45;color:#52525B}
+.ff-state-toast .ff-toast-actions{display:flex;gap:8px;margin-top:12px}
+.ff-state-toast .ff-toast-btn{height:36px;padding:0 12px;border-radius:10px;font-size:13px;font-weight:700;border:1px solid #d4d4d8;background:#fff;color:#52525B;cursor:pointer}
+.ff-state-toast .ff-toast-btn.ff-toast-btn--primary{background:#DC2626;border-color:#DC2626;color:#fff}
+.ff-state-toast .ff-toast-btn.ff-toast-btn--ghost{background:#F8FAFC;border-color:#e2e8f0;color:#0F6E56}
+.ff-state-toast.ff-state-toast--report{left:18px;bottom:18px;border-color:#FECACA;background:#FFF7F7}
+.ff-state-toast.ff-state-toast--report h4{color:#B91C1C}
+.ff-state-toast.ff-state-toast--notif{right:18px;top:90px;border-color:#FDE68A;background:#FFFBEB}
+.ff-state-toast.ff-state-toast--notif h4{color:#B45309}
+.ff-missing-modal-wrap{position:fixed;inset:0;z-index:585;background:rgba(13,31,26,.45);display:flex;align-items:center;justify-content:center;padding:20px}
+.ff-missing-modal{width:min(620px,100%);background:#fff;border-radius:18px;box-shadow:0 24px 60px rgba(24,24,27,.25);overflow:hidden}
+.ff-missing-head{display:flex;justify-content:space-between;gap:10px;padding:18px 20px 12px;border-bottom:1px solid #E4E4E7}
+.ff-missing-head h3{font-family:'Syne',sans-serif;font-size:25px;font-weight:700;color:#18181B}
+.ff-missing-head p{font-size:14px;color:#71717A;margin-top:4px}
+.ff-missing-list{padding:16px 20px;display:flex;flex-direction:column;gap:12px;max-height:360px;overflow:auto}
+.ff-missing-item{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px;border-radius:14px;background:#FFFBEF;border:1px solid #FDE68A}
+.ff-missing-item strong{display:block;font-size:14px;color:#92400E}
+.ff-missing-item span{display:block;font-size:12px;color:#A16207;margin-top:2px}
+.ff-fix-link{font-size:14px;font-weight:700;color:#0F6E56;background:none;border:none;cursor:pointer;white-space:nowrap}
+.ff-missing-foot{padding:14px 20px;border-top:1px solid #E4E4E7;display:flex;justify-content:space-between;align-items:center;gap:10px}
+.ff-missing-foot p{font-size:13px;color:#71717A}
+.ff-review-later{height:36px;padding:0 14px;border-radius:999px;border:0;background:#E4E4E7;color:#71717A;font-size:13px;font-weight:700}
+.ff-upload-modal-wrap{position:fixed;inset:0;z-index:584;background:rgba(13,31,26,.35);display:flex;align-items:center;justify-content:center;padding:20px}
+.ff-upload-modal{width:min(480px,100%);background:#fff;border-radius:16px;box-shadow:0 24px 60px rgba(24,24,27,.2);overflow:hidden;font-family:'DM Sans',sans-serif}
+.ff-upload-head{padding:18px 20px 16px;border-bottom:1px solid #E4E4E7;display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.ff-upload-head-main{display:flex;align-items:flex-start;gap:12px;min-width:0}
+.ff-upload-head-ico{width:40px;height:40px;border-radius:50%;background:#E1F5EE;display:flex;align-items:center;justify-content:center;color:#0F6E56;flex-shrink:0}
+.ff-upload-head-ico svg{width:18px;height:18px}
+.ff-upload-head h3{font-size:16px;font-family:'Syne',sans-serif;font-weight:700;color:#18181B;line-height:1.25;margin:0}
+.ff-upload-head p{font-size:13px;color:#71717A;line-height:1.5;margin:4px 0 0}
+.ff-upload-body{padding:16px 20px 18px}
+.ff-upload-field-label{font-size:11px;font-weight:600;color:#71717A;letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px}
+.ff-upload-select{width:100%;height:40px;border:1px solid #E4E4E7;border-radius:10px;padding:0 12px;font-size:14px;color:#18181B;background:#fff;font-family:inherit;outline:none;cursor:pointer}
+.ff-upload-select:focus{border-color:#0F6E56;box-shadow:0 0 0 3px rgba(15,110,86,.12)}
+.ff-upload-dropzone{margin-top:12px;border-radius:12px;padding:28px 16px;text-align:center;border:2px dashed #D4D4D8;background:#FAFAFA;cursor:pointer;transition:border-color .15s,background .15s}
+.ff-upload-dropzone:hover{border-color:#99DCC5;background:#F7FBF9}
+.ff-upload-dropzone.ff-upload-dropzone--error{border-color:#FCA5A5;background:#FFF1F2;cursor:default}
+.ff-upload-dropzone.ff-upload-dropzone--error:hover{border-color:#FCA5A5;background:#FFF1F2}
+.ff-upload-dropzone.ff-upload-dropzone--warn{border-color:#FCD34D;background:#FFFBEB;cursor:default}
+.ff-upload-dropzone.ff-upload-dropzone--warn:hover{border-color:#FCD34D;background:#FFFBEB}
+.ff-upload-dropzone.ff-upload-dropzone--warn h4{color:#B45309}
+.ff-upload-dropzone.ff-upload-dropzone--warn p{color:#B45309}
+.ff-upload-dropzone.ff-upload-dropzone--amber{border-color:#FCD34D;background:#FFFBEB;cursor:default}
+.ff-upload-dropzone-ico{width:40px;height:40px;border-radius:50%;background:#FEE2E2;color:#DC2626;display:inline-flex;align-items:center;justify-content:center;margin:0 auto 10px}
+.ff-upload-dropzone-ico--neutral{background:#E1F5EE;color:#0F6E56}
+.ff-upload-dropzone-ico--amber{background:#FEF3C7;color:#B45309}
+.ff-upload-dropzone-ico svg{width:20px;height:20px}
+.ff-upload-dropzone h4{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:#18181B;line-height:1.3;margin:0 0 6px}
+.ff-upload-dropzone.ff-upload-dropzone--error h4{color:#B91C1C}
+.ff-upload-dropzone.ff-upload-dropzone--amber h4{color:#B45309}
+.ff-upload-dropzone p{font-size:13px;color:#71717A;line-height:1.45;margin:0}
+.ff-upload-dropzone.ff-upload-dropzone--error p{color:#DC2626}
+.ff-upload-dropzone.ff-upload-dropzone--amber p{color:#B45309}
+.ff-upload-browse{display:inline-flex;align-items:center;gap:6px;margin-top:14px;padding:8px 14px;border-radius:8px;border:0;background:#0F6E56;color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit}
+.ff-upload-cta{display:inline-flex;align-items:center;gap:6px;margin-top:12px;padding:8px 14px;border-radius:8px;border:0;background:#DC2626;color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit}
+.ff-upload-actions{display:flex;justify-content:space-between;align-items:center;margin-top:14px;gap:12px}
+.ff-upload-empty{font-size:12px;color:#A1A1AA}
+.ff-upload-skip{display:inline-flex;align-items:center;gap:6px;height:36px;padding:0 14px;border-radius:8px;border:0;background:#0F6E56;color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap}
+.ff-upload-skip:hover{background:#16856F}
+.ff-upload-float{position:fixed;left:16px;top:50%;transform:translateY(-50%);z-index:586;display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:14px;border:1px solid #99DCC5;background:#EDFFFA;box-shadow:0 10px 24px rgba(15,110,86,.18);cursor:pointer;max-width:240px}
+.ff-upload-float:hover{background:#E1F5EE}
+.ff-upload-float-ico{width:30px;height:30px;border-radius:50%;background:#DDF4EB;display:flex;align-items:center;justify-content:center;color:#0F6E56;flex-shrink:0}
+.ff-upload-float-ico svg{width:15px;height:15px}
+.ff-upload-float-copy strong{display:block;font-size:12px;font-weight:800;color:#0F6E56;line-height:1.2}
+.ff-upload-float-copy span{display:block;font-size:11px;color:#166534;line-height:1.3;margin-top:2px}
 
 /* ── Add New Case button */
 .cs-add-case-btn{display:flex;height:43px;padding:4px 20px;justify-content:center;align-items:center;gap:5.637px;border-radius:32px;background:#0F6E56;color:var(--white);font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;border:none;cursor:pointer;transition:background .2s;white-space:nowrap}
@@ -1309,6 +1475,10 @@ html.ff-open,body.ff-open{overflow:hidden!important;height:100%}
         <svg viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M5 5h6M5 8h2M5 11h2M9 8h2v3H9z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
         Calculators
       </div>
+      <div class="dash-nav-item" onclick="openDashboardRoute('/dashboard/settings')">
+        <svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="2.25" stroke="currentColor" stroke-width="1.5"/><path d="M8 1.5v1.6M8 12.9v1.6M1.5 8h1.6M12.9 8h1.6M3.4 3.4l1.1 1.1M11.5 11.5l1.1 1.1M3.4 12.6l1.1-1.1M11.5 4.5l1.1-1.1" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+        Settings
+      </div>
       <div style="margin-top:auto"></div>
       <div class="sidebar-bottom"><div class="sidebar-plan">Professional</div><div class="sidebar-plan-sub">KO Financials</div></div>
     </aside>
@@ -1316,11 +1486,11 @@ html.ff-open,body.ff-open{overflow:hidden!important;height:100%}
     <main class="dash-main">
 
       <!-- ── OVERVIEW ── -->
-      <div id="tab-overview">
+      <div id="tab-overview" class="">
         <div class="dash-top-strip" aria-hidden="true"></div>
         <div class="dash-greet-section">
           <div class="dash-greet-date" id="dash-overview-date"></div>
-          <div class="dash-greet-name">Good morning, Alex</div>
+          <div class="dash-greet-name" id="dash-greet-name">Good morning, Alex</div>
         </div>
         <div class="dash-content">
           <div class="ov-overview-sections">
@@ -1330,51 +1500,66 @@ html.ff-open,body.ff-open{overflow:hidden!important;height:100%}
             <div class="ov-kpi-card">
               <div class="ov-kpi-top">
                 <div class="ov-kpi-copy">
-                  <div class="ov-kpi-title">Active Clients</div>
-                  <div class="ov-kpi-hint">Solo brokers getting setup</div>
+                  <div class="ov-kpi-title" data-ov-kpi-title>Active Clients</div>
+                  <div class="ov-kpi-hint" data-ov-kpi-hint>Solo brokers getting setup</div>
                 </div>
                 <img class="ov-kpi-icon" src="assets/people-1.svg" width="26" height="26" alt="" />
               </div>
-              <div class="ov-kpi-val">35</div>
-              <div class="ov-kpi-trend">+5 this week</div>
+              <div class="ov-kpi-val" data-ov-kpi-val>35</div>
+              <div class="ov-kpi-trend" data-ov-kpi-trend>+5 this week</div>
             </div>
             <div class="ov-kpi-card ov-kpi-card--cases">
               <div class="ov-kpi-top">
                 <div class="ov-kpi-copy">
-                  <div class="ov-kpi-title">Open cases</div>
-                  <div class="ov-kpi-hint">Across all pipeline stages</div>
+                  <div class="ov-kpi-title" data-ov-kpi-title>Open cases</div>
+                  <div class="ov-kpi-hint" data-ov-kpi-hint>Across all pipeline stages</div>
                 </div>
                 <img class="ov-kpi-icon" src="assets/cases.svg" width="26" height="26" alt="" />
               </div>
-              <div class="ov-kpi-val">11</div>
-              <div class="ov-kpi-trend">+2 this week</div>
+              <div class="ov-kpi-val" data-ov-kpi-val>11</div>
+              <div class="ov-kpi-trend" data-ov-kpi-trend>+2 this week</div>
             </div>
             <div class="ov-kpi-card ov-kpi-card--pipeline">
               <div class="ov-kpi-top">
                 <div class="ov-kpi-copy">
-                  <div class="ov-kpi-title">Pipeline value</div>
-                  <div class="ov-kpi-hint">Volume and value in flight</div>
+                  <div class="ov-kpi-title" data-ov-kpi-title>Pipeline value</div>
+                  <div class="ov-kpi-hint" data-ov-kpi-hint>Volume and value in flight</div>
                 </div>
                 <img class="ov-kpi-icon" src="assets/dashboard-pipeline.svg" width="26" height="26" alt="" />
               </div>
-              <div class="ov-kpi-val">£6,665,000</div>
-              <div class="ov-kpi-trend">+5 this week</div>
+              <div class="ov-kpi-val" data-ov-kpi-val>£6,665,000</div>
+              <div class="ov-kpi-trend" data-ov-kpi-trend>+5 this week</div>
             </div>
             <div class="ov-kpi-card ov-kpi-card--msgs">
               <div class="ov-kpi-top">
                 <div class="ov-kpi-copy">
-                  <div class="ov-kpi-title">Unread messages</div>
-                  <div class="ov-kpi-hint">Needs your attention</div>
+                  <div class="ov-kpi-title" data-ov-kpi-title>Unread messages</div>
+                  <div class="ov-kpi-hint" data-ov-kpi-hint>Needs your attention</div>
                 </div>
                 <img class="ov-kpi-icon" src="assets/chat.svg" width="26" height="26" alt="" />
               </div>
-              <div class="ov-kpi-val">11</div>
-              <div class="ov-kpi-trend"><span style="cursor:pointer;text-decoration:underline" onclick="showTab('messages')">3 from clients ↗</span></div>
+              <div class="ov-kpi-val" data-ov-kpi-val>11</div>
+              <div class="ov-kpi-trend" data-ov-kpi-trend><span style="cursor:pointer;text-decoration:underline" onclick="showTab('messages')">3 from clients ↗</span></div>
             </div>
               </div>
             </div>
 
-            <div class="ov-glass-block ov-pipeline-block">
+            <div class="ov-empty-state" id="ov-empty-state" aria-live="polite">
+              <img class="ov-empty-illus" src="assets/dashboard-empty-illustration.png" alt="" width="280" height="220" />
+              <div class="ov-empty-copy">
+                <h3 class="ov-empty-title">Welcome to your dashboard</h3>
+                <p class="ov-empty-sub">Your overview will appear here once you start adding clients and cases</p>
+              </div>
+              <div class="ov-empty-cta-wrap">
+                <button type="button" class="ov-empty-cta" onclick="requestAddClient()">
+                  <img class="ov-empty-cta-icon" src="assets/fi-sr-user-add.png" alt="" width="20" height="20" />
+                  Add New Client
+                </button>
+              </div>
+            </div>
+
+            <div class="ov-filled-dashboard" id="ov-filled-dashboard">
+            <div class="ov-glass-block ov-pipeline-block ov-mock-only">
             <div class="ov-pipeline-head">
               <div class="ov-pipeline-head-text">
                 <h3 class="ov-pipeline-title">Pipeline at a glance</h3>
@@ -1539,9 +1724,8 @@ html.ff-open,body.ff-open{overflow:hidden!important;height:100%}
               </div>
             </div>
             </div>
-          </div>
 
-          <div class="ov-bottom-row">
+          <div class="ov-bottom-row ov-mock-only">
               <div class="ov-activity-panel">
                 <h3 class="ov-activity-title">Recent activity</h3>
                 <div class="ov-activity-list">
@@ -1612,6 +1796,8 @@ html.ff-open,body.ff-open{overflow:hidden!important;height:100%}
                   </div>
                 </div>
               </div>
+          </div>
+            </div>
           </div>
 
         </div>
@@ -1802,61 +1988,6 @@ html.ff-open,body.ff-open{overflow:hidden!important;height:100%}
             </table>
           </div>
         </div>
-
-        <div class="cl-drawer-root" id="cl-drawer-root" aria-hidden="true">
-          <div class="cl-drawer-overlay" id="cl-drawer-overlay"></div>
-          <aside class="cl-drawer" id="cl-drawer" role="dialog" aria-modal="true" aria-labelledby="cl-drawer-title">
-            <div class="cl-drawer-head">
-              <h2 class="cl-drawer-title" id="cl-drawer-title">New Client</h2>
-              <button type="button" class="cl-drawer-close" id="cl-drawer-close" aria-label="Close">×</button>
-            </div>
-            <form class="cl-drawer-form" id="cl-drawer-form" novalidate>
-              <div class="cl-drawer-field">
-                <label class="cl-drawer-label" for="cl-new-name">Full name</label>
-                <input type="text" class="cl-drawer-input" id="cl-new-name" name="name" placeholder="John Doe" autocomplete="name">
-              </div>
-              <div class="cl-drawer-field">
-                <label class="cl-drawer-label" for="cl-new-email">Email</label>
-                <input type="email" class="cl-drawer-input" id="cl-new-email" name="email" placeholder="name@company.com" autocomplete="email">
-              </div>
-              <div class="cl-drawer-field">
-                <label class="cl-drawer-label" for="cl-new-employment">Employment</label>
-                <select class="cl-drawer-select" id="cl-new-employment" name="employment">
-                  <option value="" disabled selected>Select employment</option>
-                  <option value="self-employed">Self-employed</option>
-                  <option value="employed">Employed</option>
-                  <option value="director">Director</option>
-                  <option value="on-boarding">On-boarding</option>
-                </select>
-              </div>
-              <div class="cl-drawer-field">
-                <label class="cl-drawer-label" for="cl-new-income">Annual Income</label>
-                <input type="text" class="cl-drawer-input" id="cl-new-income" name="income" placeholder="e.g. £72,000">
-              </div>
-              <div class="cl-drawer-field">
-                <label class="cl-drawer-label" for="cl-new-adviser">Adviser</label>
-                <select class="cl-drawer-select" id="cl-new-adviser" name="adviser">
-                  <option value="" disabled selected>Select adviser</option>
-                  <option value="alex-morgan">Alex Morgan</option>
-                  <option value="sera-bach">Sera Bach</option>
-                  <option value="richard-chan">Richard Chan</option>
-                </select>
-              </div>
-              <div class="cl-drawer-field">
-                <label class="cl-drawer-label" for="cl-new-status">Status</label>
-                <select class="cl-drawer-select" id="cl-new-status" name="status">
-                  <option value="prospect" selected>Prospect</option>
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
-                </select>
-              </div>
-              <div class="cl-drawer-actions">
-                <button type="submit" class="cl-drawer-create" id="cl-drawer-create">Create Client</button>
-                <button type="button" class="cl-drawer-cancel" id="cl-drawer-cancel">Cancel</button>
-              </div>
-            </form>
-          </aside>
-        </div>
       </div>
 
       <!-- ── CASES ── -->
@@ -2010,7 +2141,7 @@ html.ff-open,body.ff-open{overflow:hidden!important;height:100%}
           <!-- Page heading -->
           <div>
             <h1 class="msg-hub-title">Messages Hub</h1>
-            <p class="msg-hub-subtitle">All client and lender communications in one place.</p>
+            <p class="msg-hub-subtitle">In-app, email, and SMS — all client and lender communications in one place.</p>
           </div>
           <!-- Stats row -->
           <div class="msg-hub-stats">
@@ -2062,6 +2193,7 @@ html.ff-open,body.ff-open{overflow:hidden!important;height:100%}
                   </button>
                 </div>
                 <div class="msg-hub-filter-row">
+                  <select class="msg-hub-filter" id="msg-hub-filter-channel"><option value="">All channels</option><option value="IN_APP">In-app</option><option value="EMAIL">Email</option><option value="SMS">SMS</option></select>
                   <select class="msg-hub-filter"><option>All types</option><option>Client</option><option>Lender</option><option>System</option></select>
                   <select class="msg-hub-filter"><option>All statuses</option><option>Unread</option><option>Read</option><option>Action required</option></select>
                   <select class="msg-hub-filter"><option>All stages</option><option>Enquiry</option><option>Fact-Find</option><option>Research</option><option>DIP</option><option>Offer</option></select>
@@ -2196,93 +2328,119 @@ html.ff-open,body.ff-open{overflow:hidden!important;height:100%}
 
       <!-- ── AI REPORTS ── -->
       <div id="tab-ai" class="hidden">
-        <div class="dash-topbar">
-          <div class="dash-topbar-title">AI Report Generation</div>
-          <div class="dash-topbar-actions"><span class="ai-badge">✍️ Powered by Claude AI</span></div>
-        </div>
-        <div class="dash-content">
-          <div class="panel">
-            <div class="panel-body" style="padding:14px 20px;display:flex;align-items:center;gap:14px">
-              <div style="font-size:12px;font-weight:600;color:var(--ink-60)">Case</div>
-              <select style="padding:7px 12px;border:1px solid var(--ink-20);border-radius:6px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--ink);background:var(--white);flex:1;max-width:340px"><option>M. Chen — BTL Purchase · KOF-0313</option><option>J. Patel — Purchase · KOF-0312</option><option>S. Williams — Remortgage · KOF-0311</option></select>
-              <div style="font-size:12px;color:var(--ink-60)">Status:</div>
-              <span class="status s-pending">Draft generated</span>
+        <div class="dash-content ai-rpt-content">
+          <div class="ai-rpt-page-head">
+            <div>
+              <h1 class="ai-rpt-title">AI Reports</h1>
+              <p class="ai-rpt-subtitle" id="ai-rpt-subtitle">8 of 8 clients</p>
+            </div>
+            <button type="button" class="ai-rpt-btn-new" id="ai-rpt-btn-new" onclick="openClDrawer()">New Client +</button>
+          </div>
+
+          <div class="ov-kpi-row">
+            <div class="ov-kpi-card">
+              <div class="ov-kpi-top">
+                <div class="ov-kpi-copy">
+                  <div class="ov-kpi-title">Total Reports</div>
+                  <div class="ov-kpi-hint">Across all client pipelines</div>
+                </div>
+                <img class="ov-kpi-icon" src="assets/smart_toy.svg" width="26" height="26" alt="" />
+              </div>
+              <div class="ov-kpi-val" id="ai-rpt-stat-total">35</div>
+              <div class="ov-kpi-trend" aria-hidden="true">&nbsp;</div>
+            </div>
+            <div class="ov-kpi-card ov-kpi-card--msgs">
+              <div class="ov-kpi-top">
+                <div class="ov-kpi-copy">
+                  <div class="ov-kpi-title">FCA Red Flags</div>
+                  <div class="ov-kpi-hint">Section markers flagged OK</div>
+                </div>
+                <img class="ov-kpi-icon" src="assets/cases.svg" width="26" height="26" alt="" />
+              </div>
+              <div class="ov-kpi-val" id="ai-rpt-stat-flags">11</div>
+              <div class="ov-kpi-trend" aria-hidden="true">&nbsp;</div>
             </div>
           </div>
-          <div class="report-layout">
-            <div style="display:flex;flex-direction:column;gap:12px">
-              <div class="panel">
-                <div class="panel-head"><span class="panel-title">Report type</span></div>
-                <div class="panel-body" style="padding:10px 12px">
-                  <div class="template-list">
-                    <div class="template-item" onclick="selectTemplate(this)">First-time buyer <span class="tmpl-badge">MVP</span></div>
-                    <div class="template-item active" onclick="selectTemplate(this)">Buy-to-let <span class="tmpl-badge">MVP</span></div>
-                    <div class="template-item" onclick="selectTemplate(this)">Remortgage <span class="tmpl-badge">MVP</span></div>
-                    <div class="template-item" onclick="selectTemplate(this)">Home mover <span class="tmpl-badge">MVP</span></div>
-                    <div class="template-item" onclick="selectTemplate(this)">Product transfer <span class="tmpl-badge">MVP</span></div>
-                    <div class="template-item" onclick="selectTemplate(this)">Divorce/separation <span class="tmpl-badge">MVP</span></div>
-                    <div class="template-item" onclick="selectTemplate(this)">Self-employed income <span class="tmpl-badge">MVP</span></div>
-                    <div class="template-item" style="border-top:1px solid var(--ink-08);margin-top:4px;padding-top:10px" onclick="selectTemplate(this)">Vulnerable customer overlay <span class="tmpl-badge">MVP</span></div>
-                    <div class="template-item" style="opacity:.5;pointer-events:none">Equity release <span class="tmpl-phase">Phase 2</span></div>
-                  </div>
-                </div>
-              </div>
-              <div class="panel">
-                <div class="panel-head"><span class="panel-title">Data sources</span></div>
-                <div class="panel-body">
-                  <div class="data-check">
-                    <div class="data-check-row"><div class="check-icon check-pass">✓</div><span>Fact-find complete</span></div>
-                    <div class="data-check-row"><div class="check-icon check-pass">✓</div><span>Income verified</span></div>
-                    <div class="data-check-row"><div class="check-icon check-pass">✓</div><span>Products considered (4)</span></div>
-                    <div class="data-check-row"><div class="check-icon check-pass">✓</div><span>Product selected</span></div>
-                    <div class="data-check-row"><div class="check-icon check-warn">!</div><span style="color:#7a4e08">Vulnerability check — review</span></div>
-                  </div>
-                  <div style="border-top:1px solid var(--ink-08);padding-top:12px;margin-top:4px">
-                    <div style="font-size:11px;font-weight:600;color:var(--ink-60);margin-bottom:8px">Notify client on approval</div>
-                    <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer"><input type="checkbox" checked style="accent-color:var(--teal-500)"> Email suitability report</label>
-                    <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;margin-top:5px"><input type="checkbox" style="accent-color:var(--teal-500)"> SMS summary</label>
-                  </div>
-                </div>
-              </div>
+
+          <div class="ai-rpt-toolbar">
+            <div class="ai-rpt-search-wrap">
+              <input type="search" class="ai-rpt-search" id="ai-rpt-search" placeholder="Search clients, cases references." aria-label="Search reports">
+              <svg class="ai-rpt-search-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"/><path d="M20 20l-3-3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
             </div>
-            <div style="display:flex;flex-direction:column;gap:12px">
-              <div class="panel">
-                <div class="panel-head"><span class="panel-title">Product selection record</span><span style="font-size:11px;color:var(--ink-60)">Recorded manually</span></div>
-                <div class="panel-body">
-                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
-                    <div class="product-field"><label>Selected lender</label><input type="text" value="Halifax"></div>
-                    <div class="product-field"><label>Product name</label><input type="text" value="BTL Fixed 2yr — HBTL224"></div>
-                    <div class="product-field"><label>Initial rate</label><input type="text" value="4.89%"></div>
-                    <div class="product-field"><label>Monthly payment</label><input type="text" value="£1,811 (interest only)"></div>
-                  </div>
-                  <div class="product-field"><label>Adviser research notes</label><textarea>Marcus Chen has been a property investor for 3 years. Halifax selected on lowest total cost of credit, acceptance of 2-year SA302, and client preference for 2-year fixed rate.</textarea></div>
-                </div>
-              </div>
-              <div class="panel">
-                <div class="panel-head"><span class="panel-title">Generated report draft</span><div style="display:flex;gap:8px;align-items:center"><span style="font-size:11px;color:var(--ink-60)">Generated 09:47 · claude-sonnet-4-6</span><button class="btn btn-ghost btn-sm" style="color:var(--ink);background:var(--surface);border:1px solid var(--ink-20)" onclick="triggerGenerate()">↻ Regenerate all</button></div></div>
-                <div class="panel-body" id="report-body">
-                  <div id="generating-state" style="display:none"><div style="display:flex;flex-direction:column;align-items:center;padding:60px 20px;gap:16px"><div class="spinner"></div><div style="font-size:13px;color:var(--ink-60)" id="gen-step-label">Extracting fact-find data…</div></div></div>
-                  <div id="report-sections">
-                    <div class="report-section"><div class="report-section-head" onclick="toggleSection(this)"><span class="rs-title">1. Client introduction</span><div class="rs-actions"><span class="rs-flag rs-flag-green">✓ Compliant</span><button class="rs-btn regen" onclick="event.stopPropagation()">↻ Regen</button><button class="rs-btn" onclick="event.stopPropagation();openEditor('Section 1 — Client introduction','Marcus Chen (38) is a self-employed software consultant operating through MC Tech Solutions Ltd, where he holds 100% of shares. He has been trading for 3 years, with income verified through SA302 documents and company accounts.')">Edit</button></div></div><div class="report-section-body">Marcus Chen (38) is a self-employed software consultant operating through his limited company, MC Tech Solutions Ltd. He has been trading for 3 years, with annual income verified through SA302 documents provided by his accountant, Edward Lawson FCA.<br><br>Marcus is purchasing an investment property at 14 Beech Grove, Manchester M14 7QR. This is his second buy-to-let property.</div></div>
-                    <div class="report-section"><div class="report-section-head" onclick="toggleSection(this)"><span class="rs-title">2. Property details</span><div class="rs-actions"><span class="rs-flag rs-flag-green">✓ Compliant</span><button class="rs-btn regen" onclick="event.stopPropagation()">↻ Regen</button><button class="rs-btn" onclick="event.stopPropagation()">Edit</button></div></div><div class="report-section-body collapsed">Three-bedroom semi-detached house, Manchester M14 7QR. Purchase price £445,000, estimated value £635,000, LTV 70.1%. Expected rental income £2,200/month confirmed by local letting agent.</div></div>
-                    <div class="report-section"><div class="report-section-head" onclick="toggleSection(this)"><span class="rs-title">3. BTL affordability assessment</span><div class="rs-actions"><span class="rs-flag rs-flag-amber">⚠ Review</span><button class="rs-btn regen" onclick="event.stopPropagation()">↻ Regen</button><button class="rs-btn" onclick="event.stopPropagation()">Edit</button></div></div><div class="report-section-body collapsed">ICR stress test requires £2,958/month rental; projected £2,200/month. Top-slicing applies as Marcus's personal income exceeds £75,000 p.a. Total assessed income supports borrowing requested.</div></div>
-                    <div class="report-section"><div class="report-section-head" onclick="toggleSection(this)"><span class="rs-title">4. Product research & recommendation</span><div class="rs-actions"><span class="rs-flag rs-flag-green">✓ Compliant</span><button class="rs-btn regen" onclick="event.stopPropagation()">↻ Regen</button><button class="rs-btn" onclick="event.stopPropagation()">Edit</button></div></div><div class="report-section-body collapsed">Four products considered. Halifax HBTL224 (4.89%, 2yr fixed) selected: lowest total cost, accepts 2-year SA302, meets client's preference for rate certainty. Three alternatives reviewed and not recommended.</div></div>
-                    <div class="report-section"><div class="report-section-head" onclick="toggleSection(this)"><span class="rs-title">5. Risks & consumer duty statement</span><div class="rs-actions"><span class="rs-flag rs-flag-green">✓ Compliant</span><button class="rs-btn regen" onclick="event.stopPropagation()">↻ Regen</button><button class="rs-btn" onclick="event.stopPropagation()">Edit</button></div></div><div class="report-section-body collapsed">Risks discussed: rate risk at reversion, void periods, regulatory changes. Consumer Duty: product meets Marcus's needs, provides fair value, adviser satisfied client understands all risks.</div></div>
-                  </div>
-                  <div class="compliance-checks" style="margin-top:4px">
-                    <div style="font-size:11px;font-weight:700;color:var(--ink-60);letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px">Pre-finalisation checks</div>
-                    <div class="cc-row"><span style="font-size:13px">✅</span><span>All sections populated · Consumer Duty language present</span></div>
-                    <div class="cc-row"><span style="font-size:13px">✅</span><span>4 products considered and documented</span></div>
-                    <div class="cc-row"><span style="font-size:13px">⚠️</span><span style="color:#7a4e08">Section 3 — ICR top-slicing: adviser review recommended</span></div>
-                  </div>
-                  <div style="display:flex;gap:8px;margin-top:14px">
-                    <button class="btn btn-primary" style="flex:1" onclick="alert('Report approved. PDF generation queued. Client notification scheduled.')">Approve & finalise</button>
-                    <button class="btn btn-ghost btn-sm" style="color:var(--ink);background:var(--surface);border:1px solid var(--ink-20)">Export draft PDF</button>
-                    <button class="btn btn-ghost btn-sm" style="color:#185FA5;background:var(--c-enquiry-bg);border:1px solid var(--c-enquiry-border)" onclick="showTab('messages')">💬 Message client</button>
-                  </div>
-                </div>
-              </div>
+            <select class="ai-rpt-template-select" id="ai-rpt-template-filter" aria-label="Mortgage template">
+              <option value="">Mortgage Template</option>
+              <option value="REMORTGAGE">Remortgage</option>
+              <option value="FTB">First-time buyer</option>
+              <option value="BTL">Buy-to-let</option>
+              <option value="HOME_MOVER">Home mover</option>
+              <option value="PRODUCT_TRANSFER">Product transfer</option>
+              <option value="DIVORCE">Divorce/separation</option>
+              <option value="SELF_EMPLOYED">Self-employed</option>
+              <option value="VULNERABLE_OVERLAY">Vulnerable overlay</option>
+            </select>
+          </div>
+
+          <div class="ai-rpt-table-panel">
+            <div class="ai-rpt-table-actions">
+              <button type="button" class="ai-rpt-tool-btn" aria-label="Delete selected">
+                <svg viewBox="0 0 16 16" fill="none"><path d="M3 4h10M6 4V3h4v1M5 4v8h6V4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                Delete
+              </button>
+              <button type="button" class="ai-rpt-tool-btn" aria-label="Filters">
+                <svg viewBox="0 0 16 16" fill="none"><path d="M2 4h12M4 8h8M6 12h4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+                Filters
+              </button>
+              <button type="button" class="ai-rpt-tool-btn" aria-label="Export">
+                <svg viewBox="0 0 16 16" fill="none"><path d="M8 2v8M5 7l3 3 3-3M3 12v2h10v-2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                Export
+              </button>
             </div>
+            <table class="ai-rpt-table">
+              <thead>
+                <tr>
+                  <th class="ai-rpt-col-check"><input type="checkbox" class="ai-rpt-checkbox" id="ai-rpt-select-all" aria-label="Select all reports"></th>
+                  <th class="ai-rpt-th-sort"><span class="ai-rpt-th-sort-inner">Client <svg class="ai-rpt-sort-icon" viewBox="0 0 10 10" fill="none"><path d="M2 4l3 3 3-3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></span></th>
+                  <th class="ai-rpt-th-sort"><span class="ai-rpt-th-sort-inner">Case Code <svg class="ai-rpt-sort-icon" viewBox="0 0 10 10" fill="none"><path d="M2 4l3 3 3-3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></span></th>
+                  <th class="ai-rpt-th-sort"><span class="ai-rpt-th-sort-inner">Template Classification <svg class="ai-rpt-sort-icon" viewBox="0 0 10 10" fill="none"><path d="M2 4l3 3 3-3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></span></th>
+                  <th class="ai-rpt-th-sort"><span class="ai-rpt-th-sort-inner">Status <svg class="ai-rpt-sort-icon" viewBox="0 0 10 10" fill="none"><path d="M2 4l3 3 3-3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></span></th>
+                  <th class="ai-rpt-th-sort"><span class="ai-rpt-th-sort-inner">Red Flags / Audit <svg class="ai-rpt-sort-icon" viewBox="0 0 10 10" fill="none"><path d="M2 4l3 3 3-3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></span></th>
+                </tr>
+              </thead>
+              <tbody id="ai-rpt-table-body">
+                <tr data-ai-rpt-row data-template="REMORTGAGE" data-search="helena whitfield helena@whitfield.co koc-2025-0001 remortgage">
+                  <td class="ai-rpt-col-check"><input type="checkbox" class="ai-rpt-checkbox ai-rpt-row-cb" checked aria-label="Select Helena Whitfield"></td>
+                  <td><div class="ai-rpt-client-name">Helena Whitfield</div><div class="ai-rpt-client-email">helena@whitfield.co</div></td>
+                  <td class="ai-rpt-cell-muted">KOC-2025-0001</td>
+                  <td class="ai-rpt-cell-muted">Remortgage</td>
+                  <td><span class="ai-rpt-status ai-rpt-status--finished"><span class="ai-rpt-status-dot"></span>Finished</span></td>
+                  <td><span class="ai-rpt-audit ai-rpt-audit--pass">✓ Pass</span></td>
+                </tr>
+                <tr data-ai-rpt-row data-template="HOME_MOVER" data-search="bolu oyinloye bolu@sampletext.com koc-2025-00034 home">
+                  <td class="ai-rpt-col-check"><input type="checkbox" class="ai-rpt-checkbox ai-rpt-row-cb" checked aria-label="Select Bolu Oyinloye"></td>
+                  <td><div class="ai-rpt-client-name">Bolu Oyinloye</div><div class="ai-rpt-client-email">bolu@sampletext.com</div></td>
+                  <td class="ai-rpt-cell-muted">KOC-2025-00034</td>
+                  <td class="ai-rpt-cell-muted">Home</td>
+                  <td><span class="ai-rpt-status ai-rpt-status--active"><span class="ai-rpt-status-dot"></span>Active</span></td>
+                  <td><span class="ai-rpt-audit ai-rpt-audit--fail">× Fail</span></td>
+                </tr>
+                <tr data-ai-rpt-row data-template="BTL" data-search="jennifer blackburn jennifer@sampletext.com koc-2025-0003 buy-to-let">
+                  <td class="ai-rpt-col-check"><input type="checkbox" class="ai-rpt-checkbox ai-rpt-row-cb" aria-label="Select Jennifer Blackburn"></td>
+                  <td><div class="ai-rpt-client-name">Jennifer Blackburn</div><div class="ai-rpt-client-email">jennifer@sampletext.com</div></td>
+                  <td class="ai-rpt-cell-muted">KOC-2025-0003</td>
+                  <td class="ai-rpt-cell-muted">Buy-to-let</td>
+                  <td><span class="ai-rpt-status ai-rpt-status--active"><span class="ai-rpt-status-dot"></span>Active</span></td>
+                  <td><span class="ai-rpt-status ai-rpt-status--active"><span class="ai-rpt-status-dot"></span>Active</span></td>
+                </tr>
+                <tr data-ai-rpt-row data-template="FTB" data-search="teresa kang teresa@sampletext.com koc-2025-0005 first-time buyer">
+                  <td class="ai-rpt-col-check"><input type="checkbox" class="ai-rpt-checkbox ai-rpt-row-cb" aria-label="Select Teresa Kang"></td>
+                  <td><div class="ai-rpt-client-name">Teresa Kang</div><div class="ai-rpt-client-email">teresa@sampletext.com</div></td>
+                  <td class="ai-rpt-cell-muted">KOC-2025-0005</td>
+                  <td class="ai-rpt-cell-muted">First-time buyer</td>
+                  <td><span class="ai-rpt-status ai-rpt-status--inactive"><span class="ai-rpt-status-dot"></span>Inactive</span></td>
+                  <td><span class="ai-rpt-status ai-rpt-status--inactive"><span class="ai-rpt-status-dot"></span>Inactive</span></td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
@@ -2320,6 +2478,88 @@ html.ff-open,body.ff-open{overflow:hidden!important;height:100%}
       </div>
 
     </main>
+
+    <!-- New Client slide-over — global so it works from overview empty state too -->
+    <div class="cl-drawer-root" id="cl-drawer-root" aria-hidden="true">
+      <div class="cl-drawer-overlay" id="cl-drawer-overlay"></div>
+      <aside class="cl-drawer" id="cl-drawer" role="dialog" aria-modal="true" aria-labelledby="cl-drawer-title">
+        <div class="cl-drawer-head">
+          <h2 class="cl-drawer-title" id="cl-drawer-title">New Client</h2>
+          <button type="button" class="cl-drawer-close" id="cl-drawer-close" aria-label="Close">×</button>
+        </div>
+        <form class="cl-drawer-form" id="cl-drawer-form" novalidate>
+          <div class="cl-drawer-field">
+            <span class="cl-drawer-label">Client type</span>
+            <div class="cl-drawer-type-grid" role="group" aria-label="Client type">
+              <button type="button" class="cl-drawer-type-btn is-selected" id="cl-type-individual" data-client-type="INDIVIDUAL" aria-pressed="true">
+                <span class="cl-drawer-type-label">Individual</span>
+                <span class="cl-drawer-type-desc">Personal mortgage client</span>
+              </button>
+              <button type="button" class="cl-drawer-type-btn" id="cl-type-company" data-client-type="COMPANY" aria-pressed="false">
+                <span class="cl-drawer-type-label">Company</span>
+                <span class="cl-drawer-type-desc">Limited company entity</span>
+              </button>
+            </div>
+          </div>
+          <div id="cl-fields-individual">
+            <div class="cl-drawer-field">
+              <label class="cl-drawer-label" for="cl-new-name">Full name</label>
+              <input type="text" class="cl-drawer-input" id="cl-new-name" name="name" placeholder="John Doe" autocomplete="name">
+            </div>
+            <div class="cl-drawer-field">
+              <label class="cl-drawer-label" for="cl-new-employment">Employment</label>
+              <select class="cl-drawer-select" id="cl-new-employment" name="employment">
+                <option value="" disabled selected>Select employment</option>
+                <option value="self-employed">Self-employed</option>
+                <option value="employed">Employed</option>
+                <option value="director">Director</option>
+                <option value="on-boarding">On-boarding</option>
+              </select>
+            </div>
+          </div>
+          <div id="cl-fields-company" class="cl-drawer-section-hidden">
+            <div class="cl-drawer-field">
+              <label class="cl-drawer-label" for="cl-new-company-name">Company name</label>
+              <input type="text" class="cl-drawer-input" id="cl-new-company-name" name="companyName" placeholder="Acme Holdings Ltd" autocomplete="organization">
+            </div>
+            <div class="cl-drawer-field">
+              <label class="cl-drawer-label" for="cl-new-company-number">Company registration number</label>
+              <input type="text" class="cl-drawer-input" id="cl-new-company-number" name="companyNumber" placeholder="12345678">
+            </div>
+          </div>
+          <div class="cl-drawer-field">
+            <label class="cl-drawer-label" for="cl-new-email">Email</label>
+            <input type="email" class="cl-drawer-input" id="cl-new-email" name="email" placeholder="name@company.com" autocomplete="email">
+          </div>
+          <div class="cl-drawer-field">
+            <label class="cl-drawer-label" for="cl-new-income" id="cl-new-income-label">Annual Income</label>
+            <input type="text" class="cl-drawer-input" id="cl-new-income" name="income" placeholder="e.g. £72,000">
+          </div>
+          <div class="cl-drawer-field">
+            <label class="cl-drawer-label" for="cl-new-adviser">Adviser</label>
+            <select class="cl-drawer-select" id="cl-new-adviser" name="adviser">
+              <option value="" disabled selected>Select adviser</option>
+              <option value="alex-morgan">Alex Morgan</option>
+              <option value="sera-bach">Sera Bach</option>
+              <option value="richard-chan">Richard Chan</option>
+            </select>
+          </div>
+          <div class="cl-drawer-field">
+            <label class="cl-drawer-label" for="cl-new-status">Status</label>
+            <select class="cl-drawer-select" id="cl-new-status" name="status">
+              <option value="prospect" selected>Prospect</option>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
+          </div>
+          <p class="cl-drawer-error hidden" id="cl-drawer-error" role="alert"></p>
+          <div class="cl-drawer-actions">
+            <button type="submit" class="cl-drawer-create" id="cl-drawer-create">Create Client</button>
+            <button type="button" class="cl-drawer-cancel" id="cl-drawer-cancel">Cancel</button>
+          </div>
+        </form>
+      </aside>
+    </div>
   </div>
 </div>
 
@@ -2345,13 +2585,80 @@ if (new URLSearchParams(window.location.search).get('embedded') === '1') {
     var months = ['JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE', 'JULY', 'AUGUST', 'SEPTEMBER', 'OCTOBER', 'NOVEMBER', 'DECEMBER'];
     return days[d.getDay()] + ', ' + months[d.getMonth()] + ' ' + d.getDate();
   }
+  function greetingForHour(h) {
+    if (h < 12) return 'Good morning';
+    if (h < 18) return 'Good afternoon';
+    return 'Good evening';
+  }
   function refreshOverviewHeader() {
     var dateEl = document.getElementById('dash-overview-date');
     if (dateEl) dateEl.textContent = formatOverviewDate(new Date());
+    var userName = new URLSearchParams(window.location.search).get('userName');
+    var greetEl = document.getElementById('dash-greet-name');
+    if (greetEl && userName) {
+      greetEl.textContent = greetingForHour(new Date().getHours()) + ', ' + userName;
+    }
   }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', refreshOverviewHeader);
-  else refreshOverviewHeader();
+  var isPersonalDashboard = new URLSearchParams(window.location.search).get('personal') === '1';
+  var overviewEmptyMode =
+    new URLSearchParams(window.location.search).get('overviewEmpty') === '1';
+  function applyPersonalDashboardMode() {
+    var overview = document.getElementById('tab-overview');
+    if (!overview) return;
+    overview.classList.toggle('ov-personal-mode', isPersonalDashboard);
+  }
+  function applyOverviewEmptyMode() {
+    var overview = document.getElementById('tab-overview');
+    if (!overview) return;
+    applyPersonalDashboardMode();
+    overview.classList.toggle('ov-empty-mode', overviewEmptyMode);
+    if (!overviewEmptyMode) return;
+    var emptyHints = document.querySelectorAll('#tab-overview [data-ov-kpi-hint]');
+    for (var i = 0; i < emptyHints.length; i++) emptyHints[i].textContent = 'Solo brokers getting set up';
+    var emptyVals = document.querySelectorAll('#tab-overview [data-ov-kpi-val]');
+    for (var j = 0; j < emptyVals.length; j++) {
+      emptyVals[j].textContent = j === 2 ? '£0' : '0';
+    }
+    var emptyTrends = document.querySelectorAll('#tab-overview [data-ov-kpi-trend]');
+    for (var k = 0; k < emptyTrends.length; k++) emptyTrends[k].textContent = isPersonalDashboard ? '—' : '+6 this week';
+    var titles = document.querySelectorAll('#tab-overview [data-ov-kpi-title]');
+    if (titles[0]) titles[0].textContent = 'Active clients';
+  }
+  function refreshOverview() {
+    refreshOverviewHeader();
+    applyOverviewEmptyMode();
+  }
+  window.koSetOverviewEmpty = function (empty) {
+    overviewEmptyMode = Boolean(empty);
+    applyOverviewEmptyMode();
+  };
+  window.koSetOverviewStats = function (stats) {
+    if (!stats) return;
+    var vals = document.querySelectorAll('#tab-overview [data-ov-kpi-val]');
+    if (vals[0] && stats.clients != null) vals[0].textContent = String(stats.clients);
+    if (vals[1] && stats.cases != null) vals[1].textContent = String(stats.cases);
+    if (vals[2] && stats.pipelineValue) vals[2].textContent = stats.pipelineValue;
+    if (vals[3] && stats.unreadMessages != null) vals[3].textContent = String(stats.unreadMessages);
+  };
+  window.koSetUserGreeting = function (name) {
+    var greetEl = document.getElementById('dash-greet-name');
+    if (greetEl && name) {
+      greetEl.textContent = greetingForHour(new Date().getHours()) + ', ' + name;
+    }
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', refreshOverview);
+  else refreshOverview();
 })();
+function requestAddClient() {
+  if (typeof window.openClDrawer === 'function') {
+    window.openClDrawer();
+    return;
+  }
+  showTab('clients');
+  window.setTimeout(function () {
+    if (typeof window.openClDrawer === 'function') window.openClDrawer();
+  }, 0);
+}
 const initialTabFromQuery = new URLSearchParams(window.location.search).get('tab');
 // ── Case data
 const cases = {
@@ -2648,6 +2955,19 @@ function showTab(t) {
   showView('dashboard');
   if(t==='messages') { document.querySelectorAll('.msg-hub-row').forEach(r=>r.classList.remove('msg-row-active')); const p=document.getElementById('msg-hub-thread'); if(p){p.style.display='none';p.innerHTML='';} }
 }
+function openDashboardRoute(path) {
+  try {
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage({ type: 'ko:navigate', path }, window.location.origin);
+      return;
+    }
+  } catch {}
+  if (String(path).includes('settings')) {
+    window.location.assign('/dashboard?tab=settings');
+    return;
+  }
+  window.location.assign(path);
+}
 function scrollToSection(id) { document.getElementById(id)?.scrollIntoView({behavior:'smooth'}); }
 
 // ── Cases view toggle
@@ -2675,20 +2995,49 @@ function switchCasesView(v) {
 // ── New Case modal logic
 (function() {
   var ncCaseCounter = 8; // starting from KOC-2026-0008
+  var ncCreateRequestId = 0;
+  var isEmbeddedLive =
+    new URLSearchParams(window.location.search).get('liveData') === '1' &&
+    document.body.classList.contains('embedded');
 
   function padNum(n) { return String(n).padStart(4, '0'); }
+
+  function populateNcClients() {
+    var select = document.getElementById('nc-client');
+    if (!select) return;
+    var clients = window.koLiveClients || [];
+    select.innerHTML = '';
+    if (!clients.length) {
+      select.innerHTML = '<option value="">No clients — add a client first</option>';
+      return;
+    }
+    clients.forEach(function (c) {
+      var opt = document.createElement('option');
+      opt.value = c.id;
+      opt.textContent = c.firstName + ' ' + c.lastName + ' - ' + (c.referenceNumber || '');
+      select.appendChild(opt);
+    });
+  }
+
+  function setNcSubmitting(submitting) {
+    var btn = document.querySelector('#nc-modal-overlay .nc-submit-btn');
+    if (!btn) return;
+    btn.disabled = submitting;
+    btn.style.opacity = submitting ? '0.7' : '';
+  }
 
   window.openNewCaseModal = function() {
     var overlay = document.getElementById('nc-modal-overlay');
     if (!overlay) return;
-    // Reset form
-    document.getElementById('nc-client').value = 'sasha';
+    if (isEmbeddedLive) populateNcClients();
+    else document.getElementById('nc-client').value = 'sasha';
     document.getElementById('nc-case-type').value = '';
     document.getElementById('nc-term').value = '0';
     document.getElementById('nc-asset-value').value = '';
     document.getElementById('nc-loan-sum').value = '';
     document.getElementById('nc-purpose-note').value = '';
     document.getElementById('nc-ltv-value').textContent = '0%';
+    setNcSubmitting(false);
     overlay.classList.remove('nc-hidden');
     document.body.style.overflow = 'hidden';
   };
@@ -2706,21 +3055,87 @@ function switchCasesView(v) {
     document.getElementById('nc-ltv-value').textContent = ltv + '%';
   };
 
-  window.submitNewCase = function() {
-    ncCaseCounter++;
-    var ref = 'KOC-2026-' + padNum(ncCaseCounter);
-    var clientSelect = document.getElementById('nc-client');
-    var clientText = clientSelect.options[clientSelect.selectedIndex].text.split(' - ')[0];
+  function showCaseSuccess(ref, clientText) {
     document.getElementById('nc-success-ref').textContent = ref;
     document.getElementById('nc-success-client').textContent = clientText;
-    // close create modal, open success modal
     closeNewCaseModal();
     var successOverlay = document.getElementById('nc-success-overlay');
     if (successOverlay) {
       successOverlay.classList.remove('nc-hidden');
       document.body.style.overflow = 'hidden';
     }
+  }
+
+  function submitNewCaseLive() {
+    var clientId = document.getElementById('nc-client').value;
+    var typeKey = document.getElementById('nc-case-type').value;
+    var termRaw = parseInt(document.getElementById('nc-term').value, 10);
+    var propertyValue = parseFloat(document.getElementById('nc-asset-value').value) || undefined;
+    var loanAmount = parseFloat(document.getElementById('nc-loan-sum').value) || undefined;
+    var typeMap = {
+      residential: 'PURCHASE',
+      btl: 'BTL',
+      remortgage: 'REMORTGAGE',
+      bridge: 'PURCHASE',
+      commercial: 'PURCHASE',
+    };
+
+    if (!clientId) {
+      alert('Please select a client. Create a client first if the list is empty.');
+      return;
+    }
+    if (!typeKey || !typeMap[typeKey]) {
+      alert('Please select a case type.');
+      return;
+    }
+
+    ncCreateRequestId += 1;
+    var requestId = ncCreateRequestId;
+    setNcSubmitting(true);
+    window.parent.postMessage(
+      {
+        type: 'ko:create-case',
+        requestId: requestId,
+        payload: {
+          clientId: clientId,
+          type: typeMap[typeKey],
+          propertyValue: propertyValue,
+          loanAmount: loanAmount,
+          termYears: termRaw > 0 ? termRaw : undefined,
+        },
+      },
+      window.location.origin,
+    );
+  }
+
+  window.submitNewCase = function() {
+    if (isEmbeddedLive) {
+      submitNewCaseLive();
+      return;
+    }
+    ncCaseCounter++;
+    var ref = 'KOC-2026-' + padNum(ncCaseCounter);
+    var clientSelect = document.getElementById('nc-client');
+    var clientText = clientSelect.options[clientSelect.selectedIndex].text.split(' - ')[0];
+    showCaseSuccess(ref, clientText);
   };
+
+  window.addEventListener('message', function (event) {
+    if (event.origin !== window.location.origin) return;
+    var data = event.data;
+    if (!data || data.type !== 'ko:create-case-result') return;
+    if (data.requestId !== ncCreateRequestId) return;
+    setNcSubmitting(false);
+    if (data.success && data.case) {
+      showCaseSuccess(
+        data.case.referenceNumber,
+        data.clientName || 'Client',
+      );
+      if (typeof showTab === 'function') showTab('cases');
+      return;
+    }
+    alert(data.error || 'Could not create case. Please try again.');
+  });
 
   window.closeSuccessModal = function() {
     var overlay = document.getElementById('nc-success-overlay');
@@ -3118,7 +3533,7 @@ function renderCaseReportGeneratedHtml(c, id, state) {
             <p class="cd-rpt-ai-banner-title">Your AI report</p>
             <p class="cd-rpt-ai-banner-sub">Model Instance: Gemini 1.5 Flash (Pay-per-case credits offset)</p>
           </div>
-          <img src="assets/258726584_9c50a840-de4e-4d0e-b4d3-3d10c7e73295 1 (1).png" class="cd-rpt-ai-banner-img" alt="AI Report">
+          <img src="/marketing/258726584_9c50a840-de4e-4d0e-b4d3-3d10c7e73295%201%20(1).png" class="cd-rpt-ai-banner-img" alt="AI Report">
         </div>
         <div id="cd-rpt-sections-${id}">${sectionsHtml}</div>
       </div>
@@ -3525,10 +3940,74 @@ function openEditor(title,content) {
 function closeEditor() { document.getElementById('section-editor').classList.remove('open'); }
 function triggerGenerate() {
   const sec=document.getElementById('report-sections'), gen=document.getElementById('generating-state'), lbl=document.getElementById('gen-step-label');
+  if (!sec || !gen || !lbl) return;
   const steps=['Extracting fact-find data…','Selecting template…','Generating narratives…','Applying compliance checks…','Done'];
   sec.style.display='none'; gen.style.display='block'; let i=0; lbl.textContent=steps[0];
   const iv=setInterval(()=>{ i++; if(i<steps.length){lbl.textContent=steps[i];}else{clearInterval(iv);gen.style.display='none';sec.style.display='block';}},600);
 }
+
+// AI Reports hub table — search, template filter, row selection
+(function initAiReportsTable() {
+  const tab = document.getElementById('tab-ai');
+  if (!tab) return;
+
+  const selectAll = document.getElementById('ai-rpt-select-all');
+  const searchInput = document.getElementById('ai-rpt-search');
+  const templateFilter = document.getElementById('ai-rpt-template-filter');
+  const tbody = document.getElementById('ai-rpt-table-body');
+  if (!tbody) return;
+
+  const allRows = () => Array.from(tbody.querySelectorAll('[data-ai-rpt-row]'));
+  const visibleRows = () => allRows().filter((tr) => !tr.classList.contains('ai-rpt-row-hidden'));
+  const visibleCbs = () => visibleRows().map((tr) => tr.querySelector('.ai-rpt-row-cb')).filter(Boolean);
+
+  let emptyRow = tbody.querySelector('[data-ai-rpt-empty]');
+  if (!emptyRow) {
+    emptyRow = document.createElement('tr');
+    emptyRow.setAttribute('data-ai-rpt-empty', '');
+    emptyRow.className = 'ai-rpt-empty-row ai-rpt-row-hidden';
+    emptyRow.innerHTML = '<td colspan="6">No reports match your search.</td>';
+    tbody.appendChild(emptyRow);
+  }
+
+  function applyFilters() {
+    const q = (searchInput?.value || '').trim().toLowerCase();
+    const tpl = templateFilter?.value || '';
+    allRows().forEach((tr) => {
+      const hay = (tr.getAttribute('data-search') || tr.textContent || '').toLowerCase();
+      const rowTpl = tr.getAttribute('data-template') || '';
+      const matchSearch = !q || hay.includes(q);
+      const matchTpl = !tpl || rowTpl === tpl;
+      tr.classList.toggle('ai-rpt-row-hidden', !(matchSearch && matchTpl));
+    });
+    const vis = visibleRows();
+    emptyRow.classList.toggle('ai-rpt-row-hidden', vis.length > 0);
+    if (selectAll) {
+      selectAll.checked = vis.length > 0 && vis.every((tr) => tr.querySelector('.ai-rpt-row-cb')?.checked);
+      selectAll.indeterminate = vis.some((tr) => tr.querySelector('.ai-rpt-row-cb')?.checked) && !selectAll.checked;
+    }
+  }
+
+  if (selectAll) {
+    selectAll.addEventListener('change', () => {
+      visibleCbs().forEach((cb) => { cb.checked = selectAll.checked; });
+      selectAll.indeterminate = false;
+    });
+  }
+
+  tbody.addEventListener('change', (e) => {
+    if (!(e.target instanceof HTMLInputElement) || !e.target.classList.contains('ai-rpt-row-cb')) return;
+    const vis = visibleRows();
+    if (selectAll) {
+      selectAll.checked = vis.length > 0 && vis.every((tr) => tr.querySelector('.ai-rpt-row-cb')?.checked);
+      selectAll.indeterminate = vis.some((tr) => tr.querySelector('.ai-rpt-row-cb')?.checked) && !selectAll.checked;
+    }
+  });
+
+  searchInput?.addEventListener('input', applyFilters);
+  templateFilter?.addEventListener('change', applyFilters);
+  window.applyAiReportsFilters = applyFilters;
+})();
 
 // ── Calculators
 function selectCalc(type,el) {
@@ -3549,6 +4028,22 @@ function calcRun() {
 (function initClientsTable() {
   const tab = document.getElementById('tab-clients');
   if (!tab) return;
+
+  const isLiveClients = new URLSearchParams(window.location.search).get('liveData') === '1';
+  const employmentLabels = {
+    EMPLOYED: 'Employed',
+    SELF_EMPLOYED: 'Self-employed',
+    CONTRACTOR: 'Contractor',
+    RETIRED: 'Retired',
+    UNEMPLOYED: 'Unemployed',
+  };
+  const employmentKeys = {
+    EMPLOYED: 'employed',
+    SELF_EMPLOYED: 'self-employed',
+    CONTRACTOR: 'contractor',
+    RETIRED: 'retired',
+    UNEMPLOYED: 'unemployed',
+  };
 
   const selectAll = document.getElementById('cl-select-all');
   const subtitle = document.getElementById('cl-subtitle');
@@ -3608,6 +4103,100 @@ function calcRun() {
     if (filterMessages?.value === 'none' && tr.dataset.newMsg === 'true') return false;
     return true;
   }
+
+  function formatIncome(amount) {
+    if (amount == null || Number.isNaN(Number(amount))) return '—';
+    return '£' + Number(amount).toLocaleString('en-GB');
+  }
+
+  function bindRowEvents(tr) {
+    const cb = tr.querySelector('.cl-row-cb');
+    if (cb) cb.addEventListener('change', () => { syncSelectAll(); syncRowHighlight(); });
+  }
+
+  function buildClientRow(client) {
+    const tr = document.createElement('tr');
+    const isCompany = client.clientType === 'COMPANY';
+    const fullName = isCompany
+      ? (client.companyName || client.firstName || 'Company')
+      : [client.firstName, client.lastName].filter(Boolean).join(' ');
+    const employment = isCompany
+      ? 'Limited Company'
+      : (employmentLabels[client.employmentStatus] || 'Employed');
+    const employmentKey = isCompany ? 'director' : (employmentKeys[client.employmentStatus] || 'employed');
+    const cases = client._count?.cases ?? 0;
+    tr.setAttribute('data-cl-row', '');
+    tr.setAttribute('data-client-id', client.id);
+    tr.setAttribute('data-status', 'active');
+    tr.setAttribute('data-employment', employmentKey);
+    tr.setAttribute('data-adviser', '');
+    tr.setAttribute('data-new-msg', 'false');
+    tr.setAttribute('data-ref', client.referenceNumber || '');
+    tr.innerHTML =
+      '<td class="cl-col-check"><input type="checkbox" class="cl-checkbox cl-row-cb" aria-label="Select ' + fullName + '"></td>' +
+      '<td><div class="cl-client-name">' + fullName + '</div><div class="cl-client-email">' + (client.email || '') + '</div></td>' +
+      '<td class="cl-cell-muted">' + (client.referenceNumber || '—') + '</td>' +
+      '<td class="cl-cell-muted">' + employment + '</td>' +
+      '<td class="cl-cell-bold">' + formatIncome(client.annualIncome) + '</td>' +
+      '<td><span class="cl-status cl-status--active"><span class="cl-status-dot"></span>Active</span></td>' +
+      '<td class="cl-cell-muted">' + cases + '</td>' +
+      '<td class="cl-cell-muted">—</td>' +
+      '<td><button type="button" class="cl-msg-btn" onclick="showTab(\'messages\')"><svg viewBox="0 0 16 16" fill="none"><path d="M3 4h10v7H5l-2 2V4Z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>Message</button></td>';
+    bindRowEvents(tr);
+    return tr;
+  }
+
+  function renderLiveClients(clients) {
+    if (!isLiveClients || !tbody) return;
+    window.koLiveClients = clients || [];
+    allRows().forEach((tr) => tr.remove());
+    (clients || []).forEach((client) => {
+      tbody.insertBefore(buildClientRow(client), emptyRow);
+    });
+    applyClientsView();
+  }
+
+  function prependLiveClient(client) {
+    if (!isLiveClients || !tbody || !client?.id) return;
+    if (tbody.querySelector('[data-client-id="' + client.id + '"]')) return;
+    tbody.insertBefore(buildClientRow(client), tbody.firstChild);
+    applyClientsView();
+  }
+
+  window.koRenderClientsTable = renderLiveClients;
+  window.koPrependClientRow = prependLiveClient;
+
+  window.addEventListener('message', (event) => {
+    if (event.origin !== window.location.origin) return;
+    const data = event.data;
+    if (data?.type === 'ko:clients-sync' && Array.isArray(data.clients)) {
+      renderLiveClients(data.clients);
+    }
+    if (data?.type === 'ko:switch-tab' && data.tab && typeof showTab === 'function') {
+      const tabMap = { calculator: 'calculators' };
+      const tab = tabMap[data.tab] || data.tab;
+      const validTabs = ['overview', 'clients', 'cases', 'messages', 'compliance', 'ai', 'calculators'];
+      if (validTabs.includes(tab)) showTab(tab);
+    }
+    if (data?.type === 'ko:overview-empty' && typeof data.empty === 'boolean' && typeof window.koSetOverviewEmpty === 'function') {
+      window.koSetOverviewEmpty(data.empty);
+    }
+    if (data?.type === 'ko:overview-stats' && data.stats && typeof window.koSetOverviewStats === 'function') {
+      window.koSetOverviewStats(data.stats);
+    }
+    if (data?.type === 'ko:user-greeting' && data.name && typeof window.koSetUserGreeting === 'function') {
+      window.koSetUserGreeting(data.name);
+    }
+  });
+
+  function requestLiveSync() {
+    if (!isLiveClients || window.parent === window) return;
+    window.parent.postMessage({ type: 'ko:request-clients-sync' }, window.location.origin);
+    window.parent.postMessage({ type: 'ko:request-cases-sync' }, window.location.origin);
+  }
+  requestLiveSync();
+  window.setTimeout(requestLiveSync, 300);
+  window.setTimeout(requestLiveSync, 1000);
 
   function applyClientsView() {
     const q = (searchInput?.value || '').trim().toLowerCase();
@@ -3669,10 +4258,9 @@ function calcRun() {
     });
   }
 
-  allRows().forEach((tr) => {
-    const cb = tr.querySelector('.cl-row-cb');
-    if (cb) cb.addEventListener('change', () => { syncSelectAll(); syncRowHighlight(); });
-  });
+  if (!isLiveClients) {
+    allRows().forEach((tr) => bindRowEvents(tr));
+  }
 
   searchInput?.addEventListener('input', applyClientsView);
 
@@ -3704,7 +4292,271 @@ function calcRun() {
     toggleFilterPanel(false);
   });
 
+  if (isLiveClients) {
+    allRows().forEach((tr) => tr.remove());
+  }
+
   applyClientsView();
+})();
+
+// Cases pipeline — live API data
+(function initLiveCases() {
+  const isLiveCases = new URLSearchParams(window.location.search).get('liveData') === '1';
+  if (!isLiveCases) return;
+
+  const caseTypeLabels = {
+    PURCHASE: 'Purchase',
+    REMORTGAGE: 'Remortgage',
+    BTL: 'BTL',
+    FURTHER_ADVANCE: 'Further advance',
+    PRODUCT_TRANSFER: 'Product transfer',
+  };
+  const stageToColumn = {
+    ENQUIRY: 'lead',
+    FACT_FIND: 'factfind',
+    RESEARCH: 'research',
+    DIP: 'application',
+    OFFER: 'completion',
+    COMPLETION: 'completion',
+    ARCHIVED: 'completion',
+  };
+  const stageAmtClass = {
+    ENQUIRY: 'lead',
+    FACT_FIND: 'factfind',
+    RESEARCH: 'research',
+    DIP: 'application',
+    OFFER: 'completion',
+    COMPLETION: 'completion',
+    ARCHIVED: 'completion',
+  };
+  const stageStatusClass = {
+    ENQUIRY: 's-enquiry',
+    FACT_FIND: 's-factfind',
+    RESEARCH: 's-research',
+    DIP: 's-dip',
+    OFFER: 's-offer',
+    COMPLETION: 's-offer',
+    ARCHIVED: 's-offer',
+  };
+  const stageStatusLabel = {
+    ENQUIRY: 'Enquiry',
+    FACT_FIND: 'Fact-Find',
+    RESEARCH: 'Research',
+    DIP: 'Application',
+    OFFER: 'Offer',
+    COMPLETION: 'Completion',
+    ARCHIVED: 'Archived',
+  };
+
+  const subtitle = document.querySelector('#tab-cases .cs-subtitle');
+  const tableBody = document.getElementById('cs-table-body');
+
+  function initials(first, last) {
+    return ((first && first[0]) || '') + ((last && last[0]) || '');
+  }
+
+  function formatLoan(amount) {
+    if (amount == null || Number.isNaN(Number(amount))) return '—';
+    const n = Number(amount);
+    if (n >= 1000000) return '£' + (n / 1000000).toFixed(1) + 'M';
+    if (n >= 1000) return '£' + Math.round(n / 1000) + 'K';
+    return '£' + n.toLocaleString('en-GB');
+  }
+
+  function columnContainer(stage) {
+    const key = stageToColumn[stage] || 'lead';
+    return document.querySelector('#tab-cases .ov-pb-kanban-col--' + key + ' .ov-pb-cards');
+  }
+
+  const apiStageToMock = {
+    ENQUIRY: { stage: 'enquiry', stageLabel: 'Enquiry' },
+    FACT_FIND: { stage: 'factfind', stageLabel: 'Fact-Find' },
+    RESEARCH: { stage: 'research', stageLabel: 'Research' },
+    DIP: { stage: 'dip', stageLabel: 'Application' },
+    OFFER: { stage: 'offer', stageLabel: 'Offer' },
+    COMPLETION: { stage: 'offer', stageLabel: 'Completion' },
+    ARCHIVED: { stage: 'offer', stageLabel: 'Archived' },
+  };
+
+  function formatCaseMoney(amount) {
+    if (amount == null || Number.isNaN(Number(amount))) return '—';
+    return '£' + Number(amount).toLocaleString('en-GB');
+  }
+
+  function mapApiCaseToPrototypeView(detail) {
+    const client = detail.client || {};
+    const clientName = [client.firstName, client.lastName].filter(Boolean).join(' ');
+    const adviser = detail.adviser;
+    const adviserName = adviser
+      ? [adviser.firstName, adviser.lastName].filter(Boolean).join(' ')
+      : '—';
+    const stageInfo = apiStageToMock[detail.stage] || { stage: 'enquiry', stageLabel: detail.stage || 'Enquiry' };
+    const employmentLabels = {
+      EMPLOYED: 'Employed',
+      SELF_EMPLOYED: 'Self-employed',
+      CONTRACTOR: 'Contractor',
+      RETIRED: 'Retired',
+      UNEMPLOYED: 'Unemployed',
+    };
+
+    return {
+      name: clientName,
+      ref: detail.referenceNumber || '—',
+      type: caseTypeLabels[detail.type] || detail.type || '—',
+      stage: stageInfo.stage,
+      stageLabel: stageInfo.stageLabel,
+      headerAmount: formatCaseMoney(detail.loanAmount),
+      loanAmount: formatCaseMoney(detail.loanAmount),
+      ltv: detail.ltv != null ? detail.ltv + '%' : '—',
+      caseLtv: detail.ltv != null ? detail.ltv + '%' : '—',
+      adviser: adviserName,
+      caseAdviser: adviserName,
+      lender: detail.selectedLender || 'TBC',
+      client: clientName,
+      email: client.email || '—',
+      phone: client.phone || '—',
+      property: '—',
+      employment: employmentLabels[client.employmentStatus] || client.employmentStatus || '—',
+      income: '—',
+      notes: detail.adviserNotes || '',
+      timeline: [
+        {
+          title: 'Case created',
+          top: 'Case opened',
+          bottom: '',
+          dot: 'solid',
+          color: '#378ADD',
+        },
+      ],
+      msgs: [],
+      documents: [],
+      complianceCurrent: stageInfo.stage === 'factfind' ? 'factfind' : 'enquiry',
+      aiReportPhase: 'empty',
+    };
+  }
+
+  function cacheCaseSummaries(caseList) {
+    (caseList || []).forEach(function (caseItem) {
+      if (caseItem && caseItem.id) {
+        cases[caseItem.id] = mapApiCaseToPrototypeView(caseItem);
+      }
+    });
+  }
+
+  window.openLiveCase = function (id) {
+    if (!id) return;
+    if (cases[id]) {
+      openCase(id);
+    }
+    if (isLiveCases && window.parent !== window) {
+      window.parent.postMessage({ type: 'ko:open-case', caseId: id }, window.location.origin);
+      return;
+    }
+    openCase(id);
+  };
+
+  function buildKanbanCard(caseItem) {
+    const client = caseItem.client || {};
+    const name = [client.firstName, client.lastName].filter(Boolean).join(' ');
+    const init = initials(client.firstName, client.lastName).toUpperCase() || '?';
+    const typeLabel = caseTypeLabels[caseItem.type] || caseItem.type;
+    const ltv = caseItem.ltv != null ? 'LTV ' + caseItem.ltv + '%' : '';
+    const amtClass = 'kb-cc-amt kb-cc-amt--' + (stageAmtClass[caseItem.stage] || 'lead');
+    const div = document.createElement('div');
+    div.className = 'kb-card ov-kbcard cs-case-card';
+    div.setAttribute('data-cs-card', '');
+    div.setAttribute('data-case-id', caseItem.id);
+    div.innerHTML =
+      '<div class="kb-cc-top"><div class="kb-cc-avatar">' + init + '</div></div>' +
+      '<div><button type="button" class="kb-card-name">' + name + '</button><div class="kb-cc-ref">' + (caseItem.referenceNumber || '') + '</div></div>' +
+      '<div class="kb-cc-tags"><span class="kb-cc-tag">' + typeLabel + '</span>' +
+      (ltv ? '<span class="kb-cc-tag">' + ltv + '</span>' : '') + '</div>' +
+      '<div class="' + amtClass + '">' + formatLoan(caseItem.loanAmount) + '</div>';
+    div.style.cursor = 'pointer';
+    return div;
+  }
+
+  function buildTableRow(caseItem) {
+    const client = caseItem.client || {};
+    const name = [client.firstName, client.lastName].filter(Boolean).join(' ');
+    const tr = document.createElement('tr');
+    tr.className = 'cs-table-row';
+    tr.setAttribute('data-cs-row', '');
+    tr.setAttribute('data-case-id', caseItem.id);
+    const statusClass = stageStatusClass[caseItem.stage] || 's-enquiry';
+    const statusLabel = stageStatusLabel[caseItem.stage] || caseItem.stage;
+    tr.style.cursor = 'pointer';
+    const adviser = caseItem.adviser;
+    const adviserName = adviser
+      ? [adviser.firstName, adviser.lastName].filter(Boolean).join(' ')
+      : '—';
+    tr.innerHTML =
+      '<td style="font-size:12px;color:var(--ink-60)">' + (caseItem.referenceNumber || '') + '</td>' +
+      '<td style="font-weight:600"><span class="cs-client-name">' + name + '</span></td>' +
+      '<td style="color:var(--ink-60)">' + (caseTypeLabels[caseItem.type] || caseItem.type) + '</td>' +
+      '<td style="color:var(--ink-60)">' + (caseItem.selectedLender || 'TBC') + '</td>' +
+      '<td style="font-weight:600">' + formatLoan(caseItem.loanAmount) + '</td>' +
+      '<td>' + (caseItem.ltv != null ? caseItem.ltv + '%' : '—') + '</td>' +
+      '<td><span class="status ' + statusClass + '">' + statusLabel + '</span></td>' +
+      '<td><span class="accent accent-blue">—</span></td>' +
+      '<td style="color:var(--ink-60)">' + adviserName + '</td>' +
+      '<td style="font-size:12px;color:var(--ink-60)">Just now</td>';
+    return tr;
+  }
+
+  function updateSubtitle(cases) {
+    if (!subtitle) return;
+    const open = (cases || []).filter((c) => c.stage !== 'ARCHIVED');
+    const total = open.reduce((sum, c) => sum + (Number(c.loanAmount) || 0), 0);
+    subtitle.textContent =
+      open.length + ' open case' + (open.length === 1 ? '' : 's') +
+      ' · £' + total.toLocaleString('en-GB') + ' total';
+  }
+
+  function renderLiveCases(caseList) {
+    cacheCaseSummaries(caseList);
+    document.querySelectorAll('#tab-cases .cs-case-card').forEach((el) => el.remove());
+    if (tableBody) tableBody.querySelectorAll('.cs-table-row').forEach((el) => el.remove());
+
+    (caseList || []).forEach((caseItem) => {
+      const col = columnContainer(caseItem.stage);
+      if (col) col.appendChild(buildKanbanCard(caseItem));
+      if (tableBody) tableBody.appendChild(buildTableRow(caseItem));
+    });
+    updateSubtitle(caseList);
+    if (typeof refreshCasesKanbanColumns === 'function') refreshCasesKanbanColumns();
+  }
+
+  window.koRenderCases = renderLiveCases;
+
+  window.addEventListener('message', (event) => {
+    if (event.origin !== window.location.origin) return;
+    const data = event.data;
+    if (data?.type === 'ko:cases-sync' && Array.isArray(data.cases)) {
+      renderLiveCases(data.cases);
+    }
+    if (data?.type === 'ko:case-detail' && data.case && data.case.id) {
+      cases[data.case.id] = mapApiCaseToPrototypeView(data.case);
+      openCase(data.case.id);
+    }
+    if (data?.type === 'ko:open-case-error') {
+      alert(data.error || 'Could not open case.');
+    }
+  });
+
+  const tabCases = document.getElementById('tab-cases');
+  if (tabCases) {
+    tabCases.addEventListener('click', function (e) {
+      const target = e.target.closest('[data-case-id]');
+      if (!target) return;
+      const id = target.getAttribute('data-case-id');
+      if (id) window.openLiveCase(id);
+    });
+  }
+
+  document.querySelectorAll('#tab-cases .cs-case-card').forEach((el) => el.remove());
+  if (tableBody) tableBody.querySelectorAll('.cs-table-row').forEach((el) => el.remove());
+  updateSubtitle([]);
 })();
 
 // New Client slide panel
@@ -3716,15 +4568,98 @@ function calcRun() {
   const closeBtn = document.getElementById('cl-drawer-close');
   const cancelBtn = document.getElementById('cl-drawer-cancel');
   const form = document.getElementById('cl-drawer-form');
+  const typeIndividualBtn = document.getElementById('cl-type-individual');
+  const typeCompanyBtn = document.getElementById('cl-type-company');
+  const fieldsIndividual = document.getElementById('cl-fields-individual');
+  const fieldsCompany = document.getElementById('cl-fields-company');
   const nameInput = document.getElementById('cl-new-name');
+  const companyNameInput = document.getElementById('cl-new-company-name');
+  const companyNumberInput = document.getElementById('cl-new-company-number');
+  const emailInput = document.getElementById('cl-new-email');
+  const employmentSelect = document.getElementById('cl-new-employment');
+  const incomeInput = document.getElementById('cl-new-income');
+  const incomeLabel = document.getElementById('cl-new-income-label');
   const statusSelect = document.getElementById('cl-new-status');
+  const submitBtn = document.getElementById('cl-drawer-create');
+  const errorEl = document.getElementById('cl-drawer-error');
+  const isEmbedded = document.body.classList.contains('embedded');
+  let createRequestId = 0;
+  let clientType = 'INDIVIDUAL';
   if (!root) return;
 
+  const employmentMap = {
+    employed: 'EMPLOYED',
+    'self-employed': 'SELF_EMPLOYED',
+    director: 'SELF_EMPLOYED',
+    'on-boarding': 'EMPLOYED',
+  };
+
+  function setClientType(nextType) {
+    clientType = nextType === 'COMPANY' ? 'COMPANY' : 'INDIVIDUAL';
+    const isCompany = clientType === 'COMPANY';
+    typeIndividualBtn?.classList.toggle('is-selected', !isCompany);
+    typeCompanyBtn?.classList.toggle('is-selected', isCompany);
+    typeIndividualBtn?.setAttribute('aria-pressed', isCompany ? 'false' : 'true');
+    typeCompanyBtn?.setAttribute('aria-pressed', isCompany ? 'true' : 'false');
+    fieldsIndividual?.classList.toggle('cl-drawer-section-hidden', isCompany);
+    fieldsCompany?.classList.toggle('cl-drawer-section-hidden', !isCompany);
+    if (incomeLabel) {
+      incomeLabel.textContent = isCompany ? 'Annual turnover / income' : 'Annual Income';
+    }
+    if (incomeInput) {
+      incomeInput.placeholder = isCompany ? 'e.g. £250,000' : 'e.g. £72,000';
+    }
+    if (emailInput) {
+      emailInput.placeholder = isCompany ? 'accounts@acmeholdings.co.uk' : 'name@company.com';
+    }
+    showDrawerError('');
+  }
+
+  typeIndividualBtn?.addEventListener('click', () => setClientType('INDIVIDUAL'));
+  typeCompanyBtn?.addEventListener('click', () => setClientType('COMPANY'));
+
+  function showDrawerError(message) {
+    if (!errorEl) return;
+    if (!message) {
+      errorEl.textContent = '';
+      errorEl.classList.add('hidden');
+      return;
+    }
+    errorEl.textContent = message;
+    errorEl.classList.remove('hidden');
+  }
+
+  function splitFullName(fullName) {
+    const parts = fullName.trim().split(/\s+/).filter(Boolean);
+    if (!parts.length) return { firstName: '', lastName: '' };
+    if (parts.length === 1) return { firstName: parts[0], lastName: '' };
+    return { firstName: parts[0], lastName: parts.slice(1).join(' ') };
+  }
+
+  function parseAnnualIncome(value) {
+    if (!value || !String(value).trim()) return undefined;
+    const num = Number(String(value).replace(/[£,\s]/g, ''));
+    return Number.isFinite(num) && num > 0 ? num : undefined;
+  }
+
+  function setSubmitting(submitting) {
+    if (submitBtn) {
+      submitBtn.disabled = submitting;
+      submitBtn.textContent = submitting ? 'Creating…' : 'Create Client';
+    }
+    if (cancelBtn) cancelBtn.disabled = submitting;
+  }
+
   function openClDrawer() {
+    showDrawerError('');
+    setClientType('INDIVIDUAL');
     root.classList.add('is-open');
     root.setAttribute('aria-hidden', 'false');
     document.body.classList.add('cl-drawer-open');
-    window.setTimeout(() => nameInput?.focus(), 300);
+    window.setTimeout(() => {
+      if (clientType === 'COMPANY') companyNameInput?.focus();
+      else nameInput?.focus();
+    }, 300);
   }
 
   function closeClDrawer() {
@@ -3732,22 +4667,112 @@ function calcRun() {
     root.setAttribute('aria-hidden', 'true');
     document.body.classList.remove('cl-drawer-open');
     form?.reset();
+    setClientType('INDIVIDUAL');
     if (statusSelect) statusSelect.value = 'prospect';
+    setSubmitting(false);
+    showDrawerError('');
   }
 
   window.closeClDrawer = closeClDrawer;
   window.openClDrawer = openClDrawer;
 
-  openBtn?.addEventListener('click', openClDrawer);
+  openBtn?.addEventListener('click', requestAddClient);
   closeBtn?.addEventListener('click', closeClDrawer);
   cancelBtn?.addEventListener('click', closeClDrawer);
   overlay?.addEventListener('click', closeClDrawer);
 
   drawer?.addEventListener('click', (e) => e.stopPropagation());
 
+  window.addEventListener('message', (event) => {
+    if (event.origin !== window.location.origin) return;
+    const data = event.data;
+    if (!data || data.type !== 'ko:create-client-result') return;
+    if (data.requestId !== createRequestId) return;
+    setSubmitting(false);
+    if (data.success) {
+      if (data.client && typeof window.koPrependClientRow === 'function') {
+        window.koPrependClientRow(data.client);
+      }
+      if (typeof showTab === 'function') showTab('clients');
+      closeClDrawer();
+      return;
+    }
+    if (data.fields) {
+      const first = Object.values(data.fields)[0];
+      showDrawerError(typeof first === 'string' ? first : 'Please check the form and try again.');
+      return;
+    }
+    showDrawerError(data.error || 'Could not create client. Please try again.');
+  });
+
   form?.addEventListener('submit', (e) => {
     e.preventDefault();
-    closeClDrawer();
+    showDrawerError('');
+
+    const email = emailInput?.value?.trim() ?? '';
+    const annualIncome = parseAnnualIncome(incomeInput?.value ?? '');
+    const isCompany = clientType === 'COMPANY';
+    let payload;
+
+    if (isCompany) {
+      const companyName = companyNameInput?.value?.trim() ?? '';
+      const companyNumber = companyNumberInput?.value?.trim() ?? '';
+      if (!companyName) {
+        showDrawerError('Company name is required.');
+        companyNameInput?.focus();
+        return;
+      }
+      if (!email) {
+        showDrawerError('Email is required.');
+        emailInput?.focus();
+        return;
+      }
+      payload = {
+        clientType: 'COMPANY',
+        companyName,
+        companyNumber: companyNumber || undefined,
+        email,
+        annualIncome,
+      };
+    } else {
+      const fullName = nameInput?.value?.trim() ?? '';
+      const { firstName, lastName } = splitFullName(fullName);
+      const employmentKey = employmentSelect?.value ?? '';
+      const employmentStatus = employmentMap[employmentKey];
+
+      if (!firstName || !lastName) {
+        showDrawerError('Please enter first and last name.');
+        nameInput?.focus();
+        return;
+      }
+      if (!email) {
+        showDrawerError('Email is required.');
+        emailInput?.focus();
+        return;
+      }
+
+      payload = {
+        clientType: 'INDIVIDUAL',
+        firstName,
+        lastName,
+        email,
+        employmentStatus: employmentStatus || undefined,
+        annualIncome,
+      };
+    }
+
+    if (!isEmbedded) {
+      closeClDrawer();
+      return;
+    }
+
+    createRequestId += 1;
+    const requestId = createRequestId;
+    setSubmitting(true);
+    window.parent.postMessage(
+      { type: 'ko:create-client', requestId, payload },
+      window.location.origin,
+    );
   });
 
   document.addEventListener('keydown', (e) => {
@@ -3768,7 +4793,189 @@ calcRun();
   'use strict';
 
   // ── State ────────────────────────────────────────────────────────────────
-  const ff = { form: null, idx: 0, done: false, dir: 1, caseId: null, _uid: 0, saveTimer: null };
+  const ff = {
+    form: null,
+    idx: 0,
+    done: false,
+    dir: 1,
+    caseId: null,
+    _uid: 0,
+    saveTimer: null,
+    saveClearTimer: null,
+    errorState: '',
+    fieldErrors: {},
+    showUploadModal: false,
+    uploadError: '',
+    simulatedAutoFill: { stalled: false, paused: false, apiFailure: false, offline: false },
+    simulatedTimers: [],
+  };
+
+  const FF_ERROR_STATES = {
+    FILE_TOO_LARGE: 'file-too-large',
+    UNSUPPORTED_FILE_TYPE: 'unsupported-file-type',
+    AI_PROCESSING_STALLED: 'ai-processing-stalled',
+    AI_PROCESSING_PAUSED: 'ai-processing-paused',
+    AUTO_FILL_API_FAILURE: 'auto-fill-api-failure',
+    FIELD_VALIDATION_ERROR: 'field-validation-error',
+    AUTO_SAVE_OFFLINE: 'auto-save-offline',
+    MISSING_FIELDS: 'missing-fields',
+    REPORT_GENERATION_FAILED: 'report-generation-failed',
+    NOTIFICATION_FAILED: 'notification-failed',
+  };
+
+  const FF_STATE_ALIASES = {
+    filetoolarge: FF_ERROR_STATES.FILE_TOO_LARGE,
+    'file-too-large': FF_ERROR_STATES.FILE_TOO_LARGE,
+    unsupportedfiletype: FF_ERROR_STATES.UNSUPPORTED_FILE_TYPE,
+    'unsupported-file-type': FF_ERROR_STATES.UNSUPPORTED_FILE_TYPE,
+    aiprocessingstalled: FF_ERROR_STATES.AI_PROCESSING_STALLED,
+    'ai-processing-stalled': FF_ERROR_STATES.AI_PROCESSING_STALLED,
+    aiprocessingpaused: FF_ERROR_STATES.AI_PROCESSING_PAUSED,
+    'ai-processing-paused': FF_ERROR_STATES.AI_PROCESSING_PAUSED,
+    autofillapifailure: FF_ERROR_STATES.AUTO_FILL_API_FAILURE,
+    'auto-fill-api-failure': FF_ERROR_STATES.AUTO_FILL_API_FAILURE,
+    fieldvalidationerror: FF_ERROR_STATES.FIELD_VALIDATION_ERROR,
+    'field-validation-error': FF_ERROR_STATES.FIELD_VALIDATION_ERROR,
+    autosaveoffline: FF_ERROR_STATES.AUTO_SAVE_OFFLINE,
+    'auto-save-offline': FF_ERROR_STATES.AUTO_SAVE_OFFLINE,
+    missingfields: FF_ERROR_STATES.MISSING_FIELDS,
+    'missing-fields': FF_ERROR_STATES.MISSING_FIELDS,
+    reportgenerationfailed: FF_ERROR_STATES.REPORT_GENERATION_FAILED,
+    'report-generation-failed': FF_ERROR_STATES.REPORT_GENERATION_FAILED,
+    notificationfailed: FF_ERROR_STATES.NOTIFICATION_FAILED,
+    'notification-failed': FF_ERROR_STATES.NOTIFICATION_FAILED,
+  };
+
+  function ffNormalizeState(value) {
+    const key = String(value || '').trim().toLowerCase();
+    return FF_STATE_ALIASES[key] || '';
+  }
+
+  function ffState(name) {
+    return ff.errorState === name;
+  }
+
+  function ffIsOfflineSave() {
+    return ffState(FF_ERROR_STATES.AUTO_SAVE_OFFLINE) || ff.simulatedAutoFill.offline;
+  }
+
+  const FF_OFFLINE_SAVE_SVG = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v5"/><path d="M12 16h.01"/></svg>';
+
+  function ffSaveStatusHTML() {
+    if (ffIsOfflineSave()) {
+      return `<span id="ff-save-status" class="ff-offline-pill">${FF_OFFLINE_SAVE_SVG}Offline — saved locally</span>`;
+    }
+    return '<span id="ff-save-status"></span>';
+  }
+
+  function ffUpdateSaveStatus(transient) {
+    const el = document.getElementById('ff-save-status');
+    if (!el) return;
+    if (ffIsOfflineSave()) {
+      el.className = 'ff-offline-pill';
+      el.innerHTML = FF_OFFLINE_SAVE_SVG + 'Offline — saved locally';
+      el.style.color = '';
+      return;
+    }
+    el.className = '';
+    if (transient) {
+      el.textContent = transient.text;
+      el.style.color = transient.color;
+    } else {
+      el.textContent = '';
+      el.style.color = '';
+    }
+  }
+
+  function ffClearAutoFillSimulation() {
+    ff.simulatedTimers.forEach((timerId) => window.clearTimeout(timerId));
+    ff.simulatedTimers = [];
+    ff.simulatedAutoFill = { stalled: false, paused: false, apiFailure: false, offline: false };
+  }
+
+  function ffStartAutoFillSimulation() {
+    ffClearAutoFillSimulation();
+    ff.simulatedAutoFill.stalled = true;
+    ffRender();
+
+    const toPaused = window.setTimeout(() => {
+      ff.simulatedAutoFill.stalled = false;
+      ff.simulatedAutoFill.paused = true;
+      ffRender();
+    }, 3500);
+
+    const toApiFailure = window.setTimeout(() => {
+      ff.simulatedAutoFill.paused = false;
+      ff.simulatedAutoFill.apiFailure = true;
+      ffRender();
+    }, 7000);
+
+    const toOffline = window.setTimeout(() => {
+      ff.simulatedAutoFill.offline = true;
+      clearTimeout(ff.saveTimer);
+      clearTimeout(ff.saveClearTimer);
+      ffRender();
+    }, 10500);
+
+    ff.simulatedTimers.push(toPaused, toApiFailure, toOffline);
+  }
+
+  const FF_ALPHA_FIELD_KEYS = new Set(['firstName', 'middleName', 'lastName', 'nationality', 'employerName', 'city']);
+  const FF_ALPHA_FIELD_RE = /^[A-Za-z][A-Za-z\s'-]*$/;
+
+  function ffAlphaFieldPath(path) {
+    if (!path) return false;
+    const key = String(path).split('.').pop() || '';
+    return FF_ALPHA_FIELD_KEYS.has(key);
+  }
+
+  function ffValidateField(path, value) {
+    if (!ffAlphaFieldPath(path)) return '';
+    const raw = String(value ?? '').trim();
+    if (!raw) return '';
+    if (!FF_ALPHA_FIELD_RE.test(raw)) return 'Please use letters only (no numbers) in this field.';
+    return '';
+  }
+
+  function ffRenderFieldErrors(scopeEl) {
+    if (!scopeEl) return;
+    scopeEl.querySelectorAll('.ff-field-error').forEach((el) => el.remove());
+    scopeEl.querySelectorAll('.ff-box-wrap.ff-invalid').forEach((el) => el.classList.remove('ff-invalid'));
+    scopeEl.querySelectorAll('.ff-box-input[data-path]').forEach((inputEl) => {
+      const path = inputEl.getAttribute('data-path') || '';
+      const msg = ff.fieldErrors[path];
+      if (!msg) return;
+      const wrap = inputEl.closest('.ff-box-wrap');
+      if (wrap) wrap.classList.add('ff-invalid');
+      const host = wrap?.parentElement;
+      if (!host) return;
+      const err = document.createElement('p');
+      err.className = 'ff-field-error';
+      err.textContent = msg;
+      host.appendChild(err);
+    });
+  }
+
+  function ffValidateCurrentCard() {
+    const card = document.getElementById('ff-card');
+    if (!card) return true;
+    let valid = true;
+    let firstInvalidInput = null;
+    card.querySelectorAll('.ff-box-input[data-path]').forEach((inputEl) => {
+      const path = inputEl.getAttribute('data-path') || '';
+      const msg = ffValidateField(path, inputEl.value);
+      if (msg) {
+        valid = false;
+        ff.fieldErrors[path] = msg;
+        if (!firstInvalidInput) firstInvalidInput = inputEl;
+      } else {
+        delete ff.fieldErrors[path];
+      }
+    });
+    ffRenderFieldErrors(card);
+    if (!valid && firstInvalidInput) firstInvalidInput.focus();
+    return valid;
+  }
 
   function ffUid() { return 'ff' + (++ff._uid); }
 
@@ -3912,6 +5119,9 @@ calcRun();
     ff.idx    = 0;
     ff.done   = false;
     ff.dir    = 1;
+    ff.showUploadModal = false;
+    ff.uploadError = '';
+    ffClearAutoFillSimulation();
     const ov = document.getElementById('ff-overlay');
     ov.classList.remove('ff-hidden');
     document.documentElement.classList.add('ff-open');
@@ -3928,6 +5138,14 @@ calcRun();
     document.addEventListener('keydown', ffKeyDown);
   };
 
+  const ffStateFromQuery = ffNormalizeState(new URLSearchParams(window.location.search).get('ffErrorState') || '');
+  if (ffStateFromQuery) ff.errorState = ffStateFromQuery;
+  window.setFactFindErrorState = function (name) {
+    ff.errorState = ffNormalizeState(name);
+    const open = !document.getElementById('ff-overlay')?.classList.contains('ff-hidden');
+    if (open) ffRender();
+  };
+
   function ffClose() {
     document.getElementById('ff-overlay').classList.add('ff-hidden');
     document.documentElement.classList.remove('ff-open');
@@ -3937,11 +5155,15 @@ calcRun();
     document.body.style.overflow = '';
     document.body.style.height = '';
     document.body.style.minHeight = '';
+    ff.showUploadModal = false;
+    ff.uploadError = '';
+    ffClearAutoFillSimulation();
     document.removeEventListener('keydown', ffKeyDown);
   }
 
   function ffKeyDown(e) {
     if (e.key === 'Escape') { ffClose(); return; }
+    if (ff.showUploadModal || ff.simulatedAutoFill.stalled || ff.simulatedAutoFill.paused) return;
     const vis = ffVisible(), cur = vis[ff.idx];
     if (!cur) return;
     if (e.key === 'Enter' && !e.shiftKey && !(e.target instanceof HTMLTextAreaElement)) {
@@ -3957,17 +5179,28 @@ calcRun();
   }
   function ffSaveIndicator() {
     clearTimeout(ff.saveTimer);
-    const el = document.getElementById('ff-save-status');
-    if (el) { el.textContent = 'Saving…'; el.style.color = '#f59e0b'; }
+    clearTimeout(ff.saveClearTimer);
+    if (ffIsOfflineSave()) {
+      ffUpdateSaveStatus();
+      return;
+    }
+    ffUpdateSaveStatus({ text: 'Saving…', color: '#f59e0b' });
     ff.saveTimer = setTimeout(() => {
-      const el2 = document.getElementById('ff-save-status');
-      if (el2) { el2.textContent = 'Saved'; el2.style.color = '#0F6E56'; }
-      setTimeout(() => { const el3 = document.getElementById('ff-save-status'); if (el3) el3.textContent = ''; }, 2500);
+      if (ffIsOfflineSave()) {
+        ffUpdateSaveStatus();
+        return;
+      }
+      ffUpdateSaveStatus({ text: 'Saved', color: '#0F6E56' });
+      ff.saveClearTimer = setTimeout(() => {
+        if (!ffIsOfflineSave()) ffUpdateSaveStatus();
+      }, 2500);
     }, 2000);
   }
 
   // ── Navigation ────────────────────────────────────────────────────────────
   function ffGoNext() {
+    if (ff.showUploadModal || ff.simulatedAutoFill.stalled || ff.simulatedAutoFill.paused) return;
+    if (!ffValidateCurrentCard()) return;
     const vis = ffVisible();
     if (ff.idx >= vis.length - 1) { ff.done = true; ffRender(); return; }
     ff.dir = 1;
@@ -3996,11 +5229,15 @@ calcRun();
     const pct = vis.length ? Math.round(((ff.idx+1)/vis.length)*100) : 0;
     ov.innerHTML = `
       <div id="ff-progress-outer"><div id="ff-progress-inner" style="width:${pct}%"></div></div>
+      ${ffTopbarHTML(vis)}
       <button type="button" class="ff-close-btn" id="ff-close-btn" style="position:fixed;top:10px;right:16px;z-index:560;" title="Close">✕</button>
+      ${ffUploadFloatHTML()}
       <div id="ff-section-strip"><div id="ff-section-inner">${ffSectionHTML(cur)}</div></div>
       <div id="ff-card-area"><div id="ff-card">${ffCardHTML(cur, vis)}</div></div>
-      <div id="ff-dot-strip">${ffDotHTML(vis)}</div>`;
+      <div id="ff-dot-strip">${ffDotHTML(vis)}</div>
+      ${ffStateOverlayHTML()}`;
     ov.querySelector('#ff-close-btn').addEventListener('click', ffClose);
+    ffBindOverlayActions(ov);
     ffBindCard(vis[ff.idx] || vis[0]);
   }
 
@@ -4013,6 +5250,10 @@ calcRun();
     if (si) si.innerHTML = ffSectionHTML(cur);
     const ds = document.getElementById('ff-dot-strip');
     if (ds) ds.innerHTML = ffDotHTML(vis);
+    const tb = document.getElementById('ff-topbar-right');
+    if (tb) {
+      tb.innerHTML = `${ffSaveStatusHTML()}<span id="ff-topbar-count">${ff.idx + 1} / ${vis.length}</span>`;
+    }
   }
 
   function ffRenderCard() {
@@ -4055,6 +5296,209 @@ calcRun();
     return h;
   }
 
+  function ffTopbarHTML(vis) {
+    return `<div id="ff-topbar">
+      <div id="ff-topbar-left">
+        <div id="ff-topbar-logo">KO</div>
+        <div id="ff-topbar-brand">KO Platform</div>
+      </div>
+      <div id="ff-topbar-right">
+        ${ffSaveStatusHTML()}
+        <span id="ff-topbar-count">${ff.idx + 1} / ${vis.length}</span>
+      </div>
+    </div>`;
+  }
+
+  function ffUploadFloatHTML() {
+    return `<button type="button" class="ff-upload-float" id="ff-upload-float" aria-label="Auto-fill from uploaded document">
+      <span class="ff-upload-float-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 16V4"/><path d="M8 8l4-4 4 4"/><path d="M20 16.5v2a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18.5v-2"/></svg></span>
+      <span class="ff-upload-float-copy"><strong>Auto-fill from documents</strong><span>Upload a file to prefill key fact-find fields.</span></span>
+    </button>`;
+  }
+
+  function ffBindOverlayActions(scope) {
+    const openBtn = scope.querySelector('#ff-upload-float');
+    if (openBtn) {
+      openBtn.addEventListener('click', () => {
+        ff.showUploadModal = true;
+        ff.uploadError = '';
+        ffRender();
+      });
+    }
+    scope.querySelectorAll('[data-ff-upload-close]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        ff.showUploadModal = false;
+        ff.uploadError = '';
+        ffRender();
+      });
+    });
+
+    const fileInput = scope.querySelector('#ff-upload-file-input');
+    const browseBtn = scope.querySelector('#ff-upload-browse');
+    const dropzone = scope.querySelector('#ff-upload-dropzone');
+    const openPicker = () => {
+      if (!fileInput) return;
+      fileInput.value = '';
+      try {
+        if (typeof fileInput.showPicker === 'function') {
+          fileInput.showPicker();
+        } else {
+          fileInput.click();
+        }
+      } catch {
+        fileInput.click();
+      }
+    };
+    if (browseBtn) browseBtn.addEventListener('click', openPicker);
+    if (dropzone && !dropzone.classList.contains('ff-upload-dropzone--error') && !dropzone.classList.contains('ff-upload-dropzone--amber') && !dropzone.classList.contains('ff-upload-dropzone--warn')) {
+      dropzone.addEventListener('click', (e) => {
+        if (!(e.target instanceof HTMLElement)) return;
+        if (e.target.closest('#ff-upload-browse')) return;
+        openPicker();
+      });
+    }
+    const handleSelectedFile = (file) => {
+      if (!file) return;
+      const ext = (file.name.split('.').pop() || '').toLowerCase();
+      const allowed = ['pdf', 'png', 'jpg', 'jpeg'];
+      if (!allowed.includes(ext)) {
+        ff.uploadError = 'unsupported';
+        ffRender();
+        return;
+      }
+      if (file.size > 20 * 1024 * 1024) {
+        ff.uploadError = 'too-large';
+        ffRender();
+        return;
+      }
+      ff.uploadError = '';
+      ff.showUploadModal = false;
+      ffStartAutoFillSimulation();
+    };
+
+    if (fileInput) {
+      fileInput.addEventListener('change', () => {
+        const file = fileInput.files && fileInput.files[0];
+        handleSelectedFile(file);
+      });
+    }
+
+    if (dropzone) {
+      dropzone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+      });
+      dropzone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        const file = e.dataTransfer?.files?.[0];
+        handleSelectedFile(file);
+      });
+    }
+  }
+
+  function ffUploadModalHTML() {
+    const tooLarge = ffState(FF_ERROR_STATES.FILE_TOO_LARGE) || ff.uploadError === 'too-large';
+    const unsupported = ffState(FF_ERROR_STATES.UNSUPPORTED_FILE_TYPE) || ff.uploadError === 'unsupported';
+    const stalled = ffState(FF_ERROR_STATES.AI_PROCESSING_STALLED);
+
+    let dropzoneClass = 'ff-upload-dropzone';
+    let iconClass = 'ff-upload-dropzone-ico ff-upload-dropzone-ico--neutral';
+    let iconSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 16V4"/><path d="M8 8l4-4 4 4"/><path d="M20 16.5v2a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18.5v-2"/></svg>';
+    let title = 'Drag and drop files here';
+    let desc = 'PDF, PNG, or JPEG — up to 20 MB';
+    let actionBtn = '<label for="ff-upload-file-input" class="ff-upload-browse" id="ff-upload-browse">Browse files</label>';
+
+    if (tooLarge) {
+      dropzoneClass += ' ff-upload-dropzone--error';
+      iconClass = 'ff-upload-dropzone-ico';
+      iconSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>';
+      title = 'File exceeds 20 MB limit';
+      desc = 'Please compress the file or upload a PDF, PNG, or JPEG instead.';
+      actionBtn = '<label for="ff-upload-file-input" class="ff-upload-cta" id="ff-upload-browse">Choose a different file</label>';
+    } else if (unsupported) {
+      dropzoneClass += ' ff-upload-dropzone--error';
+      iconClass = 'ff-upload-dropzone-ico';
+      iconSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>';
+      title = 'Unsupported file type';
+      desc = 'We can\u2019t read .pages, .heic, or raw image formats. Please upload a PDF, PNG, or JPEG.';
+      actionBtn = '<label for="ff-upload-file-input" class="ff-upload-cta" id="ff-upload-browse">Choose a different file</label>';
+    } else if (stalled) {
+      dropzoneClass += ' ff-upload-dropzone--amber';
+      iconClass = 'ff-upload-dropzone-ico ff-upload-dropzone-ico--amber';
+      iconSvg = '<span class="ff-mini-spinner" aria-hidden="true"></span>';
+      title = 'AI processing stalled';
+      desc = 'We\u2019re still trying to read your upload. You can continue manually and retry auto-fill later.';
+      actionBtn = '';
+    }
+
+    return `<div class="ff-upload-modal-wrap"><div class="ff-upload-modal">
+      <div class="ff-upload-head">
+        <div class="ff-upload-head-main">
+          <span class="ff-upload-head-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 16V4"/><path d="M8 8l4-4 4 4"/><path d="M20 16.5v2a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18.5v-2"/></svg></span>
+          <div><h3>Upload supporting documents</h3><p>Got payslips, bank statements or ID to hand? Upload them now to help auto-fill this fact-find.</p></div>
+        </div>
+        <button type="button" class="ff-close-btn" style="position:static" data-ff-upload-close aria-label="Close">✕</button>
+      </div>
+      <div class="ff-upload-body">
+        <div class="ff-upload-field-label">Document relates to</div>
+        <select class="ff-upload-select">
+          <option>Personal details</option>
+          <option>Employment</option>
+          <option>Income</option>
+          <option>Financial commitments</option>
+          <option>Property details</option>
+          <option>Adverse credit</option>
+          <option>Goals &amp; preferences</option>
+          <option>Vulnerability assessment</option>
+          <option>Other / general</option>
+        </select>
+        <div class="${dropzoneClass}" id="ff-upload-dropzone">
+          <div class="${iconClass}">${iconSvg}</div>
+          <h4>${title}</h4>
+          <p>${desc}</p>
+          ${actionBtn}
+          <input type="file" id="ff-upload-file-input" class="sr-only" style="position:absolute;width:1px;height:1px;opacity:0">
+        </div>
+        <div class="ff-upload-actions"><span class="ff-upload-empty">No documents uploaded yet</span><button type="button" class="ff-upload-skip" data-ff-upload-close>Skip for now</button></div>
+      </div>
+    </div></div>`;
+  }
+
+  function ffStateOverlayHTML() {
+    let html = '';
+    const stateForcesUploadModal =
+      ffState(FF_ERROR_STATES.FILE_TOO_LARGE) ||
+      ffState(FF_ERROR_STATES.UNSUPPORTED_FILE_TYPE) ||
+      ffState(FF_ERROR_STATES.AI_PROCESSING_STALLED);
+    if (ffState(FF_ERROR_STATES.AI_PROCESSING_STALLED) || ff.simulatedAutoFill.stalled) {
+      html += `<div class="ff-floating-alert ff-floating-alert--amber"><span class="ff-mini-spinner" aria-hidden="true"></span>Processing stalled</div>`;
+    }
+    if (ffState(FF_ERROR_STATES.AI_PROCESSING_PAUSED) || ff.simulatedAutoFill.paused) {
+      html += `<div class="ff-floating-alert ff-floating-alert--red"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v5"/><path d="M12 16h.01"/></svg>AI processing paused. Click to retry.</div>`;
+    }
+    if (ffState(FF_ERROR_STATES.MISSING_FIELDS)) {
+      html += `<div class="ff-missing-modal-wrap"><div class="ff-missing-modal">
+        <div class="ff-missing-head"><div><h3>Required fields missing</h3><p>4 fields must be completed before this fact-find can be submitted.</p></div><button type="button" class="ff-close-btn" style="position:static">✕</button></div>
+        <div class="ff-missing-list">
+          <div class="ff-missing-item"><div><strong>Personal — Client 1: Date of birth</strong><span>Required for identity verification</span></div><button class="ff-fix-link" type="button">Fix field →</button></div>
+          <div class="ff-missing-item"><div><strong>Employment — Client 1: Employer name</strong><span>Required for affordability assessment</span></div><button class="ff-fix-link" type="button">Fix field →</button></div>
+          <div class="ff-missing-item"><div><strong>Income — Client 1: Gross annual salary</strong><span>Required for lending calculation</span></div><button class="ff-fix-link" type="button">Fix field →</button></div>
+          <div class="ff-missing-item"><div><strong>Property Details: Property value</strong><span>Required to calculate LTV</span></div><button class="ff-fix-link" type="button">Fix field →</button></div>
+        </div>
+        <div class="ff-missing-foot"><p>Complete all fields to enable submission</p><button type="button" class="ff-review-later">Review later</button></div>
+      </div></div>`;
+    }
+    if (ffState(FF_ERROR_STATES.REPORT_GENERATION_FAILED)) {
+      html += `<div class="ff-state-toast ff-state-toast--report"><h4>Report generation failed</h4><p>We couldn't compile the polished PDF layout, but your raw data is safe.</p><div class="ff-toast-actions"><button type="button" class="ff-toast-btn ff-toast-btn--ghost">Download text summary</button><button type="button" class="ff-toast-btn ff-toast-btn--primary">Retry</button></div></div>`;
+    }
+    if (ffState(FF_ERROR_STATES.NOTIFICATION_FAILED)) {
+      html += `<div class="ff-state-toast ff-state-toast--notif"><p style="font-size:11px;font-weight:700;color:#15803D;margin-bottom:4px">Status updated · Fact-Find Complete</p><h4>Email notification failed</h4><p>Case status was updated, but the email notice to the client failed to send.</p><div class="ff-toast-actions"><button type="button" class="ff-toast-btn">Copy client link</button><button type="button" class="ff-toast-btn ff-toast-btn--primary" style="background:#F59E0B;border-color:#F59E0B">Retry email</button></div></div>`;
+    }
+    if (stateForcesUploadModal || ff.showUploadModal) {
+      html += ffUploadModalHTML();
+    }
+    return html;
+  }
+
   // ── Card HTML ─────────────────────────────────────────────────────────────
   function ffCardHTML(cur, vis) {
     if (!cur) return '';
@@ -4062,8 +5506,11 @@ calcRun();
     const isFirst = ff.idx === 0;
     const autoAdv = cur.aa && ['pills','yesno','insurance'].includes(cur.t);
     const isTa    = cur.t === 'textarea';
+    const autoFillFailure = ffState(FF_ERROR_STATES.AUTO_FILL_API_FAILURE) || ff.simulatedAutoFill.apiFailure;
+    const fieldValidationError = ffState(FF_ERROR_STATES.FIELD_VALIDATION_ERROR);
     return `
       <div class="ff-section-label">${esc(cur.s)}</div>
+      ${autoFillFailure ? `<div class="ff-state-banner"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4l16 16"/><path d="M12 3a9 9 0 0 1 9 9"/><path d="M3 12a9 9 0 0 0 9 9"/></svg><div><strong>Open Banking connection unavailable</strong><span>We couldn’t securely pull data from Open Banking right now. Switching you seamlessly to manual entry — your progress is unaffected.</span></div></div>` : ''}
       <div class="ff-q-row">
         <div class="ff-q-num-wrap">
           <span>${ff.idx+1}</span>
@@ -4073,6 +5520,7 @@ calcRun();
       </div>
       ${cur.sub?`<p class="ff-q-sub">${esc(cur.sub)}</p>`:'<div style="margin-bottom:24px"></div>'}
       <div class="ff-q-input" id="ff-q-input">${ffQHTML(cur)}</div>
+      ${fieldValidationError ? `<div class="ff-inline-error"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v5"/><path d="M12 16h.01"/></svg>Please enter a valid value — must be a positive number.</div>` : ''}
       <div id="ff-action-row">
         <button type="button" class="ff-btn-back${isFirst?' ff-invisible':''}" id="ff-btn-back">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>Back
@@ -4250,6 +5698,9 @@ calcRun();
       inp.addEventListener('input', e => {
         const p=e.target.dataset.path; if(!p)return;
         ffUpd(p,e.target.value);
+        const msg = ffValidateField(p, e.target.value);
+        if (msg) ff.fieldErrors[p] = msg; else delete ff.fieldErrors[p];
+        ffRenderFieldErrors(card);
         if(p==='propertyValue'||p==='mortgageRequired') ffUpdateLTV();
       });
     });
@@ -4259,6 +5710,8 @@ calcRun();
       sel.addEventListener('change', e => {
         const p=e.target.dataset.path; if(!p)return;
         ffUpd(p,e.target.value);
+        delete ff.fieldErrors[p];
+        ffRenderFieldErrors(card);
         // contract type affects field visibility — re-render card
         if(p.endsWith('.contractType')) { ffRenderCard(); ffUpdateHdr(); }
       });
@@ -4366,6 +5819,8 @@ calcRun();
         ff.form=ffSet(ff.form,b+'.dependants',deps.map(d=>d.id===id?{...d,[fld]:e.target.value}:d));
       });
     });
+
+    ffRenderFieldErrors(card);
   }
 
   // ── Completion screen ─────────────────────────────────────────────────────
@@ -4457,7 +5912,7 @@ calcRun();
 <!-- ── CASE CREATED SUCCESS MODAL ──────────────────────────────────────── -->
 <div id="nc-success-overlay" class="nc-success-overlay nc-hidden" role="dialog" aria-modal="true" aria-labelledby="nc-success-title">
   <div class="nc-success-modal">
-    <img src="assets/SuceSS  Screen.png" class="nc-success-illus" alt="Success illustration" aria-hidden="true">
+    <img src="/marketing/SuceSS%20%20Screen.png" class="nc-success-illus" alt="Success illustration" aria-hidden="true">
     <h2 class="nc-success-title" id="nc-success-title">Case Created Successfully!</h2>
     <p class="nc-success-desc">Case <strong id="nc-success-ref">KOC-2026-0008</strong> has been registered for <span id="nc-success-client">Sasha Lindqvist</span></p>
     <div class="nc-success-actions">

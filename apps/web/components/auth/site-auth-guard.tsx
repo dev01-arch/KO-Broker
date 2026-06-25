@@ -4,15 +4,13 @@ import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { isAuthenticated } from '@/lib/auth/demo-session';
 
-const PUBLIC_PATHS = new Set(['/sign-in', '/sign-up']);
-
 type SiteAuthGuardProps = {
   children: React.ReactNode;
-  /** Where to send unauthenticated users (default: sign-in with return URL). */
   loginPath?: string;
 };
 
-export function SiteAuthGuard({ children, loginPath = '/sign-in' }: SiteAuthGuardProps) {
+/** Demo staging gate — KingOlu / Development credentials. */
+export function SiteAuthGuard({ children, loginPath = '/gate' }: SiteAuthGuardProps) {
   const router = useRouter();
   const pathname = usePathname();
   const [ready, setReady] = useState(false);
@@ -41,7 +39,9 @@ type MarketingAuthLayoutProps = {
   children: React.ReactNode;
 };
 
-/** Gates all marketing routes except sign-in / sign-up (matches ko-platform prototype). */
+/** Routes that skip the demo gate (Clerk sign-in/up from nav). */
+const PUBLIC_PATHS = new Set(['/sign-in', '/sign-up', '/gate']);
+
 export function MarketingAuthLayout({ children }: MarketingAuthLayoutProps) {
   const pathname = usePathname();
 

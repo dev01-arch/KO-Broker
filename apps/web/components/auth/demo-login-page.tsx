@@ -6,15 +6,15 @@ import { Building2, Eye, EyeOff, Lock, User } from 'lucide-react';
 import { validateLogin, isAuthConfigured } from '@/lib/auth/demo-credentials';
 import { isAuthenticated, setAuthenticated } from '@/lib/auth/demo-session';
 
-type LoginPageProps = {
+type DemoLoginPageProps = {
   title?: string;
   subtitle?: string;
 };
 
-export function LoginPage({
+export function DemoLoginPage({
   title = 'KO Platform',
   subtitle = 'Sign in to continue to the platform.',
-}: LoginPageProps) {
+}: DemoLoginPageProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get('redirect') || '/';
@@ -146,13 +146,6 @@ export function LoginPage({
             {submitting ? 'Signing in…' : 'Sign in'}
           </button>
         </form>
-
-        {/* Allowed users hint hidden — credentials live in .env.local only
-        <p className="mt-6 text-center text-xs text-gray-400">
-          Allowed users: {ALLOWED_USERNAMES.join(', ')}. Credentials are configured in{' '}
-          <code className="text-gray-500">.env.local</code>.
-        </p>
-        */}
       </div>
     </div>
   );

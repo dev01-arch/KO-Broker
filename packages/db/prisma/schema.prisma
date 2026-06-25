@@ -36,6 +36,11 @@ enum EmploymentStatus {
   UNEMPLOYED
 }
 
+enum ClientType {
+  INDIVIDUAL
+  COMPANY
+}
+
 enum CaseType {
   PURCHASE
   REMORTGAGE
@@ -145,6 +150,9 @@ model Client {
   id               String           @id @default(cuid())
   orgId            String
   referenceNumber  String           @unique
+  clientType       ClientType       @default(INDIVIDUAL)
+  companyName      String?
+  companyNumber    String?
   title            String?
   firstName        String
   lastName         String

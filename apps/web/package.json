@@ -13,6 +13,8 @@
   "dependencies": {
     "@clerk/nextjs": "^6.12.0",
     "@ko/db": "workspace:*",
+    "@ko/types": "workspace:*",
+    "@ko/utils": "workspace:*",
     "@radix-ui/react-tooltip": "^1.2.8",
     "@tanstack/react-query": "^5.75.0",
     "class-variance-authority": "^0.7.1",

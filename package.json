@@ -18,5 +18,8 @@
     "db:seed": "pnpm --filter @ko/db seed",
     "db:migrate": "pnpm --filter @ko/db migrate",
     "clean": "pnpm -r run clean"
+  },
+  "dependencies": {
+    "@clerk/nextjs": "^7.4.3"
   }
 }

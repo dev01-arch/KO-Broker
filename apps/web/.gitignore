@@ -1,0 +1,6 @@
+
+# clerk configuration (can include secrets)
+/.clerk/
+
+# Local API fallback store (development without Postgres)
+/.data/

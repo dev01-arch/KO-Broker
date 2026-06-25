@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import { MarketingAuthLayout } from '@/components/auth/site-auth-guard';
 
 export const metadata: Metadata = {
   title: 'KO Platform — The Smarter Broker Platform',
@@ -7,10 +6,11 @@ export const metadata: Metadata = {
     'AI-powered suitability reports, built-in FCA compliance, messaging, and full CRM — designed by practitioners, priced for everyone.',
 };
 
+/** Marketing pages are public — no staging gate. Clerk handles app access. */
 export default function MarketingLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="marketing-site min-h-screen bg-brand-bg font-body text-ink">
-      <MarketingAuthLayout>{children}</MarketingAuthLayout>
+      {children}
     </div>
   );
 }
