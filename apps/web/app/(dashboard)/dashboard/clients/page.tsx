@@ -50,7 +50,9 @@ export default function ClientsPage() {
 
   const clients = data?.data ?? [];
   const meta = data?.meta;
-  const totalPages = meta ? Math.ceil(meta.total / meta.perPage) : 1;
+  const totalCount = meta?.total ?? 0;
+  const totalPages =
+    totalCount > 0 ? Math.ceil(totalCount / (meta?.perPage ?? PER_PAGE)) : 1;
 
   function handleSearchChange(value: string) {
     setSearch(value);
@@ -82,9 +84,9 @@ export default function ClientsPage() {
       <div className="flex h-[52px] items-center justify-between border-b border-ink-20 bg-white px-7">
         <div className="flex items-center gap-3">
           <h1 className="font-heading text-[15px] font-bold text-ink">Clients</h1>
-          {meta && (
+          {totalCount > 0 && (
             <span className="rounded-full bg-ink-08 px-2 py-0.5 text-xs font-medium text-ink-60">
-              {meta.total}
+              {totalCount}
             </span>
           )}
         </div>
@@ -281,11 +283,11 @@ export default function ClientsPage() {
         </div>
 
         {/* Pagination */}
-        {meta && meta.total > PER_PAGE && (
+        {totalCount > PER_PAGE && (
           <div className="flex items-center justify-between text-sm text-ink-60">
             <span>
               Showing {(page - 1) * PER_PAGE + 1}–
-              {Math.min(page * PER_PAGE, meta.total)} of {meta.total}
+              {Math.min(page * PER_PAGE, totalCount)} of {totalCount}
             </span>
             <div className="flex items-center gap-1">
               <button
