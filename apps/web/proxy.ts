@@ -1,25 +1,30 @@
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
 
+const appOrigin = (process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3001').replace(
+  /\/$/,
+  '',
+);
+
 const isPublicRoute = createRouteMatcher([
   '/',
   '/gate(.*)',
   '/sign-in(.*)',
   '/sign-up(.*)',
   '/demo(.*)',
-  '/api/health',
-  '/api/webhooks(.*)',
+  // Handlers enforce auth via Bearer token — never redirect /api to sign-in (cross-origin SPA).
+  '/api/(.*)',
 ]);
 
-export default clerkMiddleware(async (auth, req) => {
-  if (isPublicRoute(req)) return;
-
-  // API routes return JSON 401/403 from handlers — never redirect to sign-in.
-  if (req.nextUrl.pathname.startsWith('/api/')) {
-    return;
-  }
-
-  await auth.protect();
-});
+export default clerkMiddleware(
+  async (auth, req) => {
+    if (isPublicRoute(req)) return;
+    await auth.protect();
+  },
+  {
+    // JWTs are issued on the Vercel frontend; Render must accept that origin as azp.
+    authorizedParties: [appOrigin, 'http://localhost:3001'],
+  },
+);
 
 export const config = {
   matcher: [

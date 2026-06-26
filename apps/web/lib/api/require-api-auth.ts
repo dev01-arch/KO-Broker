@@ -20,8 +20,9 @@ type ApiAuthSuccess = {
 type ApiAuthResult = ApiAuthSuccess | { response: Response };
 
 export async function requireApiAuth(): Promise<ApiAuthResult> {
-  const { userId } = await auth();
-  if (!userId) {
+  // Cross-origin dashboard (Vercel) → API (Render) sends session JWT as Bearer token.
+  const { userId, isAuthenticated } = await auth({ acceptsToken: 'session_token' });
+  if (!isAuthenticated || !userId) {
     return { response: apiUnauthorized() };
   }
 
