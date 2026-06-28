@@ -1,4 +1,6 @@
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
+import { NextResponse } from 'next/server';
+import { applyCorsHeaders, handleApiCorsPreflight } from '@/lib/api/cors';
 
 const appOrigin = (process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3001').replace(
   /\/$/,
@@ -17,8 +19,17 @@ const isPublicRoute = createRouteMatcher([
 
 export default clerkMiddleware(
   async (auth, req) => {
-    if (isPublicRoute(req)) return;
+    const preflight = handleApiCorsPreflight(req);
+    if (preflight) return preflight;
+
+    const isApi = req.nextUrl.pathname.startsWith('/api/');
+
+    if (isPublicRoute(req)) {
+      return isApi ? applyCorsHeaders(req, NextResponse.next()) : undefined;
+    }
+
     await auth.protect();
+    return isApi ? applyCorsHeaders(req, NextResponse.next()) : undefined;
   },
   {
     // JWTs are issued on the Vercel frontend; Render must accept that origin as azp.
