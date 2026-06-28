@@ -69,6 +69,38 @@ export async function createUserWithOrg(input: {
   }
 }
 
+/** Clerk user exists in DB but has no org — create one and link (first cross-origin login). */
+export async function linkExistingUserToNewOrg(
+  userId: string,
+  input: { orgName: string; slug: string },
+) {
+  try {
+    const org = await prisma.organisation.create({
+      data: {
+        name: input.orgName,
+        slug: input.slug,
+        plan: 'STARTER',
+      },
+    });
+    return await prisma.user.update({
+      where: { id: userId },
+      data: { orgId: org.id, role: 'ADMIN' },
+      select: {
+        id: true,
+        orgId: true,
+        clerkId: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        role: true,
+      },
+    });
+  } catch (error) {
+    if (!useDevStore(error)) throw error;
+    throw error;
+  }
+}
+
 export async function listClientsForOrg(
   orgId: string,
   params: {

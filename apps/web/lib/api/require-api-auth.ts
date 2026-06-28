@@ -1,7 +1,7 @@
 import { auth, currentUser } from '@clerk/nextjs/server';
 import { slugify } from '@ko/utils';
 import { apiUnauthorized, apiError } from '@/lib/api/responses';
-import { createUserWithOrg, findUserByClerkId } from '@/lib/api/clients-data';
+import { createUserWithOrg, findUserByClerkId, linkExistingUserToNewOrg } from '@/lib/api/clients-data';
 import { isPrismaConnectionError } from '@/lib/api/prisma-errors';
 
 type ApiAuthSuccess = {
@@ -19,6 +19,18 @@ type ApiAuthSuccess = {
 
 type ApiAuthResult = ApiAuthSuccess | { response: Response };
 
+function orgNameFromClerkUser(clerkUser: {
+  fullName: string | null;
+  firstName: string | null;
+  lastName: string | null;
+}) {
+  return (
+    clerkUser.fullName?.trim() ||
+    [clerkUser.firstName, clerkUser.lastName].filter(Boolean).join(' ') ||
+    'My Organisation'
+  );
+}
+
 export async function requireApiAuth(): Promise<ApiAuthResult> {
   // Cross-origin dashboard (Vercel) → API (Render) sends session JWT as Bearer token.
   const { userId, isAuthenticated } = await auth({ acceptsToken: 'session_token' });
@@ -29,7 +41,7 @@ export async function requireApiAuth(): Promise<ApiAuthResult> {
   try {
     let user = await findUserByClerkId(userId);
 
-    if (!user) {
+    if (!user || !user.orgId) {
       const clerkUser = await currentUser();
       if (!clerkUser) {
         return { response: apiUnauthorized() };
@@ -42,20 +54,22 @@ export async function requireApiAuth(): Promise<ApiAuthResult> {
         };
       }
 
-      const orgName =
-        clerkUser.fullName?.trim() ||
-        [clerkUser.firstName, clerkUser.lastName].filter(Boolean).join(' ') ||
-        'My Organisation';
+      const orgName = orgNameFromClerkUser(clerkUser);
       const baseSlug = slugify(orgName) || 'organisation';
+      const slug = `${baseSlug}-${userId.slice(-6).toLowerCase()}`;
 
-      user = await createUserWithOrg({
-        clerkId: userId,
-        email,
-        firstName: clerkUser.firstName,
-        lastName: clerkUser.lastName,
-        orgName,
-        slug: `${baseSlug}-${userId.slice(-6).toLowerCase()}`,
-      });
+      if (!user) {
+        user = await createUserWithOrg({
+          clerkId: userId,
+          email,
+          firstName: clerkUser.firstName,
+          lastName: clerkUser.lastName,
+          orgName,
+          slug,
+        });
+      } else {
+        user = await linkExistingUserToNewOrg(user.id, { orgName, slug });
+      }
     }
 
     const orgId = user.orgId;
