@@ -27,7 +27,7 @@ export async function getOrgPlan(orgId: string): Promise<Plan> {
 }
 
 export async function orgHasFeature(orgId: string, feature: string): Promise<boolean> {
-  if (process.env.NODE_ENV === 'development' && !planLimitsEnforced()) {
+  if (!planLimitsEnforced()) {
     return true;
   }
   const plan = await getOrgPlan(orgId);

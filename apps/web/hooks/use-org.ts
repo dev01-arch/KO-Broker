@@ -43,7 +43,7 @@ export function useOrgProfile() {
 
 export function usePlanFeature(feature: string) {
   const { data: profile } = useOrgProfile();
-  if (process.env.NODE_ENV === 'development' && !planLimitsEnforced()) {
+  if (!planLimitsEnforced()) {
     return true;
   }
   const plan = profile?.plan ?? 'STARTER';
