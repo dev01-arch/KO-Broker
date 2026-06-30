@@ -368,6 +368,9 @@ body.embedded #tab-cases{background:transparent}
   #tab-cases .ov-kanban-section .kanban.ov-pb-board{min-width:820px}
   #tab-cases .ov-pb-summary-card{width:150px;min-width:150px}
   #tab-cases .ov-pb-kanban-col{width:150px;min-width:150px;padding:14px 12px}
+  /* Fix: prevent horizontally-scrollable kanban from swallowing vertical touch events.
+     pan-x pinch-zoom lets the parent page scroll vertically while the kanban scrolls horizontally. */
+  .ov-kanban-section{touch-action:pan-x pinch-zoom;overflow-y:hidden}
 }
 
 /* Personal dashboard (signed-in /dashboard) — KPI cards at zero + welcome empty state; no mock pipeline */

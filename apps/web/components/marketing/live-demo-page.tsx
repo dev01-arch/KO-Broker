@@ -1352,6 +1352,8 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
     panel.style.display = 'flex';
     panel.style.flexDirection = 'column';
     panel.innerHTML = `<div class="msg-hub-thread-hd">
+      <button type="button" class="msg-hub-thread-back" aria-label="Back to messages"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>
+      <div class="msg-hub-thread-hd-av" style="background:#0F6E56">${meta.name.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()}</div>
       <div style="flex:1;min-width:0">
         <div class="msg-hub-thread-name">${meta.name}</div>
         <div class="msg-hub-thread-tags">
@@ -2245,6 +2247,32 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
                     try {
                       const idoc = iframeRef.current?.contentDocument;
                       if (idoc) {
+                        // ── Mobile messages styles — injected fresh on every load ──────
+                        // Injecting here bypasses any browser cache on the static HTML.
+                        const mobileStyle = idoc.createElement('style');
+                        mobileStyle.id = 'ko-mobile-msg-styles';
+                        mobileStyle.textContent = [
+                          // Kanban scroll fix: let vertical touch events pass through to parent page
+                          '@media(max-width:700px){.ov-kanban-section{touch-action:pan-x pinch-zoom!important;overflow-y:hidden!important}}',
+                          '.msg-hub-thread-back{display:none;width:36px;height:36px;align-items:center;justify-content:center;border:none;background:transparent;cursor:pointer;color:#18181b;padding:0;flex-shrink:0;border-radius:8px}',
+                          '.msg-hub-thread-back:hover{background:#f4f4f5}',
+                          '.msg-hub-thread-hd-av{display:none;width:40px;height:40px;border-radius:50%;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0}',
+                          '@media(max-width:700px){',
+                          '.msg-hub-stats{grid-template-columns:repeat(2,1fr)!important}',
+                          '.msg-hub-thread-col{position:fixed!important;inset:0!important;z-index:200!important;width:100%!important;border-left:none!important;overflow:hidden!important}',
+                          '.msg-hub-thread-hd{align-items:center!important;gap:12px!important}',
+                          '.msg-hub-thread-back{display:flex!important}',
+                          '.msg-hub-thread-close{display:none!important}',
+                          '.msg-hub-thread-hd-av{display:flex!important}',
+                          '.msg-hub-thread-name{font-size:16px!important;font-weight:700!important}',
+                          '.msg-hub-bbl{max-width:78%!important}',
+                          '.msg-hub-composer-input{border-radius:999px!important;padding:11px 18px!important}',
+                          '.msg-hub-composer-send{width:42px!important;height:42px!important;border-radius:50%!important;padding:0!important;justify-content:center!important}',
+                          '.msg-hub-send-text{display:none!important}',
+                          '}',
+                        ].join('');
+                        idoc.head.appendChild(mobileStyle);
+
                         idoc.addEventListener('click', async (e: MouseEvent) => {
                           const target = e.target as HTMLElement;
 
@@ -2363,7 +2391,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
                             return;
                           }
 
-                          const closeHub = target.closest('.msg-hub-thread-close') as HTMLElement | null;
+                          const closeHub = target.closest('.msg-hub-thread-close, .msg-hub-thread-back') as HTMLElement | null;
                           if (closeHub) {
                             const panel = idoc.getElementById('msg-hub-thread');
                             if (panel) {
