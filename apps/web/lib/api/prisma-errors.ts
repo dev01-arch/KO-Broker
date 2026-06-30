@@ -9,3 +9,11 @@ export function isPrismaConnectionError(error: unknown): boolean {
     message.includes('ECONNREFUSED')
   );
 }
+
+export function isPrismaUniqueConflict(error: unknown, field: string): boolean {
+  if (!error || typeof error !== 'object') return false;
+  if (!('code' in error) || String(error.code) !== 'P2002') return false;
+  const meta = 'meta' in error ? (error as { meta?: { target?: unknown } }).meta : null;
+  const target = meta?.target;
+  return Array.isArray(target) && target.includes(field);
+}

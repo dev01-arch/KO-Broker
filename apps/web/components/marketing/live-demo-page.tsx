@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth, useUser } from '@clerk/nextjs';
 import { useQueryClient } from '@tanstack/react-query';
-import { Building2, Calculator as CalculatorIcon, FileText, Loader2, Settings, Upload, type LucideIcon } from 'lucide-react';
+import { Bell, Building2, Calculator as CalculatorIcon, FileText, Loader2, Settings, Upload, type LucideIcon } from 'lucide-react';
 import MortgageCalculators from '@/components/marketing/demo-calculator/MortgageCalculators';
 import { IntegrationsSettingsPanel } from '@/components/dashboard/integrations-settings-panel';
 import { clientsQueryKey, useClients, useCreateClient } from '@/hooks/use-clients';
@@ -183,6 +183,14 @@ function applyGreetingToIframe(doc: Document, displayName: string) {
   }
 }
 
+const DEMO_NOTIFICATIONS = [
+  { initials: 'SM', name: 'Sarah Mitchell', preview: 'Uploaded 2 new documents to KOC-0001-A', time: '2m ago', color: '#CE652D' },
+  { initials: 'JJ', name: 'James John', preview: 'Requested a call-back for KOC-0012', time: '14m ago', color: '#2D9D7A' },
+  { initials: 'S', name: 'System', preview: 'Lender criteria updated — 3 products affected', time: '1h ago', color: '#00B8D9' },
+  { initials: 'JJ', name: 'Jane Joe', preview: 'Signed the suitability letter', time: '2h ago', color: '#857ABE' },
+  { initials: 'AS', name: 'Amon Stone', preview: 'New enquiry submitted via portal', time: '3h ago', color: '#E04B4B' },
+] as const;
+
 type LiveDemoPageProps = {
   /** Logo link target — `/` on marketing demo, `/dashboard` when signed in. */
   homeHref?: string;
@@ -201,6 +209,19 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
   const [iframeLoaded, setIframeLoaded] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const [uploadModal, setUploadModal] = useState<{ caseId: string } | null>(null);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [notifUnread, setNotifUnread] = useState<number>(DEMO_NOTIFICATIONS.length);
+  const notifRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!notifOpen) return;
+    function handleOutside(e: MouseEvent) {
+      if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
+        setNotifOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleOutside);
+    return () => document.removeEventListener('mousedown', handleOutside);
+  }, [notifOpen]);
   // Stable ref so onLoad/click closures always call the current getToken.
   const getTokenRef = useRef(getToken);
   useEffect(() => { getTokenRef.current = getToken; }, [getToken]);
@@ -2035,16 +2056,81 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
         </aside>
 
         <section className="min-w-0 flex-1">
+          <div className="mx-auto w-full max-w-7xl px-6 pt-6 pb-10">
+          {/* Notification bell header row */}
+          <div className="relative mb-2 flex justify-end">
+          <div ref={notifRef} className="relative z-30">
+            <button
+              type="button"
+              onClick={() => { setNotifOpen(o => !o); setNotifUnread(0); }}
+              className="relative flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 bg-white shadow-sm transition-colors hover:bg-gray-50"
+              aria-label="Notifications"
+              aria-expanded={notifOpen}
+            >
+              <Bell className="h-5 w-5 text-gray-600" />
+              {notifUnread > 0 && (
+                <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold leading-none text-white">
+                  {notifUnread}
+                </span>
+              )}
+            </button>
+
+            {notifOpen && (
+              <div className="absolute right-0 top-12 w-[300px] overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-2xl">
+                <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
+                  <span className="text-sm font-semibold text-gray-900">Messages</span>
+                  <button
+                    type="button"
+                    onClick={() => setNotifUnread(0)}
+                    className="text-xs text-brand-teal hover:underline"
+                  >
+                    Mark all as read
+                  </button>
+                </div>
+                <ul className="divide-y divide-gray-50">
+                  {DEMO_NOTIFICATIONS.map((n, i) => (
+                    <li key={i}>
+                      <button
+                        type="button"
+                        onClick={() => { setActiveTab('messages'); setNotifOpen(false); }}
+                        className="flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-gray-50"
+                      >
+                        <span
+                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
+                          style={{ backgroundColor: n.color }}
+                        >
+                          {n.initials}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-xs font-semibold text-gray-900">{n.name}</span>
+                            <span className="shrink-0 text-[10px] text-gray-400">{n.time}</span>
+                          </div>
+                          <p className="mt-0.5 truncate text-[11px] text-gray-500">{n.preview}</p>
+                        </div>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+                <div className="border-t border-gray-100 px-4 py-3 text-center">
+                  <button
+                    type="button"
+                    onClick={() => { setActiveTab('messages'); setNotifOpen(false); }}
+                    className="text-xs font-medium text-brand-teal hover:underline"
+                  >
+                    View all messages →
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+          </div>
           {activeTab === 'calculator' ? (
-            <div className="relative mx-auto w-full max-w-7xl px-6 pt-6 pb-10">
               <MortgageCalculators />
-            </div>
           ) : activeTab === 'settings' ? (
-            <div className="relative mx-auto w-full max-w-7xl px-6 pt-6 pb-10">
               <IntegrationsSettingsPanel embedded />
-            </div>
           ) : (
-            <div className="relative mx-auto w-full max-w-7xl px-6 pt-6 pb-10">
+            <>
               {iframeLoading && (
                 <div
                   className="absolute inset-0 z-10 flex min-h-[min(70vh,560px)] flex-col items-center justify-center gap-4 rounded-lg border border-gray-100 bg-white/95 px-6 backdrop-blur-sm"
@@ -2316,8 +2402,9 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
                   }}
                 />
               )}
-            </div>
+            </>
           )}
+          </div>
         </section>
     </div>
   );

@@ -50,10 +50,10 @@ export function LandingPage() {
       >
         <MarketingNavbar />
 
-        <motion.section className="flex flex-col overflow-hidden px-6 pt-48 pb-0" {...scrollReveal}>
+        <motion.section className="flex flex-col overflow-hidden px-6 pt-36 pb-0 md:pt-48" {...scrollReveal}>
           <div className="mx-auto max-w-4xl space-y-12 text-center">
             <div className="space-y-6">
-              <h1 className="hero-heading text-5xl text-hero-dark md:text-7xl">
+              <h1 className="hero-heading text-3xl text-hero-dark sm:text-4xl md:text-7xl">
                 The <span className="text-hero-accent italic">smarter</span>
                 <br />
                 broker platform
@@ -72,7 +72,7 @@ export function LandingPage() {
               </Link>
               <Link
                 href="/sign-in"
-                className="w-full rounded-xl border border-gray-100 bg-white px-8 py-4 font-bold text-gray-600 transition-all hover:bg-gray-50 sm:w-auto"
+                className="font-bold text-gray-600 transition-all hover:text-brand-teal sm:w-auto sm:rounded-xl sm:border sm:border-gray-100 sm:bg-white sm:px-8 sm:py-4 sm:hover:bg-gray-50"
               >
                 Sign in
               </Link>
@@ -89,7 +89,7 @@ export function LandingPage() {
       </div>
 
       <motion.div className="w-full border-y border-gray-100 bg-white" {...scrollReveal}>
-        <div className="mx-auto max-w-7xl px-6 py-20">
+        <div className="mx-auto max-w-7xl px-6 py-10 md:py-20">
           <div className="flex flex-col items-stretch md:flex-row">
             {[
               {
@@ -110,8 +110,8 @@ export function LandingPage() {
             ].map((item, i) => (
               <Fragment key={i}>
                 {i > 0 && <div className="mx-12 hidden w-px flex-shrink-0 bg-gray-200 md:block" />}
-                <div className="flex-1 space-y-4 py-6 md:py-0">
-                  <div className="text-gray-400">{item.icon}</div>
+                <div className="flex-1 space-y-4 py-6 text-center md:py-0 md:text-left">
+                  <div className="flex justify-center text-gray-400 md:justify-start">{item.icon}</div>
                   <h4 className="text-lg font-bold">{item.title}</h4>
                   <p className="text-sm leading-relaxed text-gray-500">{item.desc}</p>
                 </div>
@@ -123,16 +123,16 @@ export function LandingPage() {
 
       <motion.section
         id="features"
-        className="w-full bg-cover bg-center bg-no-repeat px-6 py-32"
+        className="w-full bg-cover bg-center bg-no-repeat px-6 py-16 md:py-32"
         style={{ backgroundImage: `url(${marketingImages.modulesBg})` }}
         {...scrollReveal}
       >
         <div className="mx-auto max-w-7xl">
-          <div className="mb-20 space-y-4 text-center md:text-left">
-            <span className="text-[10px] font-black tracking-widest text-brand-teal uppercase">
+          <div className="mb-10 space-y-4 text-center md:mb-20 md:text-left">
+            <span className="text-xs font-black tracking-widest text-brand-teal uppercase">
               Platform
             </span>
-            <h2 className="heading-bold text-5xl md:text-6xl">
+            <h2 className="heading-bold text-3xl sm:text-4xl md:text-6xl">
               <span className="text-[#061F18]">Five modules</span>
               <br />
               <span className="text-brand-teal">One workflow</span>
@@ -229,8 +229,8 @@ export function LandingPage() {
                   </div>
                   <div className="w-full min-w-0 text-center">
                     <h5 className="text-lg font-bold">{m.title}</h5>
-                    <div className="max-h-0 overflow-hidden transition-[max-height] duration-300 ease-out group-hover:max-h-[12rem]">
-                      <p className="pt-2 text-center text-xs leading-relaxed text-gray-600 opacity-0 transition-opacity duration-200 ease-out group-hover:opacity-100 group-hover:delay-75">
+                    <div className="overflow-hidden transition-[max-height] duration-300 ease-out max-h-none md:max-h-0 md:group-hover:max-h-[12rem]">
+                      <p className="pt-2 text-center text-xs leading-relaxed text-gray-600 opacity-100 md:opacity-0 md:transition-opacity md:duration-200 md:ease-out md:group-hover:opacity-100 md:group-hover:delay-75">
                         {m.desc}
                       </p>
                     </div>
@@ -246,30 +246,31 @@ export function LandingPage() {
         <MarketingStats />
       </motion.div>
 
-      <motion.section id="pricing" className="bg-[rgba(247,251,249,0.8)] px-6 py-32 backdrop-blur-[3.4px]" {...scrollReveal}>
-        <div className="mx-auto max-w-7xl space-y-20">
+      <motion.section id="pricing" className="bg-[rgba(247,251,249,0.8)] px-6 py-16 backdrop-blur-[3.4px] md:py-32" {...scrollReveal}>
+        <div className="mx-auto max-w-7xl space-y-10 md:space-y-20">
           <div className="space-y-4 text-center">
-            <span className="text-[10px] font-black tracking-widest text-brand-teal uppercase">
+            <span className="text-xs font-black tracking-widest text-brand-teal uppercase">
               Pricing
             </span>
-            <h2 className="heading-bold text-5xl text-[#061F18] md:text-7xl">
+            <h2 className="heading-bold text-3xl text-[#061F18] sm:text-4xl md:text-7xl">
               Per adviser, per month.
             </h2>
             <p className="text-gray-500">No setup fees. No per-case charges. Cancel any time.</p>
           </div>
 
-          <div className="mx-auto flex w-full max-w-6xl flex-col items-center justify-center gap-10 lg:flex-row lg:items-end lg:justify-center lg:gap-6 xl:gap-8">
-            <motion.div className="flex w-full justify-center" {...scrollReveal}>
+          {/* Mobile: vertical stack; lg+: row layout */}
+          <div className="mx-auto flex w-full max-w-6xl flex-col items-center gap-8 lg:flex-row lg:items-end lg:justify-center lg:gap-6 xl:gap-8">
+            <motion.div className="w-full flex justify-center" {...scrollReveal}>
               <PricingCard
                 v2Design="starter"
                 tier="Starter"
                 price="35"
                 buttonText="Choose Starter"
-                features={[]}
+                features={['Pipeline CRM', 'Fact-find templates', 'Up to 50 cases/mo', 'Email support']}
               />
             </motion.div>
             <motion.div
-              className="flex w-full justify-center"
+              className="w-full flex justify-center"
               initial={{ opacity: 0, y: 28 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, amount: 0.25 }}
@@ -282,11 +283,11 @@ export function LandingPage() {
                 mostPopular
                 buttonText="Try the demo"
                 buttonHref="/demo"
-                features={[]}
+                features={['Everything in Starter', 'Lender research engine', 'Compliance vault', 'AI report generation', 'Priority support']}
               />
             </motion.div>
             <motion.div
-              className="flex w-full justify-center"
+              className="w-full flex justify-center"
               initial={{ opacity: 0, y: 28 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, amount: 0.25 }}
@@ -297,13 +298,13 @@ export function LandingPage() {
                 tier="Enterprise"
                 price="75"
                 buttonText="Choose Enterprise"
-                features={[]}
+                features={['Everything in Professional', 'SSO + advanced roles', 'Custom audit reports', 'API access']}
               />
             </motion.div>
           </div>
 
           <motion.div
-            className="mx-auto mt-20 max-w-5xl rounded-[40px] border border-gray-50 bg-white p-8 md:p-12"
+            className="mx-auto mt-20 hidden max-w-5xl rounded-[40px] border border-gray-50 bg-white p-8 md:block md:p-12"
             initial={{ opacity: 0, y: 24 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.15 }}

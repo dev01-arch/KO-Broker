@@ -149,7 +149,7 @@ model User {
 model Client {
   id               String           @id @default(cuid())
   orgId            String
-  referenceNumber  String           @unique
+  referenceNumber  String
   clientType       ClientType       @default(INDIVIDUAL)
   companyName      String?
   companyNumber    String?
@@ -175,6 +175,7 @@ model Client {
   documents    Document[]
   messages     Message[]
 
+  @@unique([orgId, referenceNumber])
   @@map("clients")
 }
 
@@ -182,7 +183,7 @@ model Case {
   id              String    @id @default(cuid())
   orgId           String
   clientId        String
-  referenceNumber String    @unique
+  referenceNumber String
   type            CaseType
   stage           CaseStage @default(ENQUIRY)
   propertyValue   Float?
@@ -208,6 +209,7 @@ model Case {
   messages           Message[]
   documents          Document[]
 
+  @@unique([orgId, referenceNumber])
   @@map("cases")
 }
 

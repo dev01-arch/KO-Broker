@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/db';
 import { devStore } from '@/lib/api/dev-store';
-import { isPrismaConnectionError } from '@/lib/api/prisma-errors';
+import { isPrismaConnectionError, isPrismaUniqueConflict } from '@/lib/api/prisma-errors';
 import { validateStageTransition } from '@/lib/api/stage-transition';
 import { calculateLTV, generateReference } from '@ko/utils';
 import type { CaseStage, CaseType, UpsertFactFindInput } from '@ko/types';
@@ -102,50 +102,62 @@ export async function createCaseForOrg(
     termYears?: number;
   },
 ) {
-  try {
-    const client = await prisma.client.findFirst({
-      where: { id: input.clientId, orgId },
-      select: { id: true },
-    });
-    if (!client) return { error: 'NOT_FOUND' as const };
+  const client = await (async () => {
+    try {
+      return await prisma.client.findFirst({
+        where: { id: input.clientId, orgId },
+        select: { id: true },
+      });
+    } catch (error) {
+      if (!useDevStore(error)) throw error;
+      return devStore.getClient(orgId, input.clientId) ?? null;
+    }
+  })();
+  if (!client) return { error: 'NOT_FOUND' as const };
 
-    const year = new Date().getFullYear();
-    const count = await prisma.case.count({
-      where: {
-        orgId,
-        createdAt: {
-          gte: new Date(`${year}-01-01T00:00:00.000Z`),
-          lt: new Date(`${year + 1}-01-01T00:00:00.000Z`),
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const year = new Date().getFullYear();
+      const count = await prisma.case.count({
+        where: {
+          orgId,
+          createdAt: {
+            gte: new Date(`${year}-01-01T00:00:00.000Z`),
+            lt: new Date(`${year + 1}-01-01T00:00:00.000Z`),
+          },
         },
-      },
-    });
-    const referenceNumber = generateReference('KOF', count + 1);
-    const ltv =
-      input.propertyValue && input.loanAmount
-        ? calculateLTV(input.loanAmount, input.propertyValue)
-        : undefined;
+      });
+      const referenceNumber = generateReference('KOF', count + 1);
+      const ltv =
+        input.propertyValue && input.loanAmount
+          ? calculateLTV(input.loanAmount, input.propertyValue)
+          : undefined;
 
-    const created = await prisma.case.create({
-      data: {
-        orgId,
-        clientId: input.clientId,
-        referenceNumber,
-        type: input.type,
-        propertyValue: input.propertyValue,
-        loanAmount: input.loanAmount,
-        ltv,
-        termYears: input.termYears,
-      },
-      select: caseListSelect,
-    });
+      const created = await prisma.case.create({
+        data: {
+          orgId,
+          clientId: input.clientId,
+          referenceNumber,
+          type: input.type,
+          propertyValue: input.propertyValue,
+          loanAmount: input.loanAmount,
+          ltv,
+          termYears: input.termYears,
+        },
+        select: caseListSelect,
+      });
 
-    return { case: created };
-  } catch (error) {
-    if (!useDevStore(error)) throw error;
-    const result = devStore.createCase(orgId, input);
-    if ('error' in result) return result;
-    return { case: result.case };
+      return { case: created };
+    } catch (error) {
+      if (isPrismaUniqueConflict(error, 'referenceNumber') && attempt < 2) continue;
+      if (!useDevStore(error)) throw error;
+      const result = devStore.createCase(orgId, input);
+      if ('error' in result) return result;
+      return { case: result.case };
+    }
   }
+
+  throw new Error('Failed to generate a unique case reference number');
 }
 
 export async function getCaseForOrg(orgId: string, id: string) {

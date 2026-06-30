@@ -120,8 +120,8 @@ export function PricingCard({
           <p className="text-xs text-gray-500">{subtitle}</p>
         </div>
         <div className="flex items-baseline gap-1">
-          <span className="heading-bold text-4xl">£</span>
-          <span className="heading-bold text-7xl">{price}</span>
+          <span className="heading-bold text-3xl md:text-4xl">£</span>
+          <span className="heading-bold text-5xl md:text-7xl">{price}</span>
           <span className="text-xs tracking-tight text-gray-400">/adviser/mo</span>
         </div>
         {features.length > 0 ? (

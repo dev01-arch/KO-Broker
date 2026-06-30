@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/db';
 import { devStore } from '@/lib/api/dev-store';
-import { isPrismaConnectionError } from '@/lib/api/prisma-errors';
+import { isPrismaConnectionError, isPrismaUniqueConflict } from '@/lib/api/prisma-errors';
 import { generateReference } from '@ko/utils';
 import type { ClientType, EmploymentStatus } from '@ko/types';
 
@@ -180,54 +180,59 @@ export async function createClientForOrg(
   const firstName = isCompany ? companyName! : input.firstName!.trim();
   const lastName = isCompany ? '—' : input.lastName!.trim();
 
-  try {
-    const year = new Date().getFullYear();
-    const count = await prisma.client.count({
-      where: {
-        orgId,
-        createdAt: {
-          gte: new Date(`${year}-01-01T00:00:00.000Z`),
-          lt: new Date(`${year + 1}-01-01T00:00:00.000Z`),
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const year = new Date().getFullYear();
+      const count = await prisma.client.count({
+        where: {
+          orgId,
+          createdAt: {
+            gte: new Date(`${year}-01-01T00:00:00.000Z`),
+            lt: new Date(`${year + 1}-01-01T00:00:00.000Z`),
+          },
         },
-      },
-    });
-    const referenceNumber = generateReference('KOC', count + 1);
+      });
+      const referenceNumber = generateReference('KOC', count + 1);
 
-    return await prisma.client.create({
-      data: {
-        orgId,
-        referenceNumber,
-        clientType,
-        companyName: isCompany ? companyName : undefined,
-        companyNumber: isCompany ? input.companyNumber?.trim() || undefined : undefined,
-        title: isCompany ? undefined : input.title,
-        firstName,
-        lastName,
-        email: input.email,
-        phone: input.phone,
-        dateOfBirth: !isCompany && input.dateOfBirth ? new Date(input.dateOfBirth) : undefined,
-        employmentStatus: input.employmentStatus ?? 'EMPLOYED',
-        annualIncome: input.annualIncome,
-      },
-      select: {
-        id: true,
-        referenceNumber: true,
-        firstName: true,
-        lastName: true,
-        email: true,
-      },
-    });
-  } catch (error) {
-    if (!useDevStore(error)) throw error;
-    const client = devStore.createClient(orgId, input);
-    return {
-      id: client.id,
-      referenceNumber: client.referenceNumber,
-      firstName: client.firstName,
-      lastName: client.lastName,
-      email: client.email,
-    };
+      return await prisma.client.create({
+        data: {
+          orgId,
+          referenceNumber,
+          clientType,
+          companyName: isCompany ? companyName : undefined,
+          companyNumber: isCompany ? input.companyNumber?.trim() || undefined : undefined,
+          title: isCompany ? undefined : input.title,
+          firstName,
+          lastName,
+          email: input.email,
+          phone: input.phone,
+          dateOfBirth: !isCompany && input.dateOfBirth ? new Date(input.dateOfBirth) : undefined,
+          employmentStatus: input.employmentStatus ?? 'EMPLOYED',
+          annualIncome: input.annualIncome,
+        },
+        select: {
+          id: true,
+          referenceNumber: true,
+          firstName: true,
+          lastName: true,
+          email: true,
+        },
+      });
+    } catch (error) {
+      if (isPrismaUniqueConflict(error, 'referenceNumber') && attempt < 2) continue;
+      if (!useDevStore(error)) throw error;
+      const client = devStore.createClient(orgId, input);
+      return {
+        id: client.id,
+        referenceNumber: client.referenceNumber,
+        firstName: client.firstName,
+        lastName: client.lastName,
+        email: client.email,
+      };
+    }
   }
+
+  throw new Error('Failed to generate a unique client reference number');
 }
 
 export async function getClientForOrg(orgId: string, id: string) {
