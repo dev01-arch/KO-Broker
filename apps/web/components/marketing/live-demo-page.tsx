@@ -152,6 +152,13 @@ const navItems: NavItem[] = [
   { id: 'settings', label: 'Settings', icon: Settings },
 ];
 
+// Bottom nav shows 5 primary tabs on mobile; AI Reports + Calculator live under Settings.
+const MOBILE_NAV_IDS: DemoTab[] = ['overview', 'clients', 'cases', 'messages', 'settings'];
+const mobileNavItems = navItems.filter((item) => MOBILE_NAV_IDS.includes(item.id));
+// Teal filter (#00B8D9) applied to black SVG icon images on active state.
+const MOBILE_ICON_ACTIVE_FILTER =
+  'invert(55%) sepia(94%) saturate(400%) hue-rotate(155deg) brightness(100%) contrast(100%)';
+
 function isEmbeddedPanelTab(tab: DemoTab): tab is 'calculator' | 'settings' {
   return tab === 'calculator' || tab === 'settings';
 }
@@ -182,6 +189,9 @@ function applyGreetingToIframe(doc: Document, displayName: string) {
     greetEl.textContent = `${timeGreeting()}, ${displayName}`;
   }
 }
+
+// Cache-buster: changes on every page load so the browser always fetches the latest iframe HTML.
+const _IFRAME_V = Date.now();
 
 const DEMO_NOTIFICATIONS = [
   { initials: 'SM', name: 'Sarah Mitchell', preview: 'Uploaded 2 new documents to KOC-0001-A', time: '2m ago', color: '#CE652D' },
@@ -478,7 +488,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
 
   const iframeSrc = useMemo(() => {
     if (!overviewReady) return null;
-    const params = new URLSearchParams({ embedded: '1' });
+    const params = new URLSearchParams({ embedded: '1', v: String(_IFRAME_V) });
     // Personal dashboard: live API + personalised header (no mock Alex).
     if (isPersonalDashboard) {
       params.set('liveData', '1');
@@ -2001,8 +2011,18 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
           }}
         />
       )}
+      {/* ── Mobile top bar (logo only, visible below lg) ──────────────────── */}
+      <div className="sticky top-0 z-30 flex items-center border-b border-[#E4E4E4] bg-white px-4 py-3 lg:hidden">
+        <Link href="/" className="flex cursor-pointer items-center gap-2" aria-label="Go to home">
+          <div className="rounded-md bg-brand-teal p-1.5">
+            <Building2 className="h-5 w-5 text-white" />
+          </div>
+          <span className="font-display text-xl font-bold tracking-tight text-brand-teal">KO Platform</span>
+        </Link>
+      </div>
+
         <aside
-          className="flex w-full shrink-0 flex-col items-start gap-[136px] border-b border-[#E4E4E4] bg-white py-[27px] pr-[14px] pl-[14px] lg:sticky lg:top-0 lg:min-h-dvh lg:w-[254px] lg:self-start lg:border-r lg:border-b-0"
+          className="hidden w-full shrink-0 flex-col items-start gap-[136px] border-b border-[#E4E4E4] bg-white py-[27px] pr-[14px] pl-[14px] lg:flex lg:sticky lg:top-0 lg:min-h-dvh lg:w-[254px] lg:self-start lg:border-r lg:border-b-0"
           aria-label="Demo navigation"
         >
           <Link href="/" className="flex cursor-pointer items-center gap-2 text-left" aria-label="Go to home">
@@ -2056,9 +2076,9 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
         </aside>
 
         <section className="min-w-0 flex-1">
-          <div className="mx-auto w-full max-w-7xl px-6 pt-6 pb-10">
+          <div className="mx-auto w-full max-w-7xl px-0 pt-0 pb-24 lg:px-6 lg:pt-6 lg:pb-10">
           {/* Notification bell header row */}
-          <div className="relative mb-2 flex justify-end">
+          <div className="relative mb-2 flex justify-end px-4 pt-4 lg:px-0 lg:pt-0">
           <div ref={notifRef} className="relative z-30">
             <button
               type="button"
@@ -2125,10 +2145,56 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
             )}
           </div>
           </div>
+          {/* ── Mobile: back button when on a Settings-nested tab ───────────── */}
+          {(activeTab === 'ai' || activeTab === 'calculator') && (
+            <button
+              type="button"
+              onClick={() => setActiveTab('settings')}
+              className="mb-4 flex items-center gap-1.5 px-4 text-sm font-medium text-brand-teal lg:hidden lg:px-0"
+              aria-label="Back to Settings"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden><polyline points="15 18 9 12 15 6" /></svg>
+              Settings
+            </button>
+          )}
+
           {activeTab === 'calculator' ? (
               <MortgageCalculators />
           ) : activeTab === 'settings' ? (
-              <IntegrationsSettingsPanel embedded />
+            <>
+              {/* ── Mobile: quick-access cards for non-nav tabs ──────────────── */}
+              <div className="mb-5 grid grid-cols-2 gap-3 px-4 lg:hidden lg:px-0">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('ai')}
+                  className="flex items-center gap-3 rounded-xl border border-[#E4E4E4] bg-white px-4 py-3.5 text-left transition-colors hover:border-[#00B8D9] hover:bg-[#E9FCFF]"
+                >
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#f0fafb]">
+                    <img src="/assets/smart_toy.svg" alt="" width={20} height={20} className="h-5 w-5" />
+                  </span>
+                  <div>
+                    <p className="text-[13px] font-semibold text-[#061F18]">AI Reports</p>
+                    <p className="text-[11px] text-[#71717a]">Generate reports</p>
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('calculator')}
+                  className="flex items-center gap-3 rounded-xl border border-[#E4E4E4] bg-white px-4 py-3.5 text-left transition-colors hover:border-[#00B8D9] hover:bg-[#E9FCFF]"
+                >
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#f0fafb]">
+                    <CalculatorIcon className="h-5 w-5 text-[#535e5b]" aria-hidden />
+                  </span>
+                  <div>
+                    <p className="text-[13px] font-semibold text-[#061F18]">Calculator</p>
+                    <p className="text-[11px] text-[#71717a]">Mortgage tools</p>
+                  </div>
+                </button>
+              </div>
+              <div className="px-4 lg:px-0">
+                <IntegrationsSettingsPanel embedded />
+              </div>
+            </>
           ) : (
             <>
               {iframeLoading && (
@@ -2406,6 +2472,52 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
           )}
           </div>
         </section>
+
+      {/* ── Mobile bottom navigation bar ─────────────────────────────────── */}
+      <nav
+        className="fixed right-0 bottom-0 left-0 z-40 border-t border-[#E4E4E4] bg-white lg:hidden"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+        aria-label="Mobile navigation"
+      >
+        <div className="flex items-stretch">
+          {mobileNavItems.map((item) => {
+            // AI Reports and Calculator are nested under Settings on mobile.
+            const mobileActive =
+              activeTab === 'ai' || activeTab === 'calculator' ? 'settings' : activeTab;
+            const isActive = mobileActive === item.id;
+            const Icon = 'icon' in item ? item.icon : null;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => setActiveTab(item.id)}
+                aria-current={isActive ? 'page' : undefined}
+                className={`flex flex-1 flex-col items-center justify-center gap-0.5 py-2 text-[10px] font-medium transition-colors ${
+                  isActive ? 'text-[#00B8D9]' : 'text-[#71717a]'
+                }`}
+              >
+                {'iconUrl' in item ? (
+                  <img
+                    src={item.iconUrl}
+                    alt=""
+                    width={22}
+                    height={22}
+                    className="h-[22px] w-[22px]"
+                    style={isActive ? { filter: MOBILE_ICON_ACTIVE_FILTER } : undefined}
+                  />
+                ) : Icon ? (
+                  <Icon
+                    className="h-[22px] w-[22px]"
+                    style={{ color: isActive ? '#00B8D9' : '#71717a' }}
+                    aria-hidden
+                  />
+                ) : null}
+                <span>{item.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </nav>
     </div>
   );
 }

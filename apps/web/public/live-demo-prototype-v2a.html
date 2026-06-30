@@ -325,6 +325,50 @@ body.embedded #tab-cases{background:transparent}
 #tab-overview .ov-activity-ref{font-family:'DM Sans',sans-serif;font-size:11px;font-weight:400;color:#a1a1aa;line-height:normal;margin:0}
 #tab-overview .ov-activity-amt{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:#16856F;flex-shrink:0;white-space:nowrap}
 @media(max-width:900px){#tab-overview .ov-bottom-row{grid-template-columns:1fr}}
+@media(max-width:700px){
+  /* Replace the desktop card-frame background image with a plain light surface on mobile */
+  #dashboard .dash-main{background-image:none;background-color:var(--surface)}
+  /* Collapse the blank top strip */
+  .dash-top-strip{height:0!important;min-height:0!important}
+  /* Tighten internal content padding */
+  .dash-content{padding:12px 14px}
+  .dash-greet-section{padding:14px 14px 10px}
+  /* KPI cards: 2-column grid */
+  #tab-overview .ov-kpi-row{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;width:100%}
+  #tab-overview .ov-kpi-card{width:100%;min-width:0;box-sizing:border-box}
+  /* Pipeline summary cards: narrower */
+  #tab-overview .ov-pb-summary-card{width:150px;min-width:150px}
+  /* Kanban board: reduce min-width and column width */
+  #tab-overview .ov-kanban-section .kanban.ov-pb-board{min-width:820px}
+  #tab-overview .ov-pb-kanban-col{width:150px;min-width:150px;padding:14px 12px}
+  /* Pipeline heading: smaller on mobile */
+  #tab-overview .ov-pipeline-title{font-size:18px}
+  /* Clients page: reduce heading size and remove top/bottom padding gaps and table-panel border */
+  #tab-clients .cl-title{font-size:22px}
+  #tab-cases .cs-title{font-size:22px}
+  #tab-clients .cl-content{padding:12px 14px 16px}
+  #tab-clients .cl-table-panel{border:none;box-shadow:none;border-radius:0;overflow-x:auto}
+  /* New Client drawer: full-screen on mobile */
+  .cl-drawer{width:100%;left:0;right:0;border-radius:0}
+  /* Messages: 2×2 stat grid */
+  .msg-hub-stats{grid-template-columns:repeat(2,1fr)}
+  /* Messages: thread opens as full-screen overlay on mobile */
+  .msg-hub-thread-col{position:fixed;inset:0;z-index:200;width:100%!important;border-left:none;overflow:hidden}
+  .msg-hub-thread-hd{align-items:center;gap:12px}
+  .msg-hub-thread-back{display:flex!important}
+  .msg-hub-thread-close{display:none!important}
+  .msg-hub-thread-hd-av{display:flex!important}
+  .msg-hub-thread-name{font-size:16px;font-weight:700}
+  .msg-hub-bbl{max-width:78%}
+  /* Composer: rounded input + icon-only send button on mobile */
+  .msg-hub-composer-input{border-radius:999px;padding:11px 18px}
+  .msg-hub-composer-send{width:42px;height:42px;border-radius:50%;padding:0;justify-content:center}
+  .msg-hub-send-text{display:none}
+  /* Cases kanban: match overview kanban sizing on mobile */
+  #tab-cases .ov-kanban-section .kanban.ov-pb-board{min-width:820px}
+  #tab-cases .ov-pb-summary-card{width:150px;min-width:150px}
+  #tab-cases .ov-pb-kanban-col{width:150px;min-width:150px;padding:14px 12px}
+}
 
 /* Personal dashboard (signed-in /dashboard) — KPI cards at zero + welcome empty state; no mock pipeline */
 #tab-overview.ov-personal-mode .ov-mock-only{display:none!important}
@@ -935,6 +979,10 @@ body.embedded #tab-case-detail{background:transparent}
 .msg-hub-composer-icon:hover{background:#f4f4f5;color:#18181b}
 .msg-hub-composer-send{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:#0F6E56;color:#fff;border:none;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0}
 .msg-hub-composer-send:hover{background:#0a5941}
+/* Back button + avatar — hidden on desktop, activated on mobile via media query */
+.msg-hub-thread-back{display:none;width:36px;height:36px;align-items:center;justify-content:center;border:none;background:transparent;cursor:pointer;color:#18181b;padding:0;flex-shrink:0;border-radius:8px;transition:background .15s}
+.msg-hub-thread-back:hover{background:#f4f4f5}
+.msg-hub-thread-hd-av{display:none;width:40px;height:40px;border-radius:50%;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0}
 
 /* Inline message widget (in case/compliance/AI screens) */
 .inline-msg-bar{display:flex;align-items:center;gap:10px;padding:12px 16px;background:var(--surface);border:1px solid var(--ink-20);border-radius:8px}
@@ -2912,6 +2960,8 @@ function switchHubThread(id) {
   }).join('');
   panel.innerHTML = `
     <div class="msg-hub-thread-hd">
+      <button type="button" class="msg-hub-thread-back" onclick="closeHubThread()" aria-label="Back to messages"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>
+      <div class="msg-hub-thread-hd-av" style="background:${thread.avColor}">${thread.av}</div>
       <div style="flex:1;min-width:0">
         <div class="msg-hub-thread-name">${thread.name}</div>
         <div class="msg-hub-thread-tags">
@@ -2926,7 +2976,7 @@ function switchHubThread(id) {
     <div class="msg-hub-composer">
       <button type="button" class="msg-hub-composer-icon" title="Attach file"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
       <input type="text" class="msg-hub-composer-input" placeholder="Reply to ${thread.name}...">
-      <button type="button" class="msg-hub-composer-send"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true"><line x1="22" y1="2" x2="11" y2="13" stroke="white" stroke-width="2" stroke-linecap="round"/><polygon points="22,2 15,22 11,13 2,9" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Send reply</button>
+      <button type="button" class="msg-hub-composer-send"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true"><line x1="22" y1="2" x2="11" y2="13" stroke="white" stroke-width="2" stroke-linecap="round"/><polygon points="22,2 15,22 11,13 2,9" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="msg-hub-send-text">Send reply</span></button>
     </div>`;
   setTimeout(() => { const f = document.getElementById('msg-hub-feed'); if(f) f.scrollTop = f.scrollHeight; }, 50);
 }
