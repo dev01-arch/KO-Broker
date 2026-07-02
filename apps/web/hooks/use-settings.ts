@@ -5,7 +5,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   settingsApi,
   requireAuthToken,
-  type AdviserRecord,
   type CreateAdviserInput,
   type OrgIntegrations,
   type OrgMessagingSettings,
@@ -102,9 +101,8 @@ export function useCreateAdviser() {
       const token = await requireAuthToken(getToken);
       return settingsApi.createAdviser(token, input);
     },
-    onSuccess: (created) => {
+    onSuccess: () => {
       qc.invalidateQueries({ queryKey: advisersQueryKey });
-      return created as AdviserRecord;
     },
   });
 }
