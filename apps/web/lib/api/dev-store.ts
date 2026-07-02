@@ -402,8 +402,6 @@ export const devStore = {
         (item) => item.orgId !== orgId || (item.clientId !== id && !caseIds.includes(item.caseId ?? '')),
       );
       store.aiReports = store.aiReports.filter((item) => !caseIds.includes(item.caseId));
-      store.complianceRecords = store.complianceRecords.filter((item) => !caseIds.includes(item.caseId));
-      store.productsConsidered = store.productsConsidered.filter((item) => !caseIds.includes(item.caseId));
       store.clients = store.clients.filter((item) => !(item.orgId === orgId && item.id === id));
 
       return { deleted: true as const };
