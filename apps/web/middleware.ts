@@ -12,7 +12,7 @@ const isPublicRoute = createRouteMatcher([
   '/gate(.*)',
   '/sign-in(.*)',
   '/sign-up(.*)',
-  '/demo(.*)',
+  // /demo is intentionally excluded — unauthenticated visitors are redirected to sign-in.
   // Handlers enforce auth via Bearer token — never redirect /api to sign-in (cross-origin SPA).
   '/api/(.*)',
 ]);

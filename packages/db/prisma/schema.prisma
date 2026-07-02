@@ -167,6 +167,7 @@ model Client {
   vulnerabilityNotes String?
   portalEnabled    Boolean          @default(false)
   portalAccessToken String?         @unique
+  portalPasswordHash String?
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
 

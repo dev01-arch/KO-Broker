@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/db';
 import { devStore } from '@/lib/api/dev-store';
 import { isPrismaConnectionError, isPrismaUniqueConflict } from '@/lib/api/prisma-errors';
+import { sendClientWelcomeEmail, type EmailDeliveryStatus } from '@/lib/notifications/client-emails';
 import { generateReference } from '@ko/utils';
 import type { ClientType, EmploymentStatus } from '@ko/types';
 
@@ -194,7 +195,7 @@ export async function createClientForOrg(
       });
       const referenceNumber = generateReference('KOC', count + 1);
 
-      return await prisma.client.create({
+      const created = await prisma.client.create({
         data: {
           orgId,
           referenceNumber,
@@ -218,16 +219,23 @@ export async function createClientForOrg(
           email: true,
         },
       });
+
+      const welcomeEmail = await sendClientWelcomeEmail(created);
+      return { client: created, welcomeEmail };
     } catch (error) {
       if (isPrismaUniqueConflict(error, 'referenceNumber') && attempt < 2) continue;
       if (!useDevStore(error)) throw error;
       const client = devStore.createClient(orgId, input);
+      const welcomeEmail: EmailDeliveryStatus = { sent: false, error: 'Email skipped in offline dev mode' };
       return {
-        id: client.id,
-        referenceNumber: client.referenceNumber,
-        firstName: client.firstName,
-        lastName: client.lastName,
-        email: client.email,
+        client: {
+          id: client.id,
+          referenceNumber: client.referenceNumber,
+          firstName: client.firstName,
+          lastName: client.lastName,
+          email: client.email,
+        },
+        welcomeEmail,
       };
     }
   }

@@ -9,6 +9,7 @@ import { Bell, Building2, Calculator as CalculatorIcon, FileText, Loader2, Setti
 import MortgageCalculators from '@/components/marketing/demo-calculator/MortgageCalculators';
 import { IntegrationsSettingsPanel } from '@/components/dashboard/integrations-settings-panel';
 import { clientsQueryKey, useClients, useCreateClient } from '@/hooks/use-clients';
+import { usePortalInvite } from '@/hooks/use-portal-invite';
 import { casesQueryKey, useCases, useCreateCase } from '@/hooks/use-cases';
 import { usePlanFeature } from '@/hooks/use-org';
 import { useUploadDocument } from '@/hooks/use-documents';
@@ -190,9 +191,6 @@ function applyGreetingToIframe(doc: Document, displayName: string) {
   }
 }
 
-// Cache-buster: changes on every page load so the browser always fetches the latest iframe HTML.
-const _IFRAME_V = Date.now();
-
 const DEMO_NOTIFICATIONS = [
   { initials: 'SM', name: 'Sarah Mitchell', preview: 'Uploaded 2 new documents to KOC-0001-A', time: '2m ago', color: '#CE652D' },
   { initials: 'JJ', name: 'James John', preview: 'Requested a call-back for KOC-0012', time: '14m ago', color: '#2D9D7A' },
@@ -217,6 +215,10 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
   const isClerkUser = Boolean(user);
   const [frameHeight, setFrameHeight] = useState<number>(1200);
   const [iframeLoaded, setIframeLoaded] = useState(false);
+  // Cache-buster: initialised to 0 on both server and client (no hydration mismatch).
+  // Updated to Date.now() after first mount so the browser always fetches fresh iframe HTML.
+  const [iframeV, setIframeV] = useState<number>(0);
+  useEffect(() => { setIframeV(Date.now()); }, []);
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const [uploadModal, setUploadModal] = useState<{ caseId: string } | null>(null);
   const [notifOpen, setNotifOpen] = useState(false);
@@ -283,6 +285,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
     enabled: isPersonalDashboard,
   });
   const { mutateAsync: createClient } = useCreateClient();
+  const { mutateAsync: inviteToPortal } = usePortalInvite();
   const { mutateAsync: createCase } = useCreateCase();
   const hasMessages = usePlanFeature('messages');
   const hasAiReports = usePlanFeature('ai_reports');
@@ -488,7 +491,9 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
 
   const iframeSrc = useMemo(() => {
     if (!overviewReady) return null;
-    const params = new URLSearchParams({ embedded: '1', v: String(_IFRAME_V) });
+    const params = new URLSearchParams({ embedded: '1' });
+    // v is 0 on first SSR/hydration render (no mismatch), then Date.now() after mount.
+    if (iframeV) params.set('v', String(iframeV));
     // Personal dashboard: live API + personalised header (no mock Alex).
     if (isPersonalDashboard) {
       params.set('liveData', '1');
@@ -502,7 +507,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
       if (isMockDemo) params.set('userName', 'Alex');
     }
     return `/live-demo-prototype-v2a.html?${params}`;
-  }, [activeTab, overviewReady, isPersonalDashboard, isMockDemo, displayName]);
+  }, [activeTab, overviewReady, isPersonalDashboard, isMockDemo, displayName, iframeV]);
 
   const postPersonalGreeting = useCallback(() => {
     const iframeWindow = iframeRef.current?.contentWindow;
@@ -524,6 +529,14 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
     if (showEmbeddedPanel) return;
     setIframeLoaded(false);
   }, [showEmbeddedPanel, iframeSrc]);
+
+  // Fallback: if onLoad never fires (hydration edge-case, browser quirk, strict-mode remount),
+  // force the iframe visible after 6 s so the demo is never permanently stuck loading.
+  useEffect(() => {
+    if (iframeLoaded || !iframeSrc || showEmbeddedPanel) return;
+    const timer = window.setTimeout(() => setIframeLoaded(true), 6000);
+    return () => window.clearTimeout(timer);
+  }, [iframeLoaded, iframeSrc, showEmbeddedPanel]);
 
   useEffect(() => {
     if (showEmbeddedPanel || !iframeLoaded) return;
@@ -761,6 +774,26 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
         return;
       }
 
+      if (data?.type === 'ko:portal-invite' && data.requestId != null && data.caseId) {
+        const replyInvite = (body: Record<string, unknown>) => {
+          iframeWindow.postMessage(
+            { type: 'ko:portal-invite-result', requestId: data.requestId, ...body },
+            window.location.origin,
+          );
+        };
+
+        try {
+          const result = await inviteToPortal(String(data.caseId));
+          replyInvite({ success: true, message: result.message });
+        } catch (err) {
+          replyInvite({
+            success: false,
+            error: formatApiError(err, { fallback: 'Could not send portal invite.' }),
+          });
+        }
+        return;
+      }
+
       if (data?.type !== 'ko:create-client' || data.requestId == null || !data.payload) return;
 
       const reply = (body: Record<string, unknown>) => {
@@ -792,6 +825,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
             annualIncome: payload.annualIncome,
             _count: { cases: 0, messages: 0 },
           },
+          welcomeEmail: result.meta?.welcomeEmail,
         });
       } catch (err) {
         const fields = getApiErrorFieldMap(err);
@@ -805,7 +839,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
 
     window.addEventListener('message', onMessage);
     return () => window.removeEventListener('message', onMessage);
-  }, [isDashboard, isClerkUser, createClient, createCase, getToken, syncLiveDataToIframe, queryClient, router]);
+  }, [isDashboard, isClerkUser, createClient, createCase, inviteToPortal, getToken, syncLiveDataToIframe, queryClient, router]);
 
   // ── Directly update the iframe's documents table ────────────────────────────
   // Works because the iframe is same-origin, so the parent can touch its DOM.

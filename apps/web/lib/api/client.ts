@@ -879,3 +879,14 @@ export const billingApi = {
     );
   },
 };
+
+// ─── Client portal endpoints ───────────────────────────────────────────────────
+
+export const portalApi = {
+  inviteClient(token: string, caseId: string) {
+    return apiRequest<{ message: string }>('/api/portal/invite', token, {
+      method: 'POST',
+      body: JSON.stringify({ caseId }),
+    });
+  },
+};

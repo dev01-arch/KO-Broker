@@ -14,12 +14,16 @@ import {
   Mail,
   MessageSquare,
   Phone,
+  Send,
   Shield,
   Trash2,
   Upload,
   User,
+  X,
 } from 'lucide-react';
 import { useClient, useUpdateClient } from '@/hooks/use-clients';
+import { usePortalInvite } from '@/hooks/use-portal-invite';
+import { useSendMessage } from '@/hooks/use-messages';
 import { useDocuments, useUploadDocument, useDeleteDocument } from '@/hooks/use-documents';
 import { ApiErrorState } from '@/components/dashboard/api-error-state';
 import {
@@ -28,7 +32,7 @@ import {
   formatClientName,
 } from '@/lib/api/client-display';
 import { formatApiError } from '@/lib/api/client';
-import type { DocumentRecord, DocumentType } from '@/lib/api/client';
+import type { DocumentRecord, DocumentType, MessageChannel } from '@/lib/api/client';
 import type { UploadFileInput } from '@/hooks/use-documents';
 
 const CASE_STAGE_STYLES: Record<string, string> = {
@@ -247,6 +251,200 @@ function UploadDocumentModal({ clientId, clientName, onClose, onSuccess }: Uploa
   );
 }
 
+// ── Send Message Modal ───────────────────────────────────────────────────────
+
+const CHANNEL_LABELS: Record<MessageChannel, string> = {
+  EMAIL: 'Email',
+  SMS: 'SMS',
+  IN_APP: 'In-app',
+};
+
+function SendMessageModal({
+  clientId,
+  clientName,
+  caseId,
+  onClose,
+}: {
+  clientId: string;
+  clientName: string;
+  caseId?: string;
+  onClose: () => void;
+}) {
+  const { mutateAsync: sendMessage, isPending } = useSendMessage();
+  const [channel, setChannel] = useState<MessageChannel>('IN_APP');
+  const [subject, setSubject] = useState('');
+  const [body, setBody] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [delivery, setDelivery] = useState<{
+    email?: string;
+    sms?: string;
+    errors?: string[];
+  } | null>(null);
+
+  async function handleSend() {
+    setError(null);
+    setDelivery(null);
+    try {
+      const result = await sendMessage({
+        body: body.trim(),
+        subject: channel === 'EMAIL' ? subject.trim() || undefined : undefined,
+        channel,
+        sourceType: 'CASE_UPDATE',
+        clientId,
+        caseId,
+      });
+      const meta = (result as { meta?: { delivery?: { email?: string; sms?: string; errors?: string[] } } }).meta?.delivery;
+      if (meta) setDelivery(meta);
+      else onClose();
+    } catch (err) {
+      setError(formatApiError(err, { fallback: 'Failed to send message. Please try again.' }));
+    }
+  }
+
+  if (delivery) {
+    const failed = delivery.errors?.length;
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+        <div className="w-full max-w-md rounded-2xl bg-white shadow-xl">
+          <div className="flex items-center justify-between border-b border-ink-20 px-6 py-4">
+            <h2 className="font-heading text-sm font-bold text-ink">Message sent</h2>
+            <button type="button" onClick={onClose} className="text-ink-60 hover:text-ink">
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+          <div className="space-y-3 px-6 py-5">
+            {delivery.email && delivery.email !== 'skipped' && (
+              <DeliveryLine label="Email" status={delivery.email} />
+            )}
+            {delivery.sms && delivery.sms !== 'skipped' && (
+              <DeliveryLine label="SMS" status={delivery.sms} />
+            )}
+            {channel === 'IN_APP' && <DeliveryLine label="In-app" status="sent" />}
+            {failed ? (
+              <p className="rounded-lg bg-amber/10 px-3 py-2 text-xs text-amber">
+                {delivery.errors?.join('. ')}
+              </p>
+            ) : null}
+          </div>
+          <div className="flex justify-end border-t border-ink-20 px-6 py-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-lg bg-brand-teal-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-teal-600"
+            >
+              Done
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div className="w-full max-w-lg rounded-2xl bg-white shadow-xl">
+        <div className="flex items-center justify-between border-b border-ink-20 px-6 py-4">
+          <div>
+            <h2 className="font-heading text-sm font-bold text-ink">Send message</h2>
+            <p className="text-xs text-ink-60 mt-0.5">To: {clientName}</p>
+          </div>
+          <button type="button" onClick={onClose} className="text-ink-60 hover:text-ink">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="space-y-4 px-6 py-5">
+          {/* Channel */}
+          <div>
+            <label className="block text-xs font-medium text-ink-60 mb-1.5">Channel</label>
+            <div className="flex gap-2">
+              {(['IN_APP', 'EMAIL', 'SMS'] as MessageChannel[]).map((ch) => (
+                <button
+                  key={ch}
+                  type="button"
+                  onClick={() => setChannel(ch)}
+                  className={[
+                    'flex flex-1 items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium transition-colors',
+                    channel === ch
+                      ? 'border-brand-teal-500 bg-brand-teal-50 text-brand-teal-700'
+                      : 'border-ink-20 text-ink-60 hover:bg-ink-08',
+                  ].join(' ')}
+                >
+                  {ch === 'EMAIL' ? <Mail className="h-3.5 w-3.5" /> : ch === 'SMS' ? <Phone className="h-3.5 w-3.5" /> : <MessageSquare className="h-3.5 w-3.5" />}
+                  {CHANNEL_LABELS[ch]}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Subject (email only) */}
+          {channel === 'EMAIL' && (
+            <div>
+              <label className="block text-xs font-medium text-ink-60 mb-1.5">Subject</label>
+              <input
+                value={subject}
+                onChange={(e) => setSubject(e.target.value)}
+                placeholder="e.g. Update on your mortgage application"
+                className="w-full rounded-lg border border-ink-20 px-3 py-2 text-sm text-ink focus:border-brand-teal-500 focus:outline-none"
+              />
+            </div>
+          )}
+
+          {/* Message body */}
+          <div>
+            <label className="block text-xs font-medium text-ink-60 mb-1.5">Message</label>
+            <textarea
+              value={body}
+              onChange={(e) => setBody(e.target.value)}
+              rows={5}
+              placeholder="Type your message…"
+              className="w-full rounded-lg border border-ink-20 px-3 py-2 text-sm text-ink focus:border-brand-teal-500 focus:outline-none resize-none"
+            />
+          </div>
+
+          {error && (
+            <p className="rounded-lg bg-red/10 px-3 py-2 text-xs text-red flex items-center gap-1.5">
+              <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+              {error}
+            </p>
+          )}
+        </div>
+
+        <div className="flex justify-end gap-3 border-t border-ink-20 px-6 py-4">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg border border-ink-20 px-4 py-2 text-sm font-medium text-ink-60 hover:bg-ink-08"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            disabled={!body.trim() || isPending}
+            onClick={() => void handleSend()}
+            className="flex items-center gap-2 rounded-lg bg-brand-teal-500 px-4 py-2 text-sm font-medium text-white disabled:opacity-50 hover:bg-brand-teal-600"
+          >
+            {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+            Send
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DeliveryLine({ label, status }: { label: string; status: string }) {
+  const ok = status === 'sent';
+  return (
+    <div className="flex items-center justify-between text-sm">
+      <span className="text-ink-60">{label}</span>
+      <span className={ok ? 'text-brand-teal-700 font-medium' : 'text-red font-medium'}>
+        {ok ? '✓ Sent' : '✗ Failed'}
+      </span>
+    </div>
+  );
+}
+
 // ── Document row ─────────────────────────────────────────────────────────────
 
 function DocumentRow({
@@ -329,11 +527,15 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
   const { id } = use(params);
   const { data, isLoading, isError, error, refetch } = useClient(id);
   const { mutateAsync: updateClient, isPending: isUpdating } = useUpdateClient(id);
+  const { mutateAsync: inviteToPortal, isPending: isInviting } = usePortalInvite();
   const { data: docsData, isLoading: docsLoading, refetch: refetchDocs } = useDocuments(
     { clientId: id, perPage: 50 },
   );
   const [editingVulnerable, setEditingVulnerable] = useState(false);
   const [showUpload, setShowUpload] = useState(false);
+  const [showCompose, setShowCompose] = useState(false);
+  const [inviteMessage, setInviteMessage] = useState<string | null>(null);
+  const [inviteError, setInviteError] = useState<string | null>(null);
 
   const client = data?.data;
   const documents = docsData?.data ?? [];
@@ -373,6 +575,22 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
     }
   }
 
+  async function handlePortalInvite() {
+    if (!client?.cases[0]) {
+      setInviteError('Create a case for this client before sending a portal invite.');
+      return;
+    }
+    setInviteError(null);
+    setInviteMessage(null);
+    try {
+      const result = await inviteToPortal(client.cases[0].id);
+      setInviteMessage(result.message);
+      await refetch();
+    } catch (err) {
+      setInviteError(formatApiError(err));
+    }
+  }
+
   return (
     <>
       {showUpload && (
@@ -381,6 +599,14 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
           clientName={formatClientName(client)}
           onClose={() => setShowUpload(false)}
           onSuccess={() => refetchDocs()}
+        />
+      )}
+      {showCompose && (
+        <SendMessageModal
+          clientId={id}
+          clientName={formatClientName(client)}
+          caseId={client.cases[0]?.id}
+          onClose={() => setShowCompose(false)}
         />
       )}
 
@@ -614,7 +840,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
                 <Shield className="h-4 w-4 text-brand-teal-500" />
                 Client portal
               </h3>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between mb-3">
                 <span className="text-sm text-ink-60">Portal access</span>
                 <span
                   className={[
@@ -627,6 +853,26 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
                   {client.portalEnabled ? 'Enabled' : 'Disabled'}
                 </span>
               </div>
+              <button
+                type="button"
+                onClick={() => void handlePortalInvite()}
+                disabled={isInviting || client.cases.length === 0}
+                className="w-full flex items-center justify-center gap-2 rounded-lg border border-brand-teal-300 bg-brand-teal-50 px-3 py-2.5 text-sm font-medium text-brand-teal-700 hover:bg-brand-teal-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isInviting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+                {client.portalEnabled ? 'Resend portal invite' : 'Invite to client portal'}
+              </button>
+              {client.cases.length === 0 && (
+                <p className="mt-2 text-xs text-ink-60">Add a case before inviting this client.</p>
+              )}
+              {inviteMessage && (
+                <p className="mt-2 rounded-lg bg-brand-teal-50 px-3 py-2 text-xs text-brand-teal-700">
+                  {inviteMessage}
+                </p>
+              )}
+              {inviteError && (
+                <p className="mt-2 rounded-lg bg-red/10 px-3 py-2 text-xs text-red">{inviteError}</p>
+              )}
             </section>
 
             {/* Quick actions */}
@@ -637,7 +883,11 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
                   <Edit2 className="h-4 w-4" />
                   Edit client details
                 </button>
-                <button className="w-full flex items-center gap-2 rounded-lg border border-ink-20 px-3 py-2.5 text-sm text-ink-60 hover:bg-ink-08 hover:text-ink transition-colors">
+                <button
+                  type="button"
+                  onClick={() => setShowCompose(true)}
+                  className="w-full flex items-center gap-2 rounded-lg border border-ink-20 px-3 py-2.5 text-sm text-ink-60 hover:bg-ink-08 hover:text-ink transition-colors"
+                >
                   <MessageSquare className="h-4 w-4" />
                   Send message
                 </button>

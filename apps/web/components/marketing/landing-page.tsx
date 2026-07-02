@@ -266,6 +266,7 @@ export function LandingPage() {
                 tier="Starter"
                 price="35"
                 buttonText="Choose Starter"
+                buttonHref="/sign-up"
                 features={['Pipeline CRM', 'Fact-find templates', 'Up to 50 cases/mo', 'Email support']}
               />
             </motion.div>
@@ -298,6 +299,7 @@ export function LandingPage() {
                 tier="Enterprise"
                 price="75"
                 buttonText="Choose Enterprise"
+                buttonHref="/sign-up"
                 features={['Everything in Professional', 'SSO + advanced roles', 'Custom audit reports', 'API access']}
               />
             </motion.div>

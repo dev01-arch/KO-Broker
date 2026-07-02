@@ -3,13 +3,15 @@
 import { useState } from 'react';
 import {
   AlertTriangle,
+  CheckCheck,
+  Circle,
   Loader2,
   Mail,
   MessageSquare,
   Phone,
   Send,
-  CheckCheck,
-  Circle,
+  User,
+  X,
 } from 'lucide-react';
 import { useMessages, useSendMessage, useMarkMessageRead } from '@/hooks/use-messages';
 import { usePlanFeature } from '@/hooks/use-org';
@@ -44,36 +46,109 @@ function formatTime(iso: string) {
 
 const LIST_QUERY = { page: 1, perPage: 50 } as const;
 
+type DeliveryResult = { inApp?: string; email?: string; sms?: string; errors?: string[] };
+
+function DeliveryLine({ label, status }: { label: string; status: string }) {
+  const ok = status === 'sent';
+  return (
+    <div className="flex items-center justify-between text-sm">
+      <span className="text-ink-60">{label}</span>
+      <span className={ok ? 'font-medium text-brand-teal-700' : 'font-medium text-red'}>
+        {ok ? '✓ Sent' : '✗ Failed'}
+      </span>
+    </div>
+  );
+}
+
 function ComposeModal({
   onClose,
   onSend,
   isPending,
   error,
+  delivery,
 }: {
   onClose: () => void;
-  onSend: (data: { body: string; subject?: string; channel: MessageChannel }) => void | Promise<void>;
+  onSend: (data: {
+    body: string;
+    subject?: string;
+    channel: MessageChannel;
+    clientId?: string;
+  }) => void | Promise<void>;
   isPending: boolean;
   error?: string | null;
+  delivery?: DeliveryResult | null;
 }) {
   const [body, setBody] = useState('');
   const [subject, setSubject] = useState('');
   const [channel, setChannel] = useState<MessageChannel>('IN_APP');
+  const [clientId, setClientId] = useState('');
+
+  if (delivery) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+        <div className="w-full max-w-md rounded-2xl bg-white shadow-xl">
+          <div className="flex items-center justify-between border-b border-ink-20 px-6 py-4">
+            <h2 className="font-heading text-sm font-bold text-ink">Message sent</h2>
+            <button type="button" onClick={onClose} className="text-ink-60 hover:text-ink">
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+          <div className="space-y-3 px-6 py-5">
+            {delivery.inApp && delivery.inApp !== 'skipped' && (
+              <DeliveryLine label="In-app" status={delivery.inApp} />
+            )}
+            {delivery.email && delivery.email !== 'skipped' && (
+              <DeliveryLine label="Email" status={delivery.email} />
+            )}
+            {delivery.sms && delivery.sms !== 'skipped' && (
+              <DeliveryLine label="SMS" status={delivery.sms} />
+            )}
+            {delivery.errors && delivery.errors.length > 0 && (
+              <p className="rounded-lg bg-amber/10 px-3 py-2 text-xs text-amber">
+                {delivery.errors.join('. ')}
+              </p>
+            )}
+          </div>
+          <div className="flex justify-end border-t border-ink-20 px-6 py-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-lg bg-brand-teal-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-teal-600"
+            >
+              Done
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
       <div className="w-full max-w-lg rounded-2xl bg-white shadow-xl">
         <div className="flex items-center justify-between border-b border-ink-20 px-6 py-4">
           <h2 className="font-heading text-sm font-bold text-ink">New Message</h2>
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-ink-60 hover:text-ink text-xl leading-none"
-          >
-            ×
+          <button type="button" onClick={onClose} className="text-ink-60 hover:text-ink">
+            <X className="h-5 w-5" />
           </button>
         </div>
 
         <div className="space-y-4 px-6 py-5">
+          {/* Recipient */}
+          <div>
+            <label className="block text-xs font-medium text-ink-60 mb-1.5 flex items-center gap-1">
+              <User className="h-3 w-3" /> Client ID
+              <span className="text-ink-40 font-normal">(optional — required for Email / SMS delivery)</span>
+            </label>
+            <input
+              value={clientId}
+              onChange={(e) => setClientId(e.target.value)}
+              placeholder="Paste client CUID…"
+              className="w-full rounded-lg border border-ink-20 px-3 py-2 text-sm text-ink font-mono focus:border-brand-teal-500 focus:outline-none"
+            />
+          </div>
+
+          {/* Channel */}
           <div>
             <label className="block text-xs font-medium text-ink-60 mb-1.5">Channel</label>
             <div className="flex gap-2">
@@ -94,8 +169,16 @@ function ComposeModal({
                 </button>
               ))}
             </div>
+            {channel !== 'IN_APP' && !clientId.trim() && (
+              <p className="mt-1.5 text-xs text-amber flex items-center gap-1">
+                <AlertTriangle className="h-3 w-3" />
+                A Client ID is required to deliver via {CHANNEL_LABELS[channel]}.
+              </p>
+            )}
           </div>
-          {(channel === 'EMAIL') && (
+
+          {/* Subject (email only) */}
+          {channel === 'EMAIL' && (
             <div>
               <label className="block text-xs font-medium text-ink-60 mb-1.5">Subject</label>
               <input
@@ -106,9 +189,14 @@ function ComposeModal({
               />
             </div>
           )}
+
           {error && (
-            <p className="rounded-lg bg-red/10 px-3 py-2 text-xs text-red">{error}</p>
+            <p className="rounded-lg bg-red/10 px-3 py-2 text-xs text-red flex items-center gap-1.5">
+              <AlertTriangle className="h-3.5 w-3.5 shrink-0" /> {error}
+            </p>
           )}
+
+          {/* Body */}
           <div>
             <label className="block text-xs font-medium text-ink-60 mb-1.5">Message</label>
             <textarea
@@ -132,14 +220,17 @@ function ComposeModal({
           <button
             type="button"
             disabled={!body.trim() || isPending}
-            onClick={() => onSend({ body: body.trim(), subject: subject.trim() || undefined, channel })}
+            onClick={() =>
+              onSend({
+                body: body.trim(),
+                subject: channel === 'EMAIL' ? subject.trim() || undefined : undefined,
+                channel,
+                clientId: clientId.trim() || undefined,
+              })
+            }
             className="flex items-center gap-2 rounded-lg bg-brand-teal-500 px-4 py-2 text-sm font-medium text-white disabled:opacity-50 hover:bg-brand-teal-600"
           >
-            {isPending ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Send className="h-4 w-4" />
-            )}
+            {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
             Send
           </button>
         </div>
@@ -148,26 +239,52 @@ function ComposeModal({
   );
 }
 
-function MessageRow({ message, onMarkRead }: { message: MessageRecord; onMarkRead: () => void }) {
+type MessageRecordWithContext = MessageRecord & {
+  client?: { id: string; firstName: string; lastName: string } | null;
+  case?: { id: string; referenceNumber: string } | null;
+};
+
+function MessageRow({
+  message,
+  onMarkRead,
+}: {
+  message: MessageRecordWithContext;
+  onMarkRead: () => void;
+}) {
+  const clientName =
+    message.client ? `${message.client.firstName} ${message.client.lastName}` : null;
+
   return (
     <div
       className={`flex items-start gap-4 px-6 py-4 border-b border-ink-20 hover:bg-ink-08 transition-colors ${!message.isRead ? 'bg-brand-teal-50/40' : ''}`}
     >
-      <span className="mt-0.5 shrink-0 text-ink-60">
-        {CHANNEL_ICON[message.channel]}
-      </span>
+      <span className="mt-0.5 shrink-0 text-ink-60">{CHANNEL_ICON[message.channel]}</span>
       <div className="min-w-0 flex-1">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
             {message.subject && (
               <p className="truncate text-sm font-semibold text-ink">{message.subject}</p>
             )}
-            <p className={`text-sm ${message.subject ? 'text-ink-60' : 'font-medium text-ink'} line-clamp-2`}>
+            <p
+              className={`text-sm ${message.subject ? 'text-ink-60' : 'font-medium text-ink'} line-clamp-2`}
+            >
               {message.body}
             </p>
+            {clientName && (
+              <p className="mt-0.5 text-xs text-ink-60">
+                {message.direction === 'INBOUND' ? 'From' : 'To'}: {clientName}
+                {message.case && (
+                  <span className="ml-1.5 font-mono text-[10px] text-ink-40">
+                    ({message.case.referenceNumber})
+                  </span>
+                )}
+              </p>
+            )}
           </div>
           <div className="flex shrink-0 flex-col items-end gap-1">
-            <span className="text-xs text-ink-60 whitespace-nowrap">{formatTime(message.createdAt)}</span>
+            <span className="text-xs text-ink-60 whitespace-nowrap">
+              {formatTime(message.createdAt)}
+            </span>
             {!message.isRead && (
               <button
                 type="button"
@@ -190,11 +307,15 @@ function MessageRow({ message, onMarkRead }: { message: MessageRecord; onMarkRea
               message.direction === 'INBOUND'
                 ? 'bg-blue/10 text-blue'
                 : message.direction === 'OUTBOUND'
-                ? 'bg-brand-teal-50 text-brand-teal-700'
-                : 'bg-ink-08 text-ink-60'
+                  ? 'bg-brand-teal-50 text-brand-teal-700'
+                  : 'bg-ink-08 text-ink-60'
             }`}
           >
-            {message.direction === 'INBOUND' ? '↙ Inbound' : message.direction === 'OUTBOUND' ? '↗ Outbound' : 'System'}
+            {message.direction === 'INBOUND'
+              ? '↙ Inbound'
+              : message.direction === 'OUTBOUND'
+                ? '↗ Outbound'
+                : 'System'}
           </span>
           {message.isRead ? (
             <span className="flex items-center gap-1 text-[10px] text-ink-60">
@@ -215,6 +336,7 @@ export default function MessagesPage() {
   const hasMessages = usePlanFeature('messages');
   const [showCompose, setShowCompose] = useState(false);
   const [composeError, setComposeError] = useState<string | null>(null);
+  const [composeDelivery, setComposeDelivery] = useState<DeliveryResult | null>(null);
   const [filter, setFilter] = useState<'all' | 'unread'>('all');
 
   const { data, isLoading, isError, error, refetch } = useMessages(
@@ -224,18 +346,34 @@ export default function MessagesPage() {
   const { mutateAsync: sendMessage, isPending: isSending } = useSendMessage();
   const { mutateAsync: markRead } = useMarkMessageRead();
 
-  const messages = data?.data ?? [];
+  const messages = (data?.data ?? []) as MessageRecordWithContext[];
   const meta = data?.meta;
   const unreadCount = messages.filter((m) => !m.isRead).length;
 
-  async function handleSend(input: { body: string; subject?: string; channel: MessageChannel }) {
+  async function handleSend(input: {
+    body: string;
+    subject?: string;
+    channel: MessageChannel;
+    clientId?: string;
+  }) {
     setComposeError(null);
     try {
-      await sendMessage({ ...input, sourceType: 'CASE_UPDATE' });
-      setShowCompose(false);
+      const result = await sendMessage({ ...input, sourceType: 'CASE_UPDATE' });
+      const meta = (result as { meta?: { delivery?: DeliveryResult } }).meta?.delivery;
+      if (meta) {
+        setComposeDelivery(meta);
+      } else {
+        setShowCompose(false);
+      }
     } catch (err) {
       setComposeError(formatApiError(err, { fallback: 'Could not send message. Please try again.' }));
     }
+  }
+
+  function handleCloseCompose() {
+    setShowCompose(false);
+    setComposeError(null);
+    setComposeDelivery(null);
   }
 
   if (!hasMessages) {
@@ -257,13 +395,11 @@ export default function MessagesPage() {
     <>
       {showCompose && (
         <ComposeModal
-          onClose={() => {
-            setShowCompose(false);
-            setComposeError(null);
-          }}
+          onClose={handleCloseCompose}
           onSend={handleSend}
           isPending={isSending}
           error={composeError}
+          delivery={composeDelivery}
         />
       )}
 

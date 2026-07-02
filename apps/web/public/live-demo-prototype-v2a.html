@@ -1375,8 +1375,9 @@ html.ff-open,body.ff-open{overflow:hidden!important;height:100%}
 .nc-success-modal{background:var(--white);border-radius:24px;width:100%;max-width:440px;padding:36px 32px 32px;text-align:center;box-shadow:0 24px 60px rgba(13,31,26,0.3);display:flex;flex-direction:column;align-items:center;gap:10px}
 .nc-success-illus{width:148px;height:148px;margin-bottom:4px;object-fit:contain}
 .nc-success-title{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:var(--ink)}
-.nc-success-desc{font-size:15px;color:var(--ink-60);line-height:1.55;max-width:320px}
+.nc-success-desc{font-size:15px;color:var(--ink-60);line-height:1.55;max-width:340px}
 .nc-success-desc strong{color:var(--amber);font-weight:600}
+.nc-success-desc .nc-success-client-name{color:var(--ink);font-weight:600}
 .nc-success-actions{width:100%;display:flex;flex-direction:column;gap:10px;margin-top:10px}
 .nc-success-primary{display:flex;width:100%;height:48px;padding:4px 20px;justify-content:center;align-items:center;gap:8px;border-radius:32px;background:#0F6E56;color:var(--white);font-family:'DM Sans',sans-serif;font-size:15px;font-weight:600;border:none;cursor:pointer;transition:background .2s}
 .nc-success-primary:hover{background:#0a5a44}
@@ -3049,6 +3050,7 @@ function switchCasesView(v) {
 (function() {
   var ncCaseCounter = 8; // starting from KOC-2026-0008
   var ncCreateRequestId = 0;
+  var ncLastCreatedCaseId = null;
   var isEmbeddedLive =
     new URLSearchParams(window.location.search).get('liveData') === '1' &&
     document.body.classList.contains('embedded');
@@ -3108,7 +3110,8 @@ function switchCasesView(v) {
     document.getElementById('nc-ltv-value').textContent = ltv + '%';
   };
 
-  function showCaseSuccess(ref, clientText) {
+  function showCaseSuccess(ref, clientText, caseId) {
+    ncLastCreatedCaseId = caseId || null;
     document.getElementById('nc-success-ref').textContent = ref;
     document.getElementById('nc-success-client').textContent = clientText;
     closeNewCaseModal();
@@ -3183,6 +3186,7 @@ function switchCasesView(v) {
       showCaseSuccess(
         data.case.referenceNumber,
         data.clientName || 'Client',
+        data.case.id,
       );
       if (typeof showTab === 'function') showTab('cases');
       return;
@@ -3198,15 +3202,47 @@ function switchCasesView(v) {
 
   window.launchFactFind = function() {
     closeSuccessModal();
-    // Trigger the existing fact-find wizard launch if available
+    if (typeof window.openFactFindWizard === 'function') {
+      window.openFactFindWizard(ncLastCreatedCaseId || null);
+      return;
+    }
     if (typeof window.launchFF === 'function') { window.launchFF(); }
     else if (typeof window.openFactFind === 'function') { window.openFactFind(); }
   };
 
-  window.openNewCaseFromSuccess = function() {
+  var ncInviteRequestId = null;
+
+  window.inviteClientFactFind = function() {
+    if (isEmbeddedLive) {
+      if (!ncLastCreatedCaseId) {
+        alert('No case found to invite for.');
+        return;
+      }
+      ncInviteRequestId = 'invite-' + Date.now();
+      window.parent.postMessage({
+        type: 'ko:portal-invite',
+        requestId: ncInviteRequestId,
+        caseId: ncLastCreatedCaseId,
+      }, window.location.origin);
+      return;
+    }
     closeSuccessModal();
-    openNewCaseModal();
+    alert('An invitation to complete the fact-find wizard has been sent to the client.');
   };
+
+  window.addEventListener('message', function (event) {
+    if (event.origin !== window.location.origin) return;
+    var data = event.data;
+    if (!data || data.type !== 'ko:portal-invite-result') return;
+    if (data.requestId !== ncInviteRequestId) return;
+    ncInviteRequestId = null;
+    closeSuccessModal();
+    if (data.success) {
+      alert(data.message || 'Portal invitation sent to the client.');
+      return;
+    }
+    alert(data.error || 'Could not send portal invite.');
+  });
 
   // Close modals on backdrop click
   document.addEventListener('click', function(e) {
@@ -4726,6 +4762,47 @@ function calcRun() {
     showDrawerError('');
   }
 
+  function formatClientDisplayName(client) {
+    if (!client) return 'Client';
+    if (client.clientType === 'COMPANY' && client.companyName) return client.companyName;
+    const name = ((client.firstName || '') + ' ' + (client.lastName || '')).trim();
+    return name || 'Client';
+  }
+
+  function showClientSuccess(displayName, welcomeEmail) {
+    const nameEl = document.getElementById('cl-success-name');
+    if (nameEl) nameEl.textContent = displayName || 'Client';
+    const descEl = document.querySelector('#cl-success-overlay .nc-success-desc');
+    if (descEl) {
+      const safeName = displayName || 'Client';
+      if (welcomeEmail && welcomeEmail.sent) {
+        descEl.textContent = safeName + ' has been created and a welcome email has been sent to the provided address.';
+      } else if (welcomeEmail && welcomeEmail.error) {
+        descEl.textContent = safeName + ' has been created, but the welcome email could not be sent. Verify your Resend sender domain in the broker app.';
+      } else {
+        descEl.textContent = safeName + ' has been created successfully.';
+      }
+    }
+    closeClDrawer();
+    const overlay = document.getElementById('cl-success-overlay');
+    if (overlay) {
+      overlay.classList.remove('nc-hidden');
+      document.body.style.overflow = 'hidden';
+    }
+  }
+
+  function closeClientSuccessModal() {
+    const overlay = document.getElementById('cl-success-overlay');
+    if (overlay) overlay.classList.add('nc-hidden');
+    document.body.style.overflow = '';
+  }
+
+  window.closeClientSuccessModal = closeClientSuccessModal;
+  window.openNewClientFromSuccess = function () {
+    closeClientSuccessModal();
+    openClDrawer();
+  };
+
   window.closeClDrawer = closeClDrawer;
   window.openClDrawer = openClDrawer;
 
@@ -4747,7 +4824,7 @@ function calcRun() {
         window.koPrependClientRow(data.client);
       }
       if (typeof showTab === 'function') showTab('clients');
-      closeClDrawer();
+      showClientSuccess(formatClientDisplayName(data.client), data.welcomeEmail);
       return;
     }
     if (data.fields) {
@@ -4815,7 +4892,10 @@ function calcRun() {
     }
 
     if (!isEmbedded) {
-      closeClDrawer();
+      const displayName = isCompany
+        ? (companyNameInput?.value?.trim() || 'Client')
+        : (nameInput?.value?.trim() || 'Client');
+      showClientSuccess(displayName);
       return;
     }
 
@@ -4829,7 +4909,18 @@ function calcRun() {
   });
 
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && root.classList.contains('is-open')) closeClDrawer();
+    if (e.key !== 'Escape') return;
+    const clSuccess = document.getElementById('cl-success-overlay');
+    if (clSuccess && !clSuccess.classList.contains('nc-hidden')) {
+      closeClientSuccessModal();
+      return;
+    }
+    if (root.classList.contains('is-open')) closeClDrawer();
+  });
+
+  const clSuccessOverlay = document.getElementById('cl-success-overlay');
+  clSuccessOverlay?.addEventListener('click', (e) => {
+    if (e.target === clSuccessOverlay) closeClientSuccessModal();
   });
 })();
 
@@ -5967,15 +6058,30 @@ calcRun();
   <div class="nc-success-modal">
     <img src="/marketing/SuceSS%20%20Screen.png" class="nc-success-illus" alt="Success illustration" aria-hidden="true">
     <h2 class="nc-success-title" id="nc-success-title">Case Created Successfully!</h2>
-    <p class="nc-success-desc">Case <strong id="nc-success-ref">KOC-2026-0008</strong> has been registered for <span id="nc-success-client">Sasha Lindqvist</span></p>
+    <p class="nc-success-desc">Case <strong id="nc-success-ref">KOC-2026-0008</strong> has been registered for <span class="nc-success-client-name" id="nc-success-client">Sasha Lindqvist</span></p>
     <div class="nc-success-actions">
       <button type="button" class="nc-success-primary" onclick="launchFactFind()">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2" stroke="white" stroke-width="1.8" stroke-linecap="round"/><rect x="9" y="3" width="6" height="4" rx="1" stroke="white" stroke-width="1.8"/><path d="M9 12h6M9 16h4" stroke="white" stroke-width="1.8" stroke-linecap="round"/></svg>
+        <img src="/assets/smart_toy.svg" width="18" height="18" alt="" aria-hidden="true" style="filter:brightness(0) invert(1)">
         Launch Fact Finding Wizard
       </button>
-      <button type="button" class="nc-success-secondary" onclick="openNewCaseFromSuccess()">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/><path d="M12 8v8M8 12h8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-        Create new Case
+      <button type="button" class="nc-success-secondary" onclick="inviteClientFactFind()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="9" cy="8" r="3.5" stroke="currentColor" stroke-width="1.8"/><path d="M3 20c0-3.3 2.7-5 6-5s6 1.7 6 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M19 8v6M16 11h6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        Invite client to fill fact Find Wizard
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ── CLIENT ADDED SUCCESS MODAL ──────────────────────────────────────── -->
+<div id="cl-success-overlay" class="nc-success-overlay nc-hidden" role="dialog" aria-modal="true" aria-labelledby="cl-success-title">
+  <div class="nc-success-modal">
+    <img src="/marketing/SuceSS%20%20Screen.png" class="nc-success-illus" alt="Success illustration" aria-hidden="true">
+    <h2 class="nc-success-title" id="cl-success-title">Client Added Successfully!</h2>
+    <p class="nc-success-desc"><strong id="cl-success-name">Sasha Lindqvist</strong> has been created and an email has been sent to the provided address</p>
+    <div class="nc-success-actions">
+      <button type="button" class="nc-success-primary" onclick="openNewClientFromSuccess()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="9" cy="8" r="3.5" stroke="white" stroke-width="1.8"/><path d="M3 20c0-3.3 2.7-5 6-5s6 1.7 6 5" stroke="white" stroke-width="1.8" stroke-linecap="round"/><path d="M19 8v6M16 11h6" stroke="white" stroke-width="1.8" stroke-linecap="round"/></svg>
+        Add new Client
       </button>
     </div>
   </div>

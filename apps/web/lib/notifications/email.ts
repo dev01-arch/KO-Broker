@@ -6,6 +6,8 @@ export type SendEmailInput = {
   to: string;
   subject: string;
   body: string;
+  from?: string;
+  replyTo?: string;
 };
 
 export type SendEmailResult =
@@ -14,7 +16,8 @@ export type SendEmailResult =
 
 export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult> {
   const apiKey = process.env.RESEND_API_KEY?.trim();
-  const from = process.env.RESEND_FROM_EMAIL?.trim();
+  const from = input.from?.trim() || process.env.RESEND_FROM_EMAIL?.trim();
+  const replyTo = input.replyTo?.trim() || process.env.RESEND_REPLY_TO?.trim();
 
   if (!apiKey) {
     return { ok: false, error: 'RESEND_API_KEY is not configured on the server' };
@@ -35,6 +38,7 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
         to: [input.to],
         subject: input.subject,
         text: input.body,
+        ...(replyTo ? { reply_to: replyTo } : {}),
       }),
     });
 

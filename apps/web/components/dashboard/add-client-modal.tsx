@@ -85,8 +85,23 @@ export function AddClientModal({ open, onClose }: AddClientModalProps) {
   }
 
   const isFormValid = isCompany
-    ? Boolean(form.companyName.trim() && form.email.trim())
-    : Boolean(form.firstName.trim() && form.lastName.trim() && form.email.trim());
+    ? Boolean(
+        form.companyName.trim() &&
+          form.companyNumber.trim() &&
+          form.email.trim() &&
+          form.phone.trim() &&
+          form.annualIncome,
+      )
+    : Boolean(
+        form.firstName.trim() &&
+          form.lastName.trim() &&
+          form.title &&
+          form.dateOfBirth &&
+          form.employmentStatus &&
+          form.email.trim() &&
+          form.phone.trim() &&
+          form.annualIncome,
+      );
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -94,28 +109,30 @@ export function AddClientModal({ open, onClose }: AddClientModalProps) {
     setFieldErrors({});
 
     try {
+      let result;
       if (isCompany) {
-        await mutateAsync({
+        result = await mutateAsync({
           clientType: 'COMPANY',
           companyName: form.companyName.trim(),
-          companyNumber: form.companyNumber.trim() || undefined,
+          companyNumber: form.companyNumber.trim(),
           email: form.email.trim(),
-          phone: form.phone.trim() || undefined,
-          annualIncome: form.annualIncome ? Number(form.annualIncome) : undefined,
+          phone: form.phone.trim(),
+          annualIncome: Number(form.annualIncome),
         });
       } else {
-        await mutateAsync({
+        result = await mutateAsync({
           clientType: 'INDIVIDUAL',
           firstName: form.firstName.trim(),
           lastName: form.lastName.trim(),
           email: form.email.trim(),
-          title: form.title.trim() || undefined,
-          phone: form.phone.trim() || undefined,
-          dateOfBirth: form.dateOfBirth || undefined,
-          employmentStatus: (form.employmentStatus as EmploymentStatus) || undefined,
-          annualIncome: form.annualIncome ? Number(form.annualIncome) : undefined,
+          title: form.title,
+          phone: form.phone.trim(),
+          dateOfBirth: form.dateOfBirth,
+          employmentStatus: form.employmentStatus as EmploymentStatus,
+          annualIncome: Number(form.annualIncome),
         });
       }
+
       handleClose();
     } catch (err) {
       const fields = getApiErrorFieldMap(err);
@@ -236,7 +253,7 @@ export function AddClientModal({ open, onClose }: AddClientModalProps) {
                   </InputWithIcon>
                 </Field>
 
-                <Field label="Company registration number" error={fieldErrors.companyNumber}>
+                <Field label="Company registration number" required error={fieldErrors.companyNumber}>
                   <InputWithIcon icon={<Hash className="h-4 w-4" />}>
                     <input
                       value={form.companyNumber}
@@ -272,7 +289,7 @@ export function AddClientModal({ open, onClose }: AddClientModalProps) {
                 </div>
 
                 {/* Title */}
-                <Field label="Title" error={fieldErrors.title}>
+                <Field label="Title" required error={fieldErrors.title}>
                   <select
                     value={form.title}
                     onChange={(e) => set('title', e.target.value)}
@@ -288,7 +305,7 @@ export function AddClientModal({ open, onClose }: AddClientModalProps) {
                 </Field>
 
                 {/* Date of birth */}
-                <Field label="Date of birth" error={fieldErrors.dateOfBirth}>
+                <Field label="Date of birth" required error={fieldErrors.dateOfBirth}>
                   <InputWithIcon icon={<Calendar className="h-4 w-4" />}>
                     <input
                       type="date"
@@ -300,7 +317,7 @@ export function AddClientModal({ open, onClose }: AddClientModalProps) {
                 </Field>
 
                 {/* Employment status */}
-                <Field label="Employment status" error={fieldErrors.employmentStatus}>
+                <Field label="Employment status" required error={fieldErrors.employmentStatus}>
                   <InputWithIcon icon={<Briefcase className="h-4 w-4" />}>
                     <select
                       value={form.employmentStatus}
@@ -333,7 +350,7 @@ export function AddClientModal({ open, onClose }: AddClientModalProps) {
             </Field>
 
             {/* Phone */}
-            <Field label="Phone number" error={fieldErrors.phone}>
+            <Field label="Phone number" required error={fieldErrors.phone}>
               <InputWithIcon icon={<Phone className="h-4 w-4" />}>
                 <input
                   type="tel"
@@ -348,6 +365,7 @@ export function AddClientModal({ open, onClose }: AddClientModalProps) {
             {/* Annual income */}
             <Field
               label={isCompany ? 'Annual turnover / income (£)' : 'Annual income (£)'}
+              required
               error={fieldErrors.annualIncome}
             >
               <InputWithIcon icon={<DollarSign className="h-4 w-4" />}>

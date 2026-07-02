@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-const LOCAL_ORIGINS = ['http://localhost:3001', 'http://localhost:3000'];
+const LOCAL_ORIGINS = ['http://localhost:3001', 'http://localhost:3000', 'http://localhost:3002'];
 
 function parseExtraOrigins(): string[] {
   const raw = process.env.CORS_ALLOWED_ORIGINS ?? '';
@@ -24,13 +24,14 @@ export function corsHeadersForOrigin(origin: string | null): Record<string, stri
   return {
     'Access-Control-Allow-Origin': normalized,
     'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
-    'Access-Control-Allow-Headers': 'Authorization, Content-Type, X-Requested-With',
+    'Access-Control-Allow-Headers': 'Authorization, Content-Type, X-Requested-With, Cookie',
+    'Access-Control-Allow-Credentials': 'true',
     'Access-Control-Max-Age': '86400',
     Vary: 'Origin',
   };
 }
 
-export function applyCorsHeaders(req: NextRequest, res: NextResponse): NextResponse {
+export function applyCorsHeaders(req: NextRequest, res: Response): Response {
   const cors = corsHeadersForOrigin(req.headers.get('origin'));
   if (!cors) return res;
   for (const [key, value] of Object.entries(cors)) {

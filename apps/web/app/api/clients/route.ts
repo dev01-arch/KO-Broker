@@ -82,7 +82,7 @@ async function createClient(req: NextRequest) {
   }
 
   const input = parsed.data;
-  const client = await createClientForOrg(orgId, {
+  const result = await createClientForOrg(orgId, {
     clientType: input.clientType,
     title: input.title,
     firstName: input.firstName,
@@ -96,5 +96,8 @@ async function createClient(req: NextRequest) {
     annualIncome: input.annualIncome,
   });
 
-  return apiSuccess(client, { status: 201 });
+  return apiSuccess(result.client, {
+    status: 201,
+    meta: { welcomeEmail: result.welcomeEmail },
+  });
 }
