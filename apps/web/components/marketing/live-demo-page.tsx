@@ -825,7 +825,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
             annualIncome: payload.annualIncome,
             _count: { cases: 0, messages: 0 },
           },
-          welcomeEmail: result.meta?.welcomeEmail,
+          welcomeEmail: undefined,
         });
       } catch (err) {
         const fields = getApiErrorFieldMap(err);

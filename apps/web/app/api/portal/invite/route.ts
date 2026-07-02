@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
             ? 'Onboarding invitation sent successfully.'
             : `Portal invite created but email could not be sent. ${result.emailError ?? 'Check server logs and Resend domain settings.'}`,
         },
-        { status: 201, meta: { notifications: result.notifications } },
+        { status: 201 },
       ),
     );
   } catch (error) {
