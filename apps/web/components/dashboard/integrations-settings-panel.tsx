@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useClerk, useUser } from '@clerk/nextjs';
 import {
   AlertTriangle,
+  Building2,
   CheckCircle2,
   Loader2,
   LogOut,
@@ -17,6 +18,8 @@ import {
   emptyMessagingDraft,
   useIntegrations,
   useMessagingSettings,
+  useAdvisers,
+  useCreateAdviser,
   useUpdateIntegrations,
   useUpdateMessagingSettings,
   type IntegrationsDraft,
@@ -80,6 +83,8 @@ export function IntegrationsSettingsPanel({ embedded = false }: IntegrationsSett
     useMessagingSettings();
   const { mutateAsync: saveIntegrations, isPending: savingIntegrations } = useUpdateIntegrations();
   const { mutateAsync: saveMessaging, isPending: savingMessaging } = useUpdateMessagingSettings();
+  const { data: advisersData, isLoading: advisersLoading, error: advisersError } = useAdvisers();
+  const { mutateAsync: createAdviser, isPending: creatingAdviser } = useCreateAdviser();
 
   const [integrationsDraft, setIntegrationsDraft] = useState<IntegrationsDraft>(
     emptyIntegrationsDraft(),
@@ -89,6 +94,7 @@ export function IntegrationsSettingsPanel({ embedded = false }: IntegrationsSett
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [signingOut, setSigningOut] = useState(false);
+  const [adviserDraft, setAdviserDraft] = useState({ firstName: '', lastName: '', email: '' });
 
   useEffect(() => {
     if (integrationsData?.data) {
@@ -104,6 +110,7 @@ export function IntegrationsSettingsPanel({ embedded = false }: IntegrationsSett
 
   const isLoading = integrationsLoading || messagingLoading;
   const saving = savingIntegrations || savingMessaging;
+  const advisers = advisersData?.data ?? [];
 
   async function handleIntegrationToggle(integration: 'equifax' | 'twilio', enabled: boolean) {
     setIntegrationsDraft((prev) => ({ ...prev, [integration]: { enabled } }));
@@ -158,6 +165,23 @@ export function IntegrationsSettingsPanel({ embedded = false }: IntegrationsSett
     }
   }
 
+  async function handleCreateAdviser() {
+    setError(null);
+    setSaveSuccess(false);
+    try {
+      await createAdviser({
+        firstName: adviserDraft.firstName.trim(),
+        lastName: adviserDraft.lastName.trim(),
+        email: adviserDraft.email.trim(),
+      });
+      setAdviserDraft({ firstName: '', lastName: '', email: '' });
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 2500);
+    } catch (err) {
+      setError(formatApiError(err, { fallback: 'Failed to add adviser. Please try again.' }));
+    }
+  }
+
   if (isLoading) {
     return (
       <div className={`flex items-center justify-center text-ink-60 ${embedded ? 'min-h-[50vh]' : 'min-h-[60vh]'}`}>
@@ -168,8 +192,8 @@ export function IntegrationsSettingsPanel({ embedded = false }: IntegrationsSett
   }
 
   const loadMessage =
-    integrationsError || messagingError
-      ? formatApiError(integrationsError ?? messagingError, { fallback: 'Failed to load settings.' })
+    integrationsError || messagingError || advisersError
+      ? formatApiError(integrationsError ?? messagingError ?? advisersError, { fallback: 'Failed to load settings.' })
       : null;
 
   return (
@@ -209,6 +233,77 @@ export function IntegrationsSettingsPanel({ embedded = false }: IntegrationsSett
         )}
 
         <div className="space-y-8">
+          <section>
+            <h2 className="mb-1 font-heading text-lg font-bold text-ink">Organization Setup</h2>
+            <p className="mb-5 text-sm text-ink-60">
+              Add advisers to this organization so they can be assigned to cases.
+            </p>
+            <div className="space-y-6 rounded-xl border border-ink-20 bg-white p-6">
+              <div className="grid gap-3 md:grid-cols-3">
+                <input
+                  value={adviserDraft.firstName}
+                  onChange={(e) => setAdviserDraft((prev) => ({ ...prev, firstName: e.target.value }))}
+                  placeholder="First name"
+                  className="rounded-lg border border-ink-20 bg-white px-3 py-2 text-sm text-ink outline-none transition focus:border-brand-teal-500 focus:ring-2 focus:ring-brand-teal-500/20"
+                />
+                <input
+                  value={adviserDraft.lastName}
+                  onChange={(e) => setAdviserDraft((prev) => ({ ...prev, lastName: e.target.value }))}
+                  placeholder="Last name"
+                  className="rounded-lg border border-ink-20 bg-white px-3 py-2 text-sm text-ink outline-none transition focus:border-brand-teal-500 focus:ring-2 focus:ring-brand-teal-500/20"
+                />
+                <input
+                  type="email"
+                  value={adviserDraft.email}
+                  onChange={(e) => setAdviserDraft((prev) => ({ ...prev, email: e.target.value }))}
+                  placeholder="Email"
+                  className="rounded-lg border border-ink-20 bg-white px-3 py-2 text-sm text-ink outline-none transition focus:border-brand-teal-500 focus:ring-2 focus:ring-brand-teal-500/20"
+                />
+              </div>
+              <div>
+                <button
+                  type="button"
+                  disabled={
+                    !isAdmin ||
+                    creatingAdviser ||
+                    !adviserDraft.firstName.trim() ||
+                    !adviserDraft.lastName.trim() ||
+                    !adviserDraft.email.trim()
+                  }
+                  onClick={() => void handleCreateAdviser()}
+                  className="inline-flex items-center gap-2 rounded-lg bg-brand-teal-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-teal-700 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {creatingAdviser ? <Loader2 className="h-4 w-4 animate-spin" /> : <Building2 className="h-4 w-4" />}
+                  {creatingAdviser ? 'Adding adviser…' : 'Add adviser'}
+                </button>
+              </div>
+              <div className="rounded-lg border border-ink-20">
+                <div className="grid grid-cols-[1fr_1fr_1.5fr_auto] gap-3 border-b border-ink-20 bg-ink-08 px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-ink-60">
+                  <span>First name</span>
+                  <span>Last name</span>
+                  <span>Email</span>
+                  <span>Status</span>
+                </div>
+                {advisersLoading ? (
+                  <div className="px-4 py-4 text-sm text-ink-60">Loading advisers…</div>
+                ) : advisers.length === 0 ? (
+                  <div className="px-4 py-4 text-sm text-ink-60">No advisers added yet.</div>
+                ) : (
+                  advisers.map((adviser) => (
+                    <div key={adviser.id} className="grid grid-cols-[1fr_1fr_1.5fr_auto] gap-3 border-b border-ink-20 px-4 py-3 text-sm text-ink last:border-b-0">
+                      <span>{adviser.firstName ?? '—'}</span>
+                      <span>{adviser.lastName ?? '—'}</span>
+                      <span className="text-ink-60">{adviser.email}</span>
+                      <span className={adviser.isActive ? 'text-green-700' : 'text-ink-60'}>
+                        {adviser.isActive ? 'Active' : 'Inactive'}
+                      </span>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </section>
+
           <section>
             <h2 className="mb-1 font-heading text-lg font-bold text-ink">Messaging</h2>
             <p className="mb-5 text-sm text-ink-60">

@@ -373,6 +373,10 @@ export const clientsApi = {
       { method: 'PATCH', body: JSON.stringify(input) },
     );
   },
+
+  delete(token: string, id: string) {
+    return apiFetch<{ deleted: boolean }>(`/api/clients/${id}`, token, { method: 'DELETE' });
+  },
 };
 
 // ─── Document types ───────────────────────────────────────────────────────────
@@ -477,6 +481,21 @@ export interface OrgMessagingSettings {
   inApp?: { enabled: boolean };
   email?: { enabled: boolean };
   sms?: { enabled: boolean };
+}
+
+export interface AdviserRecord {
+  id: string;
+  firstName: string | null;
+  lastName: string | null;
+  email: string;
+  isActive: boolean;
+  createdAt: string;
+}
+
+export interface CreateAdviserInput {
+  firstName: string;
+  lastName: string;
+  email: string;
 }
 
 export interface MessageDeliveryMeta {
@@ -743,6 +762,17 @@ export const settingsApi = {
   updateMessaging(token: string, input: UpdateMessagingSettingsInput) {
     return apiFetch<OrgMessagingSettings>('/api/settings/messaging', token, {
       method: 'PUT',
+      body: JSON.stringify(input),
+    });
+  },
+
+  listAdvisers(token: string) {
+    return apiFetch<AdviserRecord[]>('/api/settings/advisers', token);
+  },
+
+  createAdviser(token: string, input: CreateAdviserInput) {
+    return apiFetch<AdviserRecord>('/api/settings/advisers', token, {
+      method: 'POST',
       body: JSON.stringify(input),
     });
   },

@@ -193,7 +193,8 @@ export async function createClientForOrg(
           },
         },
       });
-      const referenceNumber = generateReference('KOC', count + 1);
+      // Use retry offset so collisions after deletes can recover.
+      const referenceNumber = generateReference('KOC', count + 1 + attempt);
 
       const created = await prisma.client.create({
         data: {
@@ -290,5 +291,43 @@ export async function updateClientForOrg(
   } catch (error) {
     if (!useDevStore(error)) throw error;
     return devStore.updateClient(orgId, id, input);
+  }
+}
+
+export async function deleteClientForOrg(orgId: string, id: string) {
+  try {
+    const existing = await prisma.client.findFirst({
+      where: { id, orgId },
+      select: { id: true },
+    });
+    if (!existing) return { error: 'NOT_FOUND' as const };
+
+    const caseIds = (
+      await prisma.case.findMany({
+        where: { orgId, clientId: id },
+        select: { id: true },
+      })
+    ).map((item) => item.id);
+
+    await prisma.$transaction(async (tx) => {
+      if (caseIds.length > 0) {
+        await tx.factFind.deleteMany({ where: { caseId: { in: caseIds } } });
+        await tx.productConsidered.deleteMany({ where: { caseId: { in: caseIds } } });
+        await tx.complianceRecord.deleteMany({ where: { caseId: { in: caseIds } } });
+        await tx.suitabilityReport.deleteMany({ where: { caseId: { in: caseIds } } });
+        await tx.message.deleteMany({ where: { caseId: { in: caseIds } } });
+        await tx.document.deleteMany({ where: { caseId: { in: caseIds } } });
+        await tx.case.deleteMany({ where: { id: { in: caseIds } } });
+      }
+
+      await tx.message.deleteMany({ where: { orgId, clientId: id } });
+      await tx.document.deleteMany({ where: { orgId, clientId: id } });
+      await tx.client.delete({ where: { id } });
+    });
+
+    return { deleted: true as const };
+  } catch (error) {
+    if (!useDevStore(error)) throw error;
+    return devStore.deleteClient(orgId, id);
   }
 }

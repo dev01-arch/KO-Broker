@@ -2,6 +2,7 @@ import { prisma } from '@/lib/db';
 import type { OrgIntegrations, OrgMessagingSettings, UpdateIntegrationsInput, UpdateMessagingSettingsInput } from '@ko/types';
 import { devStore } from '@/lib/api/dev-store';
 import { isPrismaConnectionError } from '@/lib/api/prisma-errors';
+import { randomUUID } from 'crypto';
 
 function useDevStore(error: unknown) {
   return process.env.NODE_ENV === 'development' && isPrismaConnectionError(error);
@@ -259,6 +260,60 @@ export async function getOrgProfile(orgId: string, user: { role: string }) {
         plan: org?.plan ?? 'STARTER',
         role: user.role as 'ADMIN' | 'ADVISER' | 'COMPLIANCE' | 'VIEWER',
       };
+    }
+    throw error;
+  }
+}
+
+export async function listAdvisersForOrg(orgId: string) {
+  try {
+    return await prisma.user.findMany({
+      where: { orgId, role: 'ADVISER' },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        isActive: true,
+        createdAt: true,
+      },
+    });
+  } catch (error) {
+    if (useDevStore(error)) {
+      return devStore.listAdvisers(orgId);
+    }
+    throw error;
+  }
+}
+
+export async function createAdviserForOrg(
+  orgId: string,
+  input: { firstName: string; lastName: string; email: string },
+) {
+  try {
+    return await prisma.user.create({
+      data: {
+        orgId,
+        firstName: input.firstName,
+        lastName: input.lastName,
+        email: input.email.toLowerCase(),
+        role: 'ADVISER',
+        // Placeholder until adviser claims account via Clerk onboarding flow.
+        clerkId: `pending_${randomUUID()}`,
+      },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        isActive: true,
+        createdAt: true,
+      },
+    });
+  } catch (error) {
+    if (useDevStore(error)) {
+      return devStore.createAdviser(orgId, input);
     }
     throw error;
   }

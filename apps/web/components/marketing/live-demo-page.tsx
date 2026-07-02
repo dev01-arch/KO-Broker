@@ -13,10 +13,11 @@ import { usePortalInvite } from '@/hooks/use-portal-invite';
 import { casesQueryKey, useCases, useCreateCase } from '@/hooks/use-cases';
 import { usePlanFeature } from '@/hooks/use-org';
 import { useUploadDocument } from '@/hooks/use-documents';
-import { getSessionUsername } from '@/lib/auth/demo-session';
+import { clearAuthenticated, getSessionUsername } from '@/lib/auth/demo-session';
 import {
   aiApi,
   casesApi,
+  clientsApi,
   complianceApi,
   documentsApi,
   formatApiError,
@@ -36,6 +37,7 @@ import {
   type MessageDeliveryMeta,
   type ReportTemplate,
   type TimelineEntry,
+  type UpsertFactFindInput,
 } from '@/lib/api/client';
 import { formatClientName } from '@/lib/api/client-display';
 
@@ -208,7 +210,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, isLoaded: clerkLoaded } = useUser();
-  const { getToken } = useAuth();
+  const { getToken, signOut } = useAuth();
   const [demoUsername, setDemoUsername] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<DemoTab>('overview');
   const isDashboard = homeHref === '/dashboard';
@@ -224,16 +226,21 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
   const [notifOpen, setNotifOpen] = useState(false);
   const [notifUnread, setNotifUnread] = useState<number>(DEMO_NOTIFICATIONS.length);
   const notifRef = useRef<HTMLDivElement>(null);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const profileRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    if (!notifOpen) return;
+    if (!notifOpen && !profileOpen) return;
     function handleOutside(e: MouseEvent) {
       if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
         setNotifOpen(false);
       }
+      if (profileRef.current && !profileRef.current.contains(e.target as Node)) {
+        setProfileOpen(false);
+      }
     }
     document.addEventListener('mousedown', handleOutside);
     return () => document.removeEventListener('mousedown', handleOutside);
-  }, [notifOpen]);
+  }, [notifOpen, profileOpen]);
   // Stable ref so onLoad/click closures always call the current getToken.
   const getTokenRef = useRef(getToken);
   useEffect(() => { getTokenRef.current = getToken; }, [getToken]);
@@ -277,6 +284,19 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
   const isPersonalDashboard = isDashboard && isClerkUser && clerkLoaded;
   /** Marketing /demo — always mock "Alex" content, never live API. */
   const isMockDemo = !isDashboard;
+  const profileInitial = useMemo(() => {
+    const source = user?.firstName ?? user?.username ?? demoUsername ?? 'U';
+    return source.charAt(0).toUpperCase() || 'U';
+  }, [demoUsername, user?.firstName, user?.username]);
+  const handleProfileLogout = useCallback(async () => {
+    setProfileOpen(false);
+    if (isClerkUser) {
+      await signOut({ redirectUrl: '/' });
+      return;
+    }
+    clearAuthenticated();
+    router.push('/login');
+  }, [isClerkUser, router, signOut]);
 
   const { data: clientsData, isLoading: clientsLoading } = useClients(LIVE_CLIENTS_QUERY, {
     enabled: isPersonalDashboard,
@@ -622,8 +642,9 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
         type?: string;
         requestId?: number;
         caseId?: string;
+        clientIds?: string[];
         path?: string;
-        payload?: CreateClientInput | CreateCaseInput;
+        payload?: CreateClientInput | CreateCaseInput | Record<string, unknown>;
       };
 
       if (data?.type === 'ko:navigate' && typeof data.path === 'string') {
@@ -789,6 +810,83 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
           replyInvite({
             success: false,
             error: formatApiError(err, { fallback: 'Could not send portal invite.' }),
+          });
+        }
+        return;
+      }
+
+      if (data?.type === 'ko:delete-clients' && data.requestId != null) {
+        const ids = Array.isArray(data.clientIds) ? data.clientIds : [];
+        const replyDelete = (body: Record<string, unknown>) => {
+          iframeWindow.postMessage(
+            { type: 'ko:delete-clients-result', requestId: data.requestId, ...body },
+            window.location.origin,
+          );
+        };
+
+        if (ids.length === 0) {
+          replyDelete({ success: false, error: 'No clients selected.' });
+          return;
+        }
+
+        try {
+          const token = await getToken();
+          if (!token) throw new Error('Not authenticated');
+
+          const results = await Promise.allSettled(
+            ids.map(async (clientId) => clientsApi.delete(token, clientId)),
+          );
+          const deletedCount = results.filter((result) => result.status === 'fulfilled').length;
+          if (deletedCount === 0) {
+            replyDelete({ success: false, error: 'Could not delete selected clients.' });
+            return;
+          }
+
+          await queryClient.refetchQueries({ queryKey: ['clients'] });
+          await queryClient.refetchQueries({ queryKey: ['cases'] });
+          const freshClients = queryClient.getQueryData<{ data: ClientSummary[] }>(
+            clientsQueryKey(LIVE_CLIENTS_QUERY),
+          );
+          const freshCases = queryClient.getQueryData<{ data: CaseSummary[] }>(
+            casesQueryKey(LIVE_CASES_QUERY),
+          );
+          clientsDataRef.current = freshClients?.data ?? [];
+          casesDataRef.current = freshCases?.data ?? [];
+          syncLiveDataToIframe();
+          replyDelete({ success: true, deletedCount });
+        } catch (err) {
+          replyDelete({
+            success: false,
+            error: formatApiError(err, { fallback: 'Could not delete selected clients.' }),
+          });
+        }
+        return;
+      }
+
+      if (data?.type === 'ko:fact-find-save' && data.requestId != null && data.caseId && data.payload) {
+        const replyFactFind = (body: Record<string, unknown>) => {
+          iframeWindow.postMessage(
+            { type: 'ko:fact-find-save-result', requestId: data.requestId, ...body },
+            window.location.origin,
+          );
+        };
+
+        try {
+          const token = await getToken();
+          if (!token) throw new Error('Not authenticated');
+          const saved = await casesApi.upsertFactFind(token, data.caseId, data.payload as UpsertFactFindInput);
+          if (activeCaseIdRef.current === data.caseId) {
+            const updated = await casesApi.get(token, data.caseId);
+            iframeWindow.postMessage(
+              { type: 'ko:case-detail', case: updated.data },
+              window.location.origin,
+            );
+          }
+          replyFactFind({ success: true, factFind: saved.data });
+        } catch (err) {
+          replyFactFind({
+            success: false,
+            error: formatApiError(err, { fallback: 'Could not save fact-find.' }),
           });
         }
         return;
@@ -2113,8 +2211,9 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
 
         <section className="min-w-0 flex-1">
           <div className="mx-auto w-full max-w-7xl px-0 pt-0 pb-24 lg:px-6 lg:pt-6 lg:pb-10">
-          {/* Notification bell header row */}
+          {/* Notification bell + profile header row */}
           <div className="relative mb-2 flex justify-end px-4 pt-4 lg:px-0 lg:pt-0">
+          <div className="flex items-center gap-2">
           <div ref={notifRef} className="relative z-30">
             <button
               type="button"
@@ -2179,6 +2278,35 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
                 </div>
               </div>
             )}
+          </div>
+          <div ref={profileRef} className="relative z-30">
+            <button
+              type="button"
+              onClick={() => setProfileOpen((o) => !o)}
+              className="relative flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 bg-white text-sm font-semibold text-gray-700 shadow-sm transition-colors hover:bg-gray-50"
+              aria-label="Profile menu"
+              aria-expanded={profileOpen}
+            >
+              {profileInitial}
+            </button>
+
+            {profileOpen && (
+              <div className="absolute right-0 top-12 w-[180px] overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-2xl">
+                <div className="border-b border-gray-100 px-4 py-3 text-xs font-medium text-gray-500">
+                  Account
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    void handleProfileLogout();
+                  }}
+                  className="block w-full px-4 py-3 text-left text-sm font-medium text-gray-900 transition-colors hover:bg-gray-50"
+                >
+                  Log out
+                </button>
+              </div>
+            )}
+          </div>
           </div>
           </div>
           {/* ── Mobile: back button when on a Settings-nested tab ───────────── */}

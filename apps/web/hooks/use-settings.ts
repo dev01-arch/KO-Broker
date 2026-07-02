@@ -5,6 +5,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   settingsApi,
   requireAuthToken,
+  type AdviserRecord,
+  type CreateAdviserInput,
   type OrgIntegrations,
   type OrgMessagingSettings,
   type UpdateIntegrationsInput,
@@ -18,6 +20,7 @@ function useToken() {
 
 export const integrationsQueryKey = ['settings', 'integrations'] as const;
 export const messagingQueryKey = ['settings', 'messaging'] as const;
+export const advisersQueryKey = ['settings', 'advisers'] as const;
 
 export type IntegrationsDraft = {
   equifax: { enabled: boolean };
@@ -76,6 +79,32 @@ export function useUpdateMessagingSettings() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: messagingQueryKey });
+    },
+  });
+}
+
+export function useAdvisers() {
+  const getToken = useToken();
+  return useQuery({
+    queryKey: advisersQueryKey,
+    queryFn: async () => {
+      const token = await requireAuthToken(getToken);
+      return settingsApi.listAdvisers(token);
+    },
+  });
+}
+
+export function useCreateAdviser() {
+  const getToken = useToken();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: CreateAdviserInput) => {
+      const token = await requireAuthToken(getToken);
+      return settingsApi.createAdviser(token, input);
+    },
+    onSuccess: (created) => {
+      qc.invalidateQueries({ queryKey: advisersQueryKey });
+      return created as AdviserRecord;
     },
   });
 }

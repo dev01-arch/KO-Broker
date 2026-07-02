@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { EmploymentStatusSchema } from '@ko/types';
 import { requireApiAuth } from '@/lib/api/require-api-auth';
-import { getClientForOrg, updateClientForOrg } from '@/lib/api/clients-data';
+import { deleteClientForOrg, getClientForOrg, updateClientForOrg } from '@/lib/api/clients-data';
 import { apiError, apiFromZodError, apiNotFound, apiSuccess } from '@/lib/api/responses';
 import { isPrismaConnectionError } from '@/lib/api/prisma-errors';
 
@@ -96,6 +96,29 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     return apiSuccess(client);
   } catch (error) {
     console.error('[PATCH /api/clients/:id]', error);
+    if (isPrismaConnectionError(error)) {
+      return apiError('SERVICE_UNAVAILABLE', 'Database is unavailable', 503);
+    }
+    return apiError('INTERNAL_ERROR', 'An unexpected error occurred', 500);
+  }
+}
+
+export async function DELETE(_req: NextRequest, context: RouteContext) {
+  try {
+    const authResult = await requireApiAuth();
+    if ('response' in authResult) return authResult.response;
+
+    const { orgId } = authResult;
+    const { id } = await context.params;
+
+    const result = await deleteClientForOrg(orgId, id);
+    if ('error' in result) {
+      return apiNotFound('Client not found');
+    }
+
+    return apiSuccess({ deleted: true });
+  } catch (error) {
+    console.error('[DELETE /api/clients/:id]', error);
     if (isPrismaConnectionError(error)) {
       return apiError('SERVICE_UNAVAILABLE', 'Database is unavailable', 503);
     }

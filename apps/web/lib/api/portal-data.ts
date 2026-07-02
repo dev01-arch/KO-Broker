@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db';
 import { devStore } from '@/lib/api/dev-store';
 import { isPrismaConnectionError } from '@/lib/api/prisma-errors';
 import { upsertFactFindForCase } from '@/lib/api/cases-data';
+import { serializeFactFind } from '@/lib/api/cases';
 import { createMessageForOrg } from '@/lib/api/messages-data';
 import {
   hashPortalPassword,
@@ -373,5 +374,55 @@ export async function getPortalSessionProfile(session: PortalSessionPayload) {
   } catch (error) {
     if (!useDevStore(error)) throw error;
     return { error: 'NOT_FOUND' as const };
+  }
+}
+
+export async function getPortalFactFind(session: PortalSessionPayload) {
+  try {
+    const caseRecord = await prisma.case.findFirst({
+      where: { id: session.caseId, orgId: session.orgId, clientId: session.clientId },
+      include: { factFind: true },
+    });
+    if (!caseRecord) return { error: 'NOT_FOUND' as const };
+    if (!caseRecord.factFind) return null;
+    return serializeFactFind(caseRecord.factFind);
+  } catch (error) {
+    if (!useDevStore(error)) throw error;
+    const caseRecord = devStore.getCase(session.orgId, session.caseId);
+    if (!caseRecord || caseRecord.client.id !== session.clientId) return { error: 'NOT_FOUND' as const };
+    return caseRecord.factFind ? serializeFactFind(caseRecord.factFind) : null;
+  }
+}
+
+export async function updatePortalFactFind(
+  session: PortalSessionPayload,
+  input: {
+    personalDetails?: Record<string, unknown>;
+    employmentDetails?: Record<string, unknown>;
+    incomeDetails?: Record<string, unknown>;
+    expenditureDetails?: Record<string, unknown>;
+    propertyDetails?: Record<string, unknown>;
+    existingMortgages?: Record<string, unknown>;
+    clientPreferences?: Record<string, unknown>;
+    markComplete?: boolean;
+  },
+) {
+  try {
+    const caseRecord = await prisma.case.findFirst({
+      where: { id: session.caseId, orgId: session.orgId, clientId: session.clientId },
+      select: { id: true },
+    });
+    if (!caseRecord) return { error: 'NOT_FOUND' as const };
+
+    const result = await upsertFactFindForCase(session.orgId, session.caseId, input);
+    if ('error' in result) return { error: 'NOT_FOUND' as const };
+    return serializeFactFind(result.factFind);
+  } catch (error) {
+    if (!useDevStore(error)) throw error;
+    const caseRecord = devStore.getCase(session.orgId, session.caseId);
+    if (!caseRecord || caseRecord.client.id !== session.clientId) return { error: 'NOT_FOUND' as const };
+    const result = devStore.upsertFactFind(session.orgId, session.caseId, input);
+    if ('error' in result) return { error: 'NOT_FOUND' as const };
+    return serializeFactFind(result.factFind);
   }
 }

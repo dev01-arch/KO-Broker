@@ -47,6 +47,11 @@ const CLIENT_TYPE_OPTIONS: { value: ClientType; label: string; description: stri
   },
 ];
 
+function isPositiveNumber(value: string): boolean {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) && numeric > 0;
+}
+
 export function AddClientModal({ open, onClose }: AddClientModalProps) {
   const { mutateAsync, isPending } = useCreateClient();
 
@@ -90,7 +95,7 @@ export function AddClientModal({ open, onClose }: AddClientModalProps) {
           form.companyNumber.trim() &&
           form.email.trim() &&
           form.phone.trim() &&
-          form.annualIncome,
+          isPositiveNumber(form.annualIncome),
       )
     : Boolean(
         form.firstName.trim() &&
@@ -100,7 +105,7 @@ export function AddClientModal({ open, onClose }: AddClientModalProps) {
           form.employmentStatus &&
           form.email.trim() &&
           form.phone.trim() &&
-          form.annualIncome,
+          isPositiveNumber(form.annualIncome),
       );
 
   async function handleSubmit(e: FormEvent) {
@@ -245,6 +250,7 @@ export function AddClientModal({ open, onClose }: AddClientModalProps) {
                 <Field label="Company name" required error={fieldErrors.companyName}>
                   <InputWithIcon icon={<Building2 className="h-4 w-4" />}>
                     <input
+                      required
                       value={form.companyName}
                       onChange={(e) => set('companyName', e.target.value)}
                       placeholder="Acme Holdings Ltd"
@@ -256,6 +262,7 @@ export function AddClientModal({ open, onClose }: AddClientModalProps) {
                 <Field label="Company registration number" required error={fieldErrors.companyNumber}>
                   <InputWithIcon icon={<Hash className="h-4 w-4" />}>
                     <input
+                      required
                       value={form.companyNumber}
                       onChange={(e) => set('companyNumber', e.target.value)}
                       placeholder="12345678"
@@ -271,6 +278,7 @@ export function AddClientModal({ open, onClose }: AddClientModalProps) {
                   <Field label="First name" required error={fieldErrors.firstName}>
                     <InputWithIcon icon={<User className="h-4 w-4" />}>
                       <input
+                        required
                         value={form.firstName}
                         onChange={(e) => set('firstName', e.target.value)}
                         placeholder="James"
@@ -280,6 +288,7 @@ export function AddClientModal({ open, onClose }: AddClientModalProps) {
                   </Field>
                   <Field label="Last name" required error={fieldErrors.lastName}>
                     <input
+                      required
                       value={form.lastName}
                       onChange={(e) => set('lastName', e.target.value)}
                       placeholder="Osei"
@@ -291,9 +300,10 @@ export function AddClientModal({ open, onClose }: AddClientModalProps) {
                 {/* Title */}
                 <Field label="Title" required error={fieldErrors.title}>
                   <select
+                    required
                     value={form.title}
                     onChange={(e) => set('title', e.target.value)}
-                    className={selectCls(false)}
+                    className={selectCls(!!fieldErrors.title)}
                   >
                     <option value="">Select…</option>
                     {['Mr', 'Mrs', 'Ms', 'Miss', 'Dr', 'Prof'].map((t) => (
@@ -309,9 +319,10 @@ export function AddClientModal({ open, onClose }: AddClientModalProps) {
                   <InputWithIcon icon={<Calendar className="h-4 w-4" />}>
                     <input
                       type="date"
+                      required
                       value={form.dateOfBirth}
                       onChange={(e) => set('dateOfBirth', e.target.value)}
-                      className={inputCls(false)}
+                      className={inputCls(!!fieldErrors.dateOfBirth)}
                     />
                   </InputWithIcon>
                 </Field>
@@ -320,9 +331,10 @@ export function AddClientModal({ open, onClose }: AddClientModalProps) {
                 <Field label="Employment status" required error={fieldErrors.employmentStatus}>
                   <InputWithIcon icon={<Briefcase className="h-4 w-4" />}>
                     <select
+                      required
                       value={form.employmentStatus}
                       onChange={(e) => set('employmentStatus', e.target.value)}
-                      className={selectCls(false) + ' pl-10'}
+                      className={selectCls(!!fieldErrors.employmentStatus) + ' pl-10'}
                     >
                       <option value="">Select…</option>
                       {EMPLOYMENT_OPTIONS.map((o) => (
@@ -341,6 +353,7 @@ export function AddClientModal({ open, onClose }: AddClientModalProps) {
               <InputWithIcon icon={<Mail className="h-4 w-4" />}>
                 <input
                   type="email"
+                  required
                   value={form.email}
                   onChange={(e) => set('email', e.target.value)}
                   placeholder={isCompany ? 'accounts@acmeholdings.co.uk' : 'james@example.com'}
@@ -354,10 +367,11 @@ export function AddClientModal({ open, onClose }: AddClientModalProps) {
               <InputWithIcon icon={<Phone className="h-4 w-4" />}>
                 <input
                   type="tel"
+                  required
                   value={form.phone}
                   onChange={(e) => set('phone', e.target.value)}
                   placeholder="+44 7700 900000"
-                  className={inputCls(false)}
+                  className={inputCls(!!fieldErrors.phone)}
                 />
               </InputWithIcon>
             </Field>
@@ -372,10 +386,11 @@ export function AddClientModal({ open, onClose }: AddClientModalProps) {
                 <input
                   type="number"
                   min="0"
+                  required
                   value={form.annualIncome}
                   onChange={(e) => set('annualIncome', e.target.value)}
                   placeholder={isCompany ? '250000' : '65000'}
-                  className={inputCls(false)}
+                  className={inputCls(!!fieldErrors.annualIncome)}
                 />
               </InputWithIcon>
             </Field>

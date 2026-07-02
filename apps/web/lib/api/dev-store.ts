@@ -384,6 +384,32 @@ export const devStore = {
     });
   },
 
+  deleteClient(orgId: string, id: string) {
+    return mutateStore((store) => {
+      const client = store.clients.find((item) => item.orgId === orgId && item.id === id);
+      if (!client) return { error: 'NOT_FOUND' as const };
+
+      const caseIds = store.cases
+        .filter((item) => item.orgId === orgId && item.clientId === id)
+        .map((item) => item.id);
+
+      store.factFinds = store.factFinds.filter((item) => !caseIds.includes(item.caseId));
+      store.cases = store.cases.filter((item) => !caseIds.includes(item.id));
+      store.messages = store.messages.filter(
+        (item) => item.orgId !== orgId || (item.clientId !== id && !caseIds.includes(item.caseId ?? '')),
+      );
+      store.documents = store.documents.filter(
+        (item) => item.orgId !== orgId || (item.clientId !== id && !caseIds.includes(item.caseId ?? '')),
+      );
+      store.aiReports = store.aiReports.filter((item) => !caseIds.includes(item.caseId));
+      store.complianceRecords = store.complianceRecords.filter((item) => !caseIds.includes(item.caseId));
+      store.productsConsidered = store.productsConsidered.filter((item) => !caseIds.includes(item.caseId));
+      store.clients = store.clients.filter((item) => !(item.orgId === orgId && item.id === id));
+
+      return { deleted: true as const };
+    });
+  },
+
   listCases(
     orgId: string,
     params: {
@@ -874,6 +900,43 @@ export const devStore = {
 
   getOrgSettings(orgId: string): DevOrgSettings {
     return loadStore().orgSettings.find((s) => s.orgId === orgId) ?? { orgId };
+  },
+
+  listAdvisers(orgId: string) {
+    const store = loadStore();
+    return store.users
+      .filter((user) => user.orgId === orgId && user.role === 'ADVISER')
+      .map((user) => ({
+        id: user.id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        isActive: true,
+        createdAt: new Date(),
+      }));
+  },
+
+  createAdviser(orgId: string, input: { firstName: string; lastName: string; email: string }) {
+    return mutateStore((store) => {
+      const user: DevUser = {
+        id: randomUUID(),
+        clerkId: `pending_${randomUUID()}`,
+        orgId,
+        email: input.email.toLowerCase(),
+        firstName: input.firstName,
+        lastName: input.lastName,
+        role: 'ADVISER',
+      };
+      store.users.push(user);
+      return {
+        id: user.id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        isActive: true,
+        createdAt: new Date(),
+      };
+    });
   },
 
   updateOrgSettings(orgId: string, input: Partial<Omit<DevOrgSettings, 'orgId'>>) {

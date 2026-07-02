@@ -216,6 +216,21 @@ export const CreateClientSchema = z
     annualIncome: z.number().positive().optional(),
   })
   .superRefine((data, ctx) => {
+    if (!data.email?.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Email is required',
+        path: ['email'],
+      });
+    }
+    if (data.annualIncome === undefined || Number.isNaN(data.annualIncome)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Annual income is required',
+        path: ['annualIncome'],
+      });
+    }
+
     if (data.clientType === 'COMPANY') {
       if (!data.companyName?.trim()) {
         ctx.addIssue({
@@ -224,9 +239,23 @@ export const CreateClientSchema = z
           path: ['companyName'],
         });
       }
+      if (!data.companyNumber?.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Company registration number is required',
+          path: ['companyNumber'],
+        });
+      }
       return;
     }
 
+    if (!data.employmentStatus) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Employment status is required',
+        path: ['employmentStatus'],
+      });
+    }
     if (!data.firstName?.trim()) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,

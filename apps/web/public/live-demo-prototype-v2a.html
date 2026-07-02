@@ -347,7 +347,8 @@ body.embedded #tab-cases{background:transparent}
   #tab-clients .cl-title{font-size:22px}
   #tab-cases .cs-title{font-size:22px}
   #tab-clients .cl-content{padding:12px 14px 16px}
-  #tab-clients .cl-table-panel{border:none;box-shadow:none;border-radius:0;overflow-x:auto}
+  #tab-clients .cl-table-panel{display:none}
+  #tab-clients .cl-mobile-list-wrap{display:flex}
   /* New Client drawer: full-screen on mobile */
   .cl-drawer{width:100%;left:0;right:0;border-radius:0}
   /* Messages: 2×2 stat grid */
@@ -410,6 +411,20 @@ body.embedded #tab-cases{background:transparent}
 #tab-clients .cl-tool-btn:hover{background:#fafafa;border-color:#d4d4d8}
 #tab-clients .cl-tool-btn svg{width:16px;height:16px;flex-shrink:0;color:#71717a}
 #tab-clients .cl-table-panel{background:#fff;border:1px solid rgba(13,31,26,0.08);border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,0.04);overflow:auto}
+#tab-clients .cl-mobile-list-wrap{display:none;flex-direction:column;gap:12px}
+#tab-clients .cl-mobile-list{display:flex;flex-direction:column;gap:10px}
+#tab-clients .cl-mobile-card{border:1px solid #e4e4e7;border-radius:12px;background:#fff;padding:12px;display:flex;flex-direction:column;gap:8px}
+#tab-clients .cl-mobile-head{display:flex;align-items:flex-start;gap:10px}
+#tab-clients .cl-mobile-check{margin-top:2px}
+#tab-clients .cl-mobile-meta{display:grid;grid-template-columns:1fr 1fr;gap:8px 10px}
+#tab-clients .cl-mobile-meta-item{font-size:12px;color:#52525b}
+#tab-clients .cl-mobile-meta-item b{display:block;color:#18181b;font-size:11px;font-weight:600;margin-bottom:2px}
+#tab-clients .cl-mobile-actions{display:flex;align-items:center;justify-content:space-between;gap:8px}
+#tab-clients .cl-mobile-empty{padding:24px 12px;text-align:center;color:#a1a1aa;font-size:14px;border:1px dashed #e4e4e7;border-radius:10px;background:#fff}
+#tab-clients .cl-mobile-pager{display:flex;align-items:center;justify-content:space-between;gap:10px}
+#tab-clients .cl-mobile-pager-btn{border:1px solid #e4e4e7;border-radius:8px;background:#fff;padding:7px 12px;font-size:12px;color:#3f3f46;cursor:pointer}
+#tab-clients .cl-mobile-pager-btn:disabled{opacity:.5;cursor:not-allowed}
+#tab-clients .cl-mobile-page-indicator{font-size:12px;color:#71717a}
 @media(max-width:720px){#tab-clients .cl-toolbar{flex-wrap:wrap}#tab-clients .cl-search-wrap{max-width:100%;width:100%}}
 #tab-clients .cl-table{width:100%;border-collapse:collapse;font-size:13px}
 #tab-clients .cl-table thead th{text-align:left;font-family:'DM Sans',sans-serif;font-size:11px;font-weight:600;color:#a1a1aa;letter-spacing:0.04em;text-transform:none;padding:14px 16px;border-bottom:1px solid #f4f4f5;white-space:nowrap;background:#fafafa}
@@ -1872,7 +1887,7 @@ html.ff-open,body.ff-open{overflow:hidden!important;height:100%}
               <svg class="cl-search-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"/><path d="M20 20l-3-3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
             </div>
             <div class="cl-toolbar-actions">
-              <button type="button" class="cl-tool-btn" aria-label="Delete selected">
+              <button type="button" class="cl-tool-btn" id="cl-delete-btn" aria-label="Delete selected" disabled>
                 <svg viewBox="0 0 16 16" fill="none"><path d="M3 4h10M6 4V3h4v1M5 4v8h6V4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
                 Delete
               </button>
@@ -2038,6 +2053,14 @@ html.ff-open,body.ff-open{overflow:hidden!important;height:100%}
                 </tr>
               </tbody>
             </table>
+          </div>
+          <div class="cl-mobile-list-wrap" id="cl-mobile-list-wrap" aria-live="polite">
+            <div class="cl-mobile-list" id="cl-mobile-list"></div>
+            <div class="cl-mobile-pager" id="cl-mobile-pager">
+              <button type="button" class="cl-mobile-pager-btn" id="cl-mobile-prev">Previous</button>
+              <span class="cl-mobile-page-indicator" id="cl-mobile-page-indicator">Page 1 of 1</span>
+              <button type="button" class="cl-mobile-pager-btn" id="cl-mobile-next">Next</button>
+            </div>
           </div>
         </div>
       </div>
@@ -2541,7 +2564,7 @@ html.ff-open,body.ff-open{overflow:hidden!important;height:100%}
         </div>
         <form class="cl-drawer-form" id="cl-drawer-form" novalidate>
           <div class="cl-drawer-field">
-            <span class="cl-drawer-label">Client type</span>
+            <span class="cl-drawer-label">Client type *</span>
             <div class="cl-drawer-type-grid" role="group" aria-label="Client type">
               <button type="button" class="cl-drawer-type-btn is-selected" id="cl-type-individual" data-client-type="INDIVIDUAL" aria-pressed="true">
                 <span class="cl-drawer-type-label">Individual</span>
@@ -2555,12 +2578,12 @@ html.ff-open,body.ff-open{overflow:hidden!important;height:100%}
           </div>
           <div id="cl-fields-individual">
             <div class="cl-drawer-field">
-              <label class="cl-drawer-label" for="cl-new-name">Full name</label>
-              <input type="text" class="cl-drawer-input" id="cl-new-name" name="name" placeholder="John Doe" autocomplete="name">
+              <label class="cl-drawer-label" for="cl-new-name">Full name *</label>
+              <input type="text" class="cl-drawer-input" id="cl-new-name" name="name" placeholder="John Doe" autocomplete="name" required>
             </div>
             <div class="cl-drawer-field">
-              <label class="cl-drawer-label" for="cl-new-employment">Employment</label>
-              <select class="cl-drawer-select" id="cl-new-employment" name="employment">
+              <label class="cl-drawer-label" for="cl-new-employment">Employment *</label>
+              <select class="cl-drawer-select" id="cl-new-employment" name="employment" required>
                 <option value="" disabled selected>Select employment</option>
                 <option value="self-employed">Self-employed</option>
                 <option value="employed">Employed</option>
@@ -2571,25 +2594,25 @@ html.ff-open,body.ff-open{overflow:hidden!important;height:100%}
           </div>
           <div id="cl-fields-company" class="cl-drawer-section-hidden">
             <div class="cl-drawer-field">
-              <label class="cl-drawer-label" for="cl-new-company-name">Company name</label>
-              <input type="text" class="cl-drawer-input" id="cl-new-company-name" name="companyName" placeholder="Acme Holdings Ltd" autocomplete="organization">
+              <label class="cl-drawer-label" for="cl-new-company-name">Company name *</label>
+              <input type="text" class="cl-drawer-input" id="cl-new-company-name" name="companyName" placeholder="Acme Holdings Ltd" autocomplete="organization" required>
             </div>
             <div class="cl-drawer-field">
-              <label class="cl-drawer-label" for="cl-new-company-number">Company registration number</label>
-              <input type="text" class="cl-drawer-input" id="cl-new-company-number" name="companyNumber" placeholder="12345678">
+              <label class="cl-drawer-label" for="cl-new-company-number">Company registration number *</label>
+              <input type="text" class="cl-drawer-input" id="cl-new-company-number" name="companyNumber" placeholder="12345678" required>
             </div>
           </div>
           <div class="cl-drawer-field">
-            <label class="cl-drawer-label" for="cl-new-email">Email</label>
-            <input type="email" class="cl-drawer-input" id="cl-new-email" name="email" placeholder="name@company.com" autocomplete="email">
+            <label class="cl-drawer-label" for="cl-new-email">Email *</label>
+            <input type="email" class="cl-drawer-input" id="cl-new-email" name="email" placeholder="name@company.com" autocomplete="email" required>
           </div>
           <div class="cl-drawer-field">
-            <label class="cl-drawer-label" for="cl-new-income" id="cl-new-income-label">Annual Income</label>
-            <input type="text" class="cl-drawer-input" id="cl-new-income" name="income" placeholder="e.g. £72,000">
+            <label class="cl-drawer-label" for="cl-new-income" id="cl-new-income-label">Annual Income *</label>
+            <input type="text" class="cl-drawer-input" id="cl-new-income" name="income" placeholder="e.g. £72,000" required>
           </div>
           <div class="cl-drawer-field">
-            <label class="cl-drawer-label" for="cl-new-adviser">Adviser</label>
-            <select class="cl-drawer-select" id="cl-new-adviser" name="adviser">
+            <label class="cl-drawer-label" for="cl-new-adviser">Adviser *</label>
+            <select class="cl-drawer-select" id="cl-new-adviser" name="adviser" required>
               <option value="" disabled selected>Select adviser</option>
               <option value="alex-morgan">Alex Morgan</option>
               <option value="sera-bach">Sera Bach</option>
@@ -2597,8 +2620,8 @@ html.ff-open,body.ff-open{overflow:hidden!important;height:100%}
             </select>
           </div>
           <div class="cl-drawer-field">
-            <label class="cl-drawer-label" for="cl-new-status">Status</label>
-            <select class="cl-drawer-select" id="cl-new-status" name="status">
+            <label class="cl-drawer-label" for="cl-new-status">Status *</label>
+            <select class="cl-drawer-select" id="cl-new-status" name="status" required>
               <option value="prospect" selected>Prospect</option>
               <option value="active">Active</option>
               <option value="inactive">Inactive</option>
@@ -4138,6 +4161,7 @@ function calcRun() {
   const subtitle = document.getElementById('cl-subtitle');
   const searchInput = document.getElementById('cl-search');
   const tbody = document.getElementById('cl-table-body');
+  const deleteBtn = document.getElementById('cl-delete-btn');
   const filterBtn = document.getElementById('cl-filter-btn');
   const filterPanel = document.getElementById('cl-filter-panel');
   const filterBadge = document.getElementById('cl-filter-badge');
@@ -4147,6 +4171,13 @@ function calcRun() {
   const filterEmployment = document.getElementById('cl-filter-employment');
   const filterAdviser = document.getElementById('cl-filter-adviser');
   const filterMessages = document.getElementById('cl-filter-messages');
+  const mobileList = document.getElementById('cl-mobile-list');
+  const mobilePager = document.getElementById('cl-mobile-pager');
+  const mobilePrev = document.getElementById('cl-mobile-prev');
+  const mobileNext = document.getElementById('cl-mobile-next');
+  const mobilePageIndicator = document.getElementById('cl-mobile-page-indicator');
+  const mobilePageSize = 5;
+  let mobilePage = 1;
 
   const allRows = () => Array.from(tbody.querySelectorAll('[data-cl-row]'));
   const visibleRows = () => allRows().filter((tr) => !tr.classList.contains('cl-row-hidden'));
@@ -4276,6 +4307,13 @@ function calcRun() {
     if (data?.type === 'ko:user-greeting' && data.name && typeof window.koSetUserGreeting === 'function') {
       window.koSetUserGreeting(data.name);
     }
+    if (data?.type === 'ko:delete-clients-result' && data.requestId === deleteRequestId) {
+      if (!data.success) {
+        alert(data.error || 'Could not delete selected clients.');
+      }
+      requestLiveSync();
+      if (deleteBtn) deleteBtn.disabled = false;
+    }
   });
 
   function requestLiveSync() {
@@ -4308,9 +4346,76 @@ function calcRun() {
 
     emptyRow.classList.toggle('cl-row-hidden', visible > 0);
     if (subtitle) subtitle.textContent = visible + ' of ' + total + ' clients';
+    renderMobileClients();
     updateFilterUI();
     syncSelectAll();
     syncRowHighlight();
+  }
+
+  function renderMobileClients() {
+    if (!mobileList) return;
+    const rows = visibleRows();
+    const totalPages = Math.max(1, Math.ceil(rows.length / mobilePageSize));
+    if (mobilePage > totalPages) mobilePage = totalPages;
+    if (mobilePage < 1) mobilePage = 1;
+    const start = (mobilePage - 1) * mobilePageSize;
+    const pageRows = rows.slice(start, start + mobilePageSize);
+
+    if (!rows.length) {
+      mobileList.innerHTML = '<div class="cl-mobile-empty">No clients match your search or filters.</div>';
+    } else {
+      mobileList.innerHTML = pageRows.map((tr, pageIndex) => {
+        const cells = tr.querySelectorAll('td');
+        const clientName = cells[1]?.querySelector('.cl-client-name')?.textContent?.trim() || 'Client';
+        const clientEmail = cells[1]?.querySelector('.cl-client-email')?.textContent?.trim() || '—';
+        const reference = cells[2]?.textContent?.trim() || '—';
+        const employment = cells[3]?.textContent?.trim() || '—';
+        const income = cells[4]?.textContent?.trim() || '—';
+        const status = cells[5]?.textContent?.trim() || '—';
+        const casesText = cells[6]?.textContent?.trim() || '0';
+        const adviser = cells[7]?.textContent?.trim() || '—';
+        const checked = tr.querySelector('.cl-row-cb')?.checked ? 'checked' : '';
+        return `
+          <div class="cl-mobile-card" data-mobile-page-index="${pageIndex}">
+            <div class="cl-mobile-head">
+              <input type="checkbox" class="cl-checkbox cl-mobile-check" ${checked} aria-label="Select ${clientName}">
+              <div>
+                <div class="cl-client-name">${clientName}</div>
+                <div class="cl-client-email">${clientEmail}</div>
+              </div>
+            </div>
+            <div class="cl-mobile-meta">
+              <div class="cl-mobile-meta-item"><b>Reference</b>${reference}</div>
+              <div class="cl-mobile-meta-item"><b>Employment</b>${employment}</div>
+              <div class="cl-mobile-meta-item"><b>Income</b>${income}</div>
+              <div class="cl-mobile-meta-item"><b>Status</b>${status}</div>
+              <div class="cl-mobile-meta-item"><b>Cases</b>${casesText}</div>
+              <div class="cl-mobile-meta-item"><b>Adviser</b>${adviser}</div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    if (mobilePageIndicator) {
+      mobilePageIndicator.textContent = `Page ${rows.length ? mobilePage : 1} of ${totalPages}`;
+    }
+    if (mobilePrev) mobilePrev.disabled = mobilePage <= 1 || rows.length === 0;
+    if (mobileNext) mobileNext.disabled = mobilePage >= totalPages || rows.length === 0;
+    if (mobilePager) mobilePager.style.display = rows.length > 0 ? 'flex' : 'none';
+
+    mobileList.querySelectorAll('.cl-mobile-card').forEach((cardEl) => {
+      const pageIndex = Number(cardEl.getAttribute('data-mobile-page-index'));
+      const sourceRow = pageRows[pageIndex];
+      const mobileCb = cardEl.querySelector('.cl-mobile-check');
+      const sourceCb = sourceRow?.querySelector('.cl-row-cb');
+      if (!mobileCb || !sourceCb) return;
+      mobileCb.addEventListener('change', () => {
+        sourceCb.checked = mobileCb.checked;
+        syncSelectAll();
+        syncRowHighlight();
+      });
+    });
   }
 
   function syncRowHighlight() {
@@ -4318,6 +4423,14 @@ function calcRun() {
       const cb = tr.querySelector('.cl-row-cb');
       tr.classList.toggle('cl-row-selected', !!(cb && cb.checked && !tr.classList.contains('cl-row-hidden')));
     });
+    const selectedCount = allRows().filter((tr) => {
+      const cb = tr.querySelector('.cl-row-cb');
+      return !!(cb && cb.checked && !tr.classList.contains('cl-row-hidden'));
+    }).length;
+    if (deleteBtn) {
+      deleteBtn.disabled = selectedCount === 0;
+      deleteBtn.setAttribute('aria-disabled', selectedCount === 0 ? 'true' : 'false');
+    }
   }
 
   function syncSelectAll() {
@@ -4347,14 +4460,52 @@ function calcRun() {
     });
   }
 
+  function selectedRows() {
+    return allRows().filter((tr) => {
+      const cb = tr.querySelector('.cl-row-cb');
+      return !!(cb && cb.checked && !tr.classList.contains('cl-row-hidden'));
+    });
+  }
+
+  let deleteRequestId = 0;
+  function removeSelectedClients() {
+    const rows = selectedRows();
+    if (!rows.length) return;
+    if (!window.confirm('Delete selected client(s)? This action cannot be undone.')) return;
+
+    if (isLiveClients && window.parent !== window) {
+      const clientIds = rows
+        .map((tr) => tr.getAttribute('data-client-id'))
+        .filter((id) => Boolean(id));
+      if (deleteBtn) deleteBtn.disabled = true;
+      deleteRequestId += 1;
+      window.parent.postMessage(
+        { type: 'ko:delete-clients', requestId: deleteRequestId, clientIds },
+        window.location.origin,
+      );
+      return;
+    }
+
+    rows.forEach((tr) => tr.remove());
+    applyClientsView();
+  }
+
+  deleteBtn?.addEventListener('click', removeSelectedClients);
+
   if (!isLiveClients) {
     allRows().forEach((tr) => bindRowEvents(tr));
   }
 
-  searchInput?.addEventListener('input', applyClientsView);
+  searchInput?.addEventListener('input', () => {
+    mobilePage = 1;
+    applyClientsView();
+  });
 
   [filterStatus, filterEmployment, filterAdviser, filterMessages].forEach((el) => {
-    el?.addEventListener('change', applyClientsView);
+    el?.addEventListener('change', () => {
+      mobilePage = 1;
+      applyClientsView();
+    });
   });
 
   filterBtn?.addEventListener('click', (e) => {
@@ -4363,6 +4514,7 @@ function calcRun() {
   });
 
   filterApply?.addEventListener('click', () => {
+    mobilePage = 1;
     applyClientsView();
     toggleFilterPanel(false);
   });
@@ -4372,8 +4524,22 @@ function calcRun() {
     if (filterEmployment) filterEmployment.value = '';
     if (filterAdviser) filterAdviser.value = '';
     if (filterMessages) filterMessages.value = '';
+    mobilePage = 1;
     applyClientsView();
   });
+
+  mobilePrev?.addEventListener('click', () => {
+    mobilePage = Math.max(1, mobilePage - 1);
+    renderMobileClients();
+  });
+
+  mobileNext?.addEventListener('click', () => {
+    const total = Math.max(1, Math.ceil(visibleRows().length / mobilePageSize));
+    mobilePage = Math.min(total, mobilePage + 1);
+    renderMobileClients();
+  });
+
+  window.addEventListener('resize', renderMobileClients);
 
   document.addEventListener('click', (e) => {
     if (!filterPanel || filterPanel.classList.contains('hidden')) return;
@@ -4508,6 +4674,7 @@ function calcRun() {
       employment: employmentLabels[client.employmentStatus] || client.employmentStatus || '—',
       income: '—',
       notes: detail.adviserNotes || '',
+      factFind: detail.factFind || null,
       timeline: [
         {
           title: 'Case created',
@@ -4668,6 +4835,7 @@ function calcRun() {
   const employmentSelect = document.getElementById('cl-new-employment');
   const incomeInput = document.getElementById('cl-new-income');
   const incomeLabel = document.getElementById('cl-new-income-label');
+  const adviserSelect = document.getElementById('cl-new-adviser');
   const statusSelect = document.getElementById('cl-new-status');
   const submitBtn = document.getElementById('cl-drawer-create');
   const errorEl = document.getElementById('cl-drawer-error');
@@ -4693,7 +4861,7 @@ function calcRun() {
     fieldsIndividual?.classList.toggle('cl-drawer-section-hidden', isCompany);
     fieldsCompany?.classList.toggle('cl-drawer-section-hidden', !isCompany);
     if (incomeLabel) {
-      incomeLabel.textContent = isCompany ? 'Annual turnover / income' : 'Annual Income';
+      incomeLabel.textContent = isCompany ? 'Annual turnover / income *' : 'Annual Income *';
     }
     if (incomeInput) {
       incomeInput.placeholder = isCompany ? 'e.g. £250,000' : 'e.g. £72,000';
@@ -4729,6 +4897,12 @@ function calcRun() {
     if (!value || !String(value).trim()) return undefined;
     const num = Number(String(value).replace(/[£,\s]/g, ''));
     return Number.isFinite(num) && num > 0 ? num : undefined;
+  }
+
+  function getAnnualIncomeRequiredMessage() {
+    return clientType === 'COMPANY'
+      ? 'Annual turnover / income is required.'
+      : 'Annual income is required.';
   }
 
   function setSubmitting(submitting) {
@@ -4840,6 +5014,7 @@ function calcRun() {
     showDrawerError('');
 
     const email = emailInput?.value?.trim() ?? '';
+    const adviser = adviserSelect?.value ?? '';
     const annualIncome = parseAnnualIncome(incomeInput?.value ?? '');
     const isCompany = clientType === 'COMPANY';
     let payload;
@@ -4852,15 +5027,30 @@ function calcRun() {
         companyNameInput?.focus();
         return;
       }
+      if (!companyNumber) {
+        showDrawerError('Company registration number is required.');
+        companyNumberInput?.focus();
+        return;
+      }
       if (!email) {
         showDrawerError('Email is required.');
         emailInput?.focus();
         return;
       }
+      if (!annualIncome) {
+        showDrawerError(getAnnualIncomeRequiredMessage());
+        incomeInput?.focus();
+        return;
+      }
+      if (!adviser) {
+        showDrawerError('Adviser is required.');
+        adviserSelect?.focus();
+        return;
+      }
       payload = {
         clientType: 'COMPANY',
         companyName,
-        companyNumber: companyNumber || undefined,
+        companyNumber,
         email,
         annualIncome,
       };
@@ -4880,13 +5070,28 @@ function calcRun() {
         emailInput?.focus();
         return;
       }
+      if (!employmentStatus) {
+        showDrawerError('Employment is required.');
+        employmentSelect?.focus();
+        return;
+      }
+      if (!annualIncome) {
+        showDrawerError(getAnnualIncomeRequiredMessage());
+        incomeInput?.focus();
+        return;
+      }
+      if (!adviser) {
+        showDrawerError('Adviser is required.');
+        adviserSelect?.focus();
+        return;
+      }
 
       payload = {
         clientType: 'INDIVIDUAL',
         firstName,
         lastName,
         email,
-        employmentStatus: employmentStatus || undefined,
+        employmentStatus,
         annualIncome,
       };
     }
@@ -4952,6 +5157,8 @@ calcRun();
     uploadError: '',
     simulatedAutoFill: { stalled: false, paused: false, apiFailure: false, offline: false },
     simulatedTimers: [],
+    saveRequestId: 0,
+    pendingSaveRequestId: 0,
   };
 
   const FF_ERROR_STATES = {
@@ -5172,6 +5379,82 @@ calcRun();
     };
   }
 
+  function ffPickString(obj, keys) {
+    if (!obj || typeof obj !== 'object') return '';
+    for (let i = 0; i < keys.length; i += 1) {
+      const value = obj[keys[i]];
+      if (typeof value === 'string' && value.trim()) return value;
+    }
+    return '';
+  }
+
+  function ffPickNumberLike(obj, keys) {
+    if (!obj || typeof obj !== 'object') return '';
+    for (let i = 0; i < keys.length; i += 1) {
+      const value = obj[keys[i]];
+      if (typeof value === 'number' && Number.isFinite(value)) return String(value);
+      if (typeof value === 'string' && value.trim()) return value;
+    }
+    return '';
+  }
+
+  function ffMapDetailsToForm(factFind) {
+    const base = ffInitForm();
+    if (!factFind || typeof factFind !== 'object') return base;
+
+    const personal = factFind.personalDetails || {};
+    const employment = factFind.employmentDetails || {};
+    const income = factFind.incomeDetails || {};
+    const property = factFind.propertyDetails || {};
+    const mortgages = factFind.existingMortgages || {};
+    const preferences = factFind.clientPreferences || {};
+
+    return {
+      ...base,
+      client1Personal: {
+        ...base.client1Personal,
+        title: ffPickString(personal, ['title', 'client1Title']),
+        firstName: ffPickString(personal, ['firstName', 'client1FirstName']),
+        middleName: ffPickString(personal, ['middleName', 'client1MiddleName']),
+        lastName: ffPickString(personal, ['lastName', 'client1LastName']),
+        dob: ffPickString(personal, ['dateOfBirth', 'dob', 'client1Dob']),
+        maritalStatus: ffPickString(personal, ['maritalStatus', 'client1MaritalStatus']),
+        contactNumber: ffPickString(personal, ['phone', 'contactNumber', 'client1Phone']),
+        email: ffPickString(personal, ['email', 'client1Email']),
+      },
+      client1Employment: {
+        ...base.client1Employment,
+        employmentStatus: ffPickString(employment, ['employmentStatus', 'client1EmploymentStatus']),
+        employerName: ffPickString(employment, ['employerName', 'client1EmployerName']),
+      },
+      client1Income: {
+        ...base.client1Income,
+        grossSalary: ffPickNumberLike(income, ['grossSalary', 'annualIncome', 'client1AnnualIncome']),
+        bonusAmount: ffPickNumberLike(income, ['bonusAmount', 'additionalIncome']),
+      },
+      propertyValue: ffPickNumberLike(property, ['propertyValue', 'value']),
+      mortgageRequired: ffPickNumberLike(property, ['mortgageRequired', 'loanAmount']),
+      existingMortgageLender: ffPickString(mortgages, ['lenderName', 'existingMortgageLender']),
+      existingMortgageBalance: ffPickNumberLike(mortgages, ['balance', 'existingMortgageBalance']),
+      goals: ffPickString(preferences, ['goals', 'notes', 'summary']),
+      whatMatters: ffPickString(preferences, ['whatMatters', 'priorities']),
+    };
+  }
+
+  function ffHydrateFromStored(caseId) {
+    const c = caseId ? cases[caseId] : null;
+    const stored = c?.factFind;
+    if (!stored || typeof stored !== 'object') return ffInitForm();
+
+    const formBlob = stored.personalDetails?.portalFactFindForm;
+    if (formBlob && typeof formBlob === 'object') {
+      const base = ffInitForm();
+      return { ...base, ...formBlob };
+    }
+
+    return ffMapDetailsToForm(stored);
+  }
+
   // ── Helpers ───────────────────────────────────────────────────────────────
   const ffIsSE   = s => ['SELF_EMPLOYED_SOLE','SELF_EMPLOYED_LTD','PARTNERSHIP'].includes(s);
   const ffLTV    = (pv,mr) => { const p=parseFloat((pv||'').replace(/,/g,'')),m=parseFloat((mr||'').replace(/,/g,'')); return (!p||!m)?null:Math.round((m/p)*1000)/10; };
@@ -5259,7 +5542,7 @@ calcRun();
   // ── Open / close ──────────────────────────────────────────────────────────
   window.openFactFindWizard = function (caseId) {
     ff.caseId = caseId || null;
-    ff.form   = ffInitForm();
+    ff.form   = ffHydrateFromStored(ff.caseId);
     ff.idx    = 0;
     ff.done   = false;
     ff.dir    = 1;
@@ -5316,11 +5599,53 @@ calcRun();
     if (e.key === 'ArrowUp') { e.preventDefault(); ffGoBack(); }
   }
 
+  window.addEventListener('message', function (event) {
+    if (event.origin !== window.location.origin) return;
+    const data = event.data;
+    if (data?.type !== 'ko:fact-find-save-result') return;
+    if (data.requestId !== ff.pendingSaveRequestId) return;
+
+    if (data.success) {
+      const c = ff.caseId ? cases[ff.caseId] : null;
+      if (c) {
+        c.factFind = data.factFind || c.factFind || {};
+      }
+      ffUpdateSaveStatus({ text: 'Saved', color: '#0F6E56' });
+      clearTimeout(ff.saveClearTimer);
+      ff.saveClearTimer = setTimeout(() => {
+        if (!ffIsOfflineSave()) ffUpdateSaveStatus();
+      }, 2500);
+      return;
+    }
+
+    ffUpdateSaveStatus({ text: 'Save failed', color: '#DC2626' });
+  });
+
   // ── Form update ───────────────────────────────────────────────────────────
   function ffUpd(path, value) {
     ff.form = ffSet(ff.form, path, value);
     ffSaveIndicator();
   }
+
+  function ffPersist() {
+    if (!ff.caseId || window.parent === window || ffIsOfflineSave()) return;
+    ff.saveRequestId += 1;
+    ff.pendingSaveRequestId = ff.saveRequestId;
+    window.parent.postMessage(
+      {
+        type: 'ko:fact-find-save',
+        requestId: ff.saveRequestId,
+        caseId: ff.caseId,
+        payload: {
+          personalDetails: {
+            portalFactFindForm: ff.form,
+          },
+        },
+      },
+      window.location.origin,
+    );
+  }
+
   function ffSaveIndicator() {
     clearTimeout(ff.saveTimer);
     clearTimeout(ff.saveClearTimer);
@@ -5334,10 +5659,7 @@ calcRun();
         ffUpdateSaveStatus();
         return;
       }
-      ffUpdateSaveStatus({ text: 'Saved', color: '#0F6E56' });
-      ff.saveClearTimer = setTimeout(() => {
-        if (!ffIsOfflineSave()) ffUpdateSaveStatus();
-      }, 2500);
+      ffPersist();
     }, 2000);
   }
 
