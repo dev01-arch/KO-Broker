@@ -96,8 +96,5 @@ async function createClient(req: NextRequest) {
     annualIncome: input.annualIncome,
   });
 
-  return apiSuccess(result.client, {
-    status: 201,
-    meta: { welcomeEmail: result.welcomeEmail },
-  });
+  return apiSuccess(result.client, { status: 201 });
 }
