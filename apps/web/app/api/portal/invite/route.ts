@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
   try {
     const authResult = await requireApiAuth();
     if ('response' in authResult) return applyCorsHeaders(req, authResult.response);
-    const { orgId } = authResult;
+    const { orgId, user } = authResult;
 
     if (!(await orgHasFeature(orgId, 'client_portal'))) {
       return applyCorsHeaders(req, apiPlanLimitExceeded('Client portal requires a Professional or Enterprise plan'));
@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
     const parsed = InviteSchema.safeParse(body);
     if (!parsed.success) return applyCorsHeaders(req, apiFromZodError(parsed.error));
 
-    const result = await inviteClientToPortal(orgId, parsed.data.caseId);
+    const result = await inviteClientToPortal(orgId, parsed.data.caseId, user.id);
     if ('error' in result) {
       return applyCorsHeaders(req, apiNotFound('Case not found'));
     }

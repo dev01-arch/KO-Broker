@@ -315,6 +315,10 @@ export const UpsertFactFindSchema = z.object({
 });
 export type UpsertFactFindInput = z.infer<typeof UpsertFactFindSchema>;
 
+/** Alias used by portal/adviser fact-find endpoints in the backend spec. */
+export const FactFindUpdateSchema = UpsertFactFindSchema;
+export type FactFindUpdateInput = UpsertFactFindInput;
+
 // ── API response envelope types ──
 
 export interface ApiSuccessResponse<T> {

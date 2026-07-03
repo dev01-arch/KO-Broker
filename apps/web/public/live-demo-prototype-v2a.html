@@ -1387,7 +1387,8 @@ html.ff-open,body.ff-open{overflow:hidden!important;height:100%}
 /* ── Case Created success modal */
 .nc-success-overlay{position:fixed;inset:0;z-index:700;background:rgba(13,31,26,0.5);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:24px}
 .nc-success-overlay.nc-hidden{display:none!important}
-.nc-success-modal{background:var(--white);border-radius:24px;width:100%;max-width:440px;padding:36px 32px 32px;text-align:center;box-shadow:0 24px 60px rgba(13,31,26,0.3);display:flex;flex-direction:column;align-items:center;gap:10px}
+.nc-success-modal{background:var(--white);border-radius:24px;width:100%;max-width:440px;padding:36px 32px 32px;text-align:center;box-shadow:0 24px 60px rgba(13,31,26,0.3);display:flex;flex-direction:column;align-items:center;gap:10px;position:relative}
+.nc-success-close{position:absolute;top:16px;right:16px}
 .nc-success-illus{width:148px;height:148px;margin-bottom:4px;object-fit:contain}
 .nc-success-title{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:var(--ink)}
 .nc-success-desc{font-size:15px;color:var(--ink-60);line-height:1.55;max-width:340px}
@@ -3021,6 +3022,7 @@ function showView(v) {
   window.scrollTo(0,0);
 }
 function showTab(t) {
+  if (typeof window.closeFactFindWizardIfOpen === 'function') window.closeFactFindWizardIfOpen();
   if (t !== 'clients' && typeof closeClDrawer === 'function') closeClDrawer();
   document.querySelectorAll('[id^="tab-"]').forEach(el=>el.classList.add('hidden'));
   document.getElementById('tab-'+t).classList.remove('hidden');
@@ -3033,6 +3035,7 @@ function showTab(t) {
   if(t==='messages') { document.querySelectorAll('.msg-hub-row').forEach(r=>r.classList.remove('msg-row-active')); const p=document.getElementById('msg-hub-thread'); if(p){p.style.display='none';p.innerHTML='';} }
 }
 function openDashboardRoute(path) {
+  if (typeof window.closeFactFindWizardIfOpen === 'function') window.closeFactFindWizardIfOpen();
   try {
     if (window.parent && window.parent !== window) {
       window.parent.postMessage({ type: 'ko:navigate', path }, window.location.origin);
@@ -3870,6 +3873,7 @@ function initCaseDocsTable() {
 
 // ── Open case detail
 function openCase(id) {
+  if (typeof window.closeFactFindWizardIfOpen === 'function') window.closeFactFindWizardIfOpen();
   const c = cases[id]; if(!c) return;
   const stageClass = {enquiry:'s-enquiry',factfind:'s-factfind',research:'s-research',dip:'s-dip',offer:'s-offer',lead:'s-enquiry'}[c.stage]||'s-active';
   const stageBadgeClass = {lead:'cd-stage-badge--lead',enquiry:'cd-stage-badge--enquiry',factfind:'cd-stage-badge--factfind',research:'cd-stage-badge--research',dip:'cd-stage-badge--dip',offer:'cd-stage-badge--offer'}[c.stage]||'cd-stage-badge--lead';
@@ -3991,6 +3995,7 @@ function openCase(id) {
 }
 
 function switchCaseTab(el, viewId) {
+  if (typeof window.closeFactFindWizardIfOpen === 'function') window.closeFactFindWizardIfOpen();
   const tabsRoot = el.closest('.cd-tabs');
   if (tabsRoot) {
     tabsRoot.querySelectorAll('.cd-tab').forEach((t) => {
@@ -4309,7 +4314,10 @@ function calcRun() {
     }
     if (data?.type === 'ko:delete-clients-result' && data.requestId === deleteRequestId) {
       if (!data.success) {
-        alert(data.error || 'Could not delete selected clients.');
+        openClientModal(
+          'Delete failed',
+          data.error || 'Could not delete selected clients.',
+        );
       }
       requestLiveSync();
       if (deleteBtn) deleteBtn.disabled = false;
@@ -4468,11 +4476,49 @@ function calcRun() {
   }
 
   let deleteRequestId = 0;
-  function removeSelectedClients() {
-    const rows = selectedRows();
-    if (!rows.length) return;
-    if (!window.confirm('Delete selected client(s)? This action cannot be undone.')) return;
 
+  function closeClientModal() {
+    document.getElementById('ko-client-modal-overlay')?.remove();
+  }
+
+  function openClientModal(title, message, options) {
+    closeClientModal();
+    const overlay = document.createElement('div');
+    overlay.id = 'ko-client-modal-overlay';
+    overlay.style.cssText =
+      'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
+    const confirmLabel = options?.confirmLabel || 'Delete';
+    const confirmClass = options?.danger
+      ? 'padding:9px 16px;border:none;border-radius:10px;background:#e11d48;color:#fff;font-size:13px;cursor:pointer'
+      : 'padding:9px 16px;border:none;border-radius:10px;background:#0F6E56;color:#fff;font-size:13px;cursor:pointer';
+    overlay.innerHTML =
+      '<div style="width:min(460px,100%);background:#fff;border-radius:14px;padding:20px 20px 16px;box-shadow:0 20px 40px rgba(0,0,0,.25);font-family:\'DM Sans\',sans-serif">' +
+      '<h3 style="margin:0 0 8px;font-size:18px;font-weight:700;color:#18181b">' +
+      title +
+      '</h3>' +
+      '<p style="margin:0 0 16px;font-size:14px;color:#52525b;line-height:1.5">' +
+      message +
+      '</p>' +
+      '<div style="display:flex;justify-content:flex-end;gap:8px">' +
+      '<button type="button" data-ko-cancel style="padding:9px 16px;border:1px solid #d4d4d8;border-radius:10px;background:#fff;font-size:13px;cursor:pointer">Cancel</button>' +
+      (options?.onConfirm
+        ? '<button type="button" data-ko-confirm style="' + confirmClass + '">' + confirmLabel + '</button>'
+        : '<button type="button" data-ko-close style="padding:9px 16px;border:1px solid #d4d4d8;border-radius:10px;background:#fff;font-size:13px;cursor:pointer">Close</button>') +
+      '</div></div>';
+    document.body.appendChild(overlay);
+    overlay.addEventListener('click', (e) => {
+      const target = e.target;
+      if (target === overlay || target.closest('[data-ko-cancel]') || target.closest('[data-ko-close]')) {
+        closeClientModal();
+      }
+      if (target.closest('[data-ko-confirm]') && options?.onConfirm) {
+        closeClientModal();
+        options.onConfirm();
+      }
+    });
+  }
+
+  function performClientDelete(rows) {
     if (isLiveClients && window.parent !== window) {
       const clientIds = rows
         .map((tr) => tr.getAttribute('data-client-id'))
@@ -4488,6 +4534,24 @@ function calcRun() {
 
     rows.forEach((tr) => tr.remove());
     applyClientsView();
+  }
+
+  function removeSelectedClients() {
+    const rows = selectedRows();
+    if (!rows.length) return;
+    openClientModal(
+      'Delete clients',
+      'Delete ' +
+        rows.length +
+        ' selected client' +
+        (rows.length > 1 ? 's' : '') +
+        '? This action cannot be undone.',
+      {
+        danger: true,
+        confirmLabel: 'Delete',
+        onConfirm: () => performClientDelete(rows),
+      },
+    );
   }
 
   deleteBtn?.addEventListener('click', removeSelectedClients);
@@ -5588,6 +5652,11 @@ calcRun();
     document.removeEventListener('keydown', ffKeyDown);
   }
 
+  window.closeFactFindWizardIfOpen = function () {
+    const ov = document.getElementById('ff-overlay');
+    if (ov && !ov.classList.contains('ff-hidden')) ffClose();
+  };
+
   function ffKeyDown(e) {
     if (e.key === 'Escape') { ffClose(); return; }
     if (ff.showUploadModal || ff.simulatedAutoFill.stalled || ff.simulatedAutoFill.paused) return;
@@ -6397,6 +6466,7 @@ calcRun();
 <!-- ── CLIENT ADDED SUCCESS MODAL ──────────────────────────────────────── -->
 <div id="cl-success-overlay" class="nc-success-overlay nc-hidden" role="dialog" aria-modal="true" aria-labelledby="cl-success-title">
   <div class="nc-success-modal">
+    <button type="button" class="nc-close nc-success-close" onclick="closeClientSuccessModal()" aria-label="Close">✕</button>
     <img src="/marketing/SuceSS%20%20Screen.png" class="nc-success-illus" alt="Success illustration" aria-hidden="true">
     <h2 class="nc-success-title" id="cl-success-title">Client Added Successfully!</h2>
     <p class="nc-success-desc"><strong id="cl-success-name">Sasha Lindqvist</strong> has been created and an email has been sent to the provided address</p>

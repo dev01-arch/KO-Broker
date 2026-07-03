@@ -44,8 +44,39 @@ export async function createAiReportForOrg(
   input: { caseId: string; templateType: ReportTemplate; generatedBy?: string },
 ) {
   try {
-    const caseRecord = await prisma.case.findFirst({ where: { id: input.caseId, orgId } });
+    const caseRecord = await prisma.case.findFirst({
+      where: { id: input.caseId, orgId },
+      include: {
+        factFind: true,
+        productsConsidered: true,
+      },
+    });
     if (!caseRecord) return { error: 'NOT_FOUND' as const };
+
+    if (!caseRecord.factFind || !caseRecord.factFind.completedAt) {
+      return {
+        error: 'BUSINESS_RULE_VIOLATION' as const,
+        message: 'Fact-find must be completed before generating a report.',
+      };
+    }
+
+    if (caseRecord.productsConsidered.length < 3) {
+      return {
+        error: 'BUSINESS_RULE_VIOLATION' as const,
+        message: `At least 3 products must be recorded. Found: ${caseRecord.productsConsidered.length}.`,
+      };
+    }
+
+    const hasSelectedProduct =
+      caseRecord.productsConsidered.some((p) => p.isSelected) ||
+      (caseRecord.selectedProduct && caseRecord.selectedLender);
+
+    if (!hasSelectedProduct) {
+      return {
+        error: 'BUSINESS_RULE_VIOLATION' as const,
+        message: 'A selected product must be confirmed before generating a report.',
+      };
+    }
 
     const sections = {
       clientIntroduction:

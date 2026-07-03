@@ -257,34 +257,11 @@ export async function upsertFactFindForCase(
   caseId: string,
   input: UpsertFactFindInput,
 ) {
-  try {
-    const existingCase = await prisma.case.findFirst({
-      where: { id: caseId, orgId },
-      select: { id: true },
-    });
-    if (!existingCase) return { error: 'NOT_FOUND' as const };
-
-    const { markComplete, ...sections } = input;
-    const sectionData = Object.fromEntries(
-      Object.entries(sections).filter(([, value]) => value !== undefined),
-    );
-
-    const factFind = await prisma.factFind.upsert({
-      where: { caseId },
-      create: {
-        caseId,
-        ...sectionData,
-        ...(markComplete ? { completedAt: new Date() } : {}),
-      },
-      update: {
-        ...sectionData,
-        ...(markComplete ? { completedAt: new Date() } : {}),
-      },
-    });
-
-    return { factFind };
-  } catch (error) {
-    if (!useDevStore(error)) throw error;
-    return devStore.upsertFactFind(orgId, caseId, input);
+  const result = await import('@/lib/api/fact-find-data').then((m) =>
+    m.upsertFactFindWithCompliance(orgId, caseId, input, { allowWhenComplete: true }),
+  );
+  if ('error' in result && result.error === 'FORBIDDEN') {
+    return { error: 'NOT_FOUND' as const };
   }
+  return result;
 }

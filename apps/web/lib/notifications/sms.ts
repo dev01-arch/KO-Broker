@@ -59,3 +59,111 @@ export async function sendSMS(input: SendSmsInput): Promise<SendSmsResult> {
     };
   }
 }
+
+export async function sendComplianceSMS(params: {
+  orgId: string;
+  caseId: string;
+  clientId: string;
+  to: string;
+  body: string;
+  sourceType?: 'COMPLIANCE' | 'AI_REPORT' | 'CASE_UPDATE' | 'SYSTEM';
+}): Promise<boolean> {
+  const { orgId, caseId, clientId, to, body, sourceType = 'COMPLIANCE' } = params;
+  const result = await sendSMS({ to, body });
+  if (!result.ok) return false;
+
+  try {
+    const { prisma } = await import('@/lib/db');
+    await prisma.message.create({
+      data: {
+        orgId,
+        caseId,
+        clientId,
+        direction: 'OUTBOUND',
+        channel: 'SMS',
+        sourceType,
+        body,
+      },
+    });
+  } catch (err) {
+    console.error('[sendComplianceSMS] Failed to record message:', err);
+  }
+
+  return true;
+}
+
+export async function sendSMSWelcomeNotification(
+  orgId: string,
+  caseId: string,
+  clientId: string,
+  phone: string,
+) {
+  return sendComplianceSMS({
+    orgId,
+    caseId,
+    clientId,
+    to: phone,
+    body: 'Welcome to KO Broker. Your case is now open in our system. We have sent the initial disclosure to your email.',
+  });
+}
+
+export async function sendSMSFactFindConfirmation(
+  orgId: string,
+  caseId: string,
+  clientId: string,
+  phone: string,
+) {
+  return sendComplianceSMS({
+    orgId,
+    caseId,
+    clientId,
+    to: phone,
+    body: 'KO Broker: Your Fact-Find is complete. We are beginning research for your mortgage options.',
+  });
+}
+
+export async function sendSMSResearchUpdate(
+  orgId: string,
+  caseId: string,
+  clientId: string,
+  phone: string,
+) {
+  return sendComplianceSMS({
+    orgId,
+    caseId,
+    clientId,
+    to: phone,
+    body: 'KO Broker: Research is complete on your mortgage options. We are preparing the ESIS document.',
+  });
+}
+
+export async function sendSMSEsisNotification(
+  orgId: string,
+  caseId: string,
+  clientId: string,
+  phone: string,
+) {
+  return sendComplianceSMS({
+    orgId,
+    caseId,
+    clientId,
+    to: phone,
+    body: 'KO Broker: Your ESIS document is ready for review. Please check your email/portal.',
+  });
+}
+
+export async function sendSMSRecommendationNotification(
+  orgId: string,
+  caseId: string,
+  clientId: string,
+  phone: string,
+) {
+  return sendComplianceSMS({
+    orgId,
+    caseId,
+    clientId,
+    to: phone,
+    body: 'KO Broker: Your Suitability Report is ready. We have emailed the final recommendation report to you.',
+    sourceType: 'AI_REPORT',
+  });
+}

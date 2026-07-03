@@ -2,9 +2,10 @@ import { randomUUID } from 'crypto';
 import { prisma } from '@/lib/db';
 import { devStore } from '@/lib/api/dev-store';
 import { isPrismaConnectionError } from '@/lib/api/prisma-errors';
-import { upsertFactFindForCase } from '@/lib/api/cases-data';
+import { upsertFactFindWithCompliance } from '@/lib/api/fact-find-data';
 import { serializeFactFind } from '@/lib/api/cases';
 import { createMessageForOrg } from '@/lib/api/messages-data';
+import { logAuditEvent } from '@/lib/compliance/audit';
 import {
   hashPortalPassword,
   signPortalSession,
@@ -26,47 +27,216 @@ function clientPortalUrl(token: string): string {
   return `${base}/invite?token=${encodeURIComponent(token)}`;
 }
 
-function buildInitialFactFind(client: {
-  title?: string | null;
-  firstName: string;
-  lastName: string;
+const PORTAL_ADVISER_SELECT = {
+  id: true,
+  firstName: true,
+  lastName: true,
+  email: true,
+} as const;
+
+type PortalAdviserRecord = {
+  id: string;
+  firstName: string | null;
+  lastName: string | null;
   email: string;
-  phone?: string | null;
-  dateOfBirth?: Date | null;
-  employmentStatus: string;
-  annualIncome?: number | null;
-  address?: unknown;
-}) {
+};
+
+function formatAdviserName(firstName?: string | null, lastName?: string | null): string {
+  const name = `${firstName ?? ''} ${lastName ?? ''}`.trim();
+  return name || 'Your Mortgage Adviser';
+}
+
+function serializePortalAdviser(
+  adviser: PortalAdviserRecord | null,
+  options?: { includeProfileFields?: boolean },
+) {
+  if (!adviser) {
+    const placeholder = {
+      name: 'Your Mortgage Adviser',
+      firstName: 'Your',
+      lastName: 'Adviser',
+      email: '',
+      phone: null as string | null,
+    };
+
+    if (options?.includeProfileFields) {
+      return {
+        ...placeholder,
+        initials: 'KA',
+        title: 'Your Mortgage Advisor',
+      };
+    }
+
+    return placeholder;
+  }
+
+  const name = formatAdviserName(adviser.firstName, adviser.lastName);
+  const firstName = adviser.firstName ?? '';
+  const lastName = adviser.lastName ?? '';
+  const initials =
+    `${adviser.firstName?.[0] ?? ''}${adviser.lastName?.[0] ?? ''}`.toUpperCase() || 'KA';
+
+  const base = {
+    name,
+    firstName,
+    lastName,
+    email: adviser.email,
+    phone: null as string | null,
+  };
+
+  if (options?.includeProfileFields) {
+    return {
+      ...base,
+      initials,
+      title: 'Your Mortgage Advisor',
+    };
+  }
+
+  return base;
+}
+
+async function backfillCaseAdviser(caseId: string, adviserId: string) {
+  try {
+    await prisma.case.update({
+      where: { id: caseId },
+      data: { assignedAdviserId: adviserId },
+    });
+  } catch {
+    // Non-fatal — portal can still show the resolved adviser name.
+  }
+}
+
+async function resolvePortalAdviser(
+  orgId: string,
+  caseId: string,
+  clientId: string,
+  assignedAdviser?: PortalAdviserRecord | null,
+): Promise<PortalAdviserRecord | null> {
+  if (assignedAdviser) return assignedAdviser;
+
+  const siblingCase = await prisma.case.findFirst({
+    where: { orgId, clientId, assignedAdviserId: { not: null }, NOT: { id: caseId } },
+    orderBy: { updatedAt: 'desc' },
+    include: { adviser: { select: PORTAL_ADVISER_SELECT } },
+  });
+  if (siblingCase?.adviser) {
+    await backfillCaseAdviser(caseId, siblingCase.adviser.id);
+    return siblingCase.adviser;
+  }
+
+  const inviteAudit = await prisma.auditLog.findFirst({
+    where: {
+      orgId,
+      entityType: 'Client',
+      entityId: clientId,
+      action: 'PORTAL_INVITED',
+      userId: { not: null },
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  if (inviteAudit?.userId) {
+    const invitingUser = await prisma.user.findFirst({
+      where: { id: inviteAudit.userId, orgId, isActive: true },
+      select: PORTAL_ADVISER_SELECT,
+    });
+    if (invitingUser) {
+      await backfillCaseAdviser(caseId, invitingUser.id);
+      return invitingUser;
+    }
+  }
+
+  const orgAdvisers = await prisma.user.findMany({
+    where: { orgId, isActive: true, role: { in: ['ADVISER', 'ADMIN'] } },
+    select: PORTAL_ADVISER_SELECT,
+    orderBy: { createdAt: 'asc' },
+    take: 2,
+  });
+
+  if (orgAdvisers.length === 1) {
+    await backfillCaseAdviser(caseId, orgAdvisers[0].id);
+    return orgAdvisers[0];
+  }
+
+  return null;
+}
+
+function buildInitialFactFind(
+  client: {
+    title?: string | null;
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone?: string | null;
+    dateOfBirth?: Date | null;
+    niNumber?: string | null;
+    employmentStatus: string;
+    annualIncome?: number | null;
+    address?: unknown;
+  },
+  caseRecord?: {
+    propertyValue?: number | null;
+    loanAmount?: number | null;
+    termYears?: number | null;
+  },
+) {
   return {
     personalDetails: {
-      title: client.title ?? undefined,
+      title: client.title ?? '',
       firstName: client.firstName,
       lastName: client.lastName,
       email: client.email,
-      phone: client.phone ?? undefined,
-      dateOfBirth: client.dateOfBirth?.toISOString().slice(0, 10),
-      address: client.address ?? undefined,
+      phone: client.phone ?? '',
+      dateOfBirth: client.dateOfBirth?.toISOString().slice(0, 10) ?? '',
+      niNumber: client.niNumber ?? '',
+      address: client.address ?? {},
     },
     employmentDetails: {
       employmentStatus: client.employmentStatus,
     },
     incomeDetails: {
-      annualIncome: client.annualIncome ?? undefined,
+      annualIncome: client.annualIncome ?? 0,
     },
+    propertyDetails: {
+      propertyValue: caseRecord?.propertyValue ?? 0,
+      loanAmount: caseRecord?.loanAmount ?? 0,
+      termYears: caseRecord?.termYears ?? 0,
+    },
+    expenditureDetails: {},
+    existingMortgages: {},
+    clientPreferences: {},
   };
 }
 
-export async function inviteClientToPortal(orgId: string, caseId: string) {
+export async function inviteClientToPortal(orgId: string, caseId: string, invitingUserId: string) {
   try {
-    const caseRecord = await prisma.case.findFirst({
+    let caseRecord = await prisma.case.findFirst({
       where: { id: caseId, orgId },
       include: {
         client: true,
-        adviser: { select: { firstName: true, lastName: true, email: true } },
+        adviser: { select: PORTAL_ADVISER_SELECT },
       },
     });
 
     if (!caseRecord) return { error: 'NOT_FOUND' as const };
+
+    if (!caseRecord.assignedAdviserId) {
+      await prisma.case.update({
+        where: { id: caseId },
+        data: { assignedAdviserId: invitingUserId },
+      });
+
+      caseRecord = {
+        ...caseRecord,
+        assignedAdviserId: invitingUserId,
+        adviser:
+          caseRecord.adviser ??
+          (await prisma.user.findFirst({
+            where: { id: invitingUserId, orgId },
+            select: PORTAL_ADVISER_SELECT,
+          })),
+      };
+    }
 
     const token = randomUUID();
     const inviteUrl = clientPortalUrl(token);
@@ -80,12 +250,28 @@ export async function inviteClientToPortal(orgId: string, caseId: string) {
       },
     });
 
-    await upsertFactFindForCase(orgId, caseId, buildInitialFactFind(caseRecord.client));
+    await upsertFactFindWithCompliance(orgId, caseId, buildInitialFactFind(caseRecord.client, caseRecord), {
+      allowWhenComplete: true,
+    });
+
+    await logAuditEvent({
+      orgId,
+      userId: invitingUserId,
+      entityType: 'Client',
+      entityId: caseRecord.clientId,
+      action: 'PORTAL_INVITED',
+      diff: {
+        after: {
+          portalEnabled: true,
+          hasAccessToken: true,
+          caseId,
+          assignedAdviserId: caseRecord.assignedAdviserId ?? invitingUserId,
+        },
+      },
+    });
 
     const clientName = `${caseRecord.client.firstName} ${caseRecord.client.lastName}`.trim();
-    const adviserName = caseRecord.adviser
-      ? `${caseRecord.adviser.firstName ?? ''} ${caseRecord.adviser.lastName ?? ''}`.trim()
-      : 'your mortgage adviser';
+    const adviserName = formatAdviserName(caseRecord.adviser?.firstName, caseRecord.adviser?.lastName);
 
     const emailBody = [
       `Hi ${clientName},`,
@@ -148,7 +334,7 @@ export async function verifyPortalToken(token: string) {
           orderBy: { updatedAt: 'desc' },
           take: 1,
           include: {
-            adviser: { select: { firstName: true, lastName: true, email: true } },
+            adviser: { select: PORTAL_ADVISER_SELECT },
           },
         },
       },
@@ -157,7 +343,9 @@ export async function verifyPortalToken(token: string) {
     if (!client) return { error: 'NOT_FOUND' as const };
 
     const caseRecord = client.cases[0] ?? null;
-    const adviser = caseRecord?.adviser ?? null;
+    const adviser = caseRecord
+      ? await resolvePortalAdviser(client.orgId, caseRecord.id, client.id, caseRecord.adviser)
+      : null;
 
     return {
       client: {
@@ -174,19 +362,7 @@ export async function verifyPortalToken(token: string) {
             stage: caseRecord.stage,
           }
         : null,
-      adviser: adviser
-        ? {
-            firstName: adviser.firstName ?? '',
-            lastName: adviser.lastName ?? '',
-            email: adviser.email,
-            phone: null,
-          }
-        : {
-            firstName: 'Your',
-            lastName: 'Adviser',
-            email: '',
-            phone: null,
-          },
+      adviser: serializePortalAdviser(adviser),
     };
   } catch (error) {
     if (!useDevStore(error)) throw error;
@@ -340,27 +516,22 @@ export async function getPortalSessionProfile(session: PortalSessionPayload) {
       where: { id: session.caseId, orgId: session.orgId, clientId: session.clientId },
       include: {
         client: { select: { firstName: true, lastName: true, email: true } },
-        adviser: { select: { firstName: true, lastName: true, email: true } },
+        adviser: { select: PORTAL_ADVISER_SELECT },
       },
     });
 
     if (!caseRecord) return { error: 'NOT_FOUND' as const };
 
-    const adviser = caseRecord.adviser;
-    const initials = adviser
-      ? `${adviser.firstName?.[0] ?? ''}${adviser.lastName?.[0] ?? ''}`.toUpperCase()
-      : 'KA';
+    const adviser = await resolvePortalAdviser(
+      session.orgId,
+      caseRecord.id,
+      session.clientId,
+      caseRecord.adviser,
+    );
 
     return {
       client: caseRecord.client,
-      adviser: {
-        firstName: adviser?.firstName ?? 'Your',
-        lastName: adviser?.lastName ?? 'Adviser',
-        initials,
-        phone: '',
-        email: adviser?.email ?? '',
-        title: 'Your Mortgage Advisor',
-      },
+      adviser: serializePortalAdviser(adviser, { includeProfileFields: true }),
       case: {
         id: caseRecord.id,
         referenceNumber: caseRecord.referenceNumber,
@@ -414,8 +585,15 @@ export async function updatePortalFactFind(
     });
     if (!caseRecord) return { error: 'NOT_FOUND' as const };
 
-    const result = await upsertFactFindForCase(session.orgId, session.caseId, input);
-    if ('error' in result) return { error: 'NOT_FOUND' as const };
+    const result = await upsertFactFindWithCompliance(session.orgId, session.caseId, input, {
+      allowWhenComplete: false,
+    });
+    if ('error' in result) {
+      if (result.error === 'FORBIDDEN') {
+        return { error: 'FORBIDDEN' as const, message: result.message };
+      }
+      return { error: 'NOT_FOUND' as const };
+    }
     return serializeFactFind(result.factFind);
   } catch (error) {
     if (!useDevStore(error)) throw error;

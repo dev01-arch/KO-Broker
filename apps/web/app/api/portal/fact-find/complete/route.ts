@@ -1,9 +1,9 @@
 import { NextRequest } from 'next/server';
-import { UpsertFactFindSchema } from '@ko/types';
 import { requirePortalAuth } from '@/lib/api/require-portal-auth';
-import { updatePortalFactFind } from '@/lib/api/portal-data';
+import { completePortalFactFind } from '@/lib/api/fact-find-data';
+import { serializeFactFind } from '@/lib/api/cases';
 import { applyCorsHeaders } from '@/lib/api/cors';
-import { apiError, apiFromZodError, apiNotFound, apiSuccess } from '@/lib/api/responses';
+import { apiError, apiNotFound, apiSuccess } from '@/lib/api/responses';
 import { isPrismaConnectionError } from '@/lib/api/prisma-errors';
 
 export async function POST(req: NextRequest) {
@@ -11,26 +11,15 @@ export async function POST(req: NextRequest) {
     const authResult = await requirePortalAuth();
     if ('response' in authResult) return applyCorsHeaders(req, authResult.response);
 
-    let payload: Record<string, unknown> = {};
-    const contentType = req.headers.get('content-type') ?? '';
-    if (contentType.includes('application/json')) {
-      try {
-        payload = (await req.json()) as Record<string, unknown>;
-      } catch {
-        return applyCorsHeaders(req, apiError('VALIDATION_ERROR', 'Invalid JSON body', 422));
+    const result = await completePortalFactFind(authResult.session);
+    if ('error' in result) {
+      if ('message' in result && result.message) {
+        return applyCorsHeaders(req, apiNotFound(result.message));
       }
-    }
-
-    const parsed = UpsertFactFindSchema.safeParse({ ...payload, markComplete: true });
-    if (!parsed.success) {
-      return applyCorsHeaders(req, apiFromZodError(parsed.error));
-    }
-
-    const saved = await updatePortalFactFind(authResult.session, parsed.data);
-    if ('error' in saved) {
       return applyCorsHeaders(req, apiNotFound('Case not found'));
     }
-    return applyCorsHeaders(req, apiSuccess(saved));
+
+    return applyCorsHeaders(req, apiSuccess(serializeFactFind(result.factFind)));
   } catch (error) {
     console.error('[POST /api/portal/fact-find/complete]', error);
     if (isPrismaConnectionError(error)) {

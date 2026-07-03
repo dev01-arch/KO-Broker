@@ -1,7 +1,8 @@
 import { NextRequest } from 'next/server';
 import { UpsertFactFindSchema } from '@ko/types';
 import { requirePortalAuth } from '@/lib/api/require-portal-auth';
-import { getCaseForOrg, upsertFactFindForCase } from '@/lib/api/cases-data';
+import { getCaseForOrg } from '@/lib/api/cases-data';
+import { upsertFactFindWithCompliance } from '@/lib/api/fact-find-data';
 import { serializeFactFind } from '@/lib/api/cases';
 import { applyCorsHeaders } from '@/lib/api/cors';
 import { apiError, apiFromZodError, apiNotFound, apiSuccess } from '@/lib/api/responses';
@@ -34,8 +35,23 @@ export async function PUT(req: NextRequest, context: RouteContext) {
       return applyCorsHeaders(req, apiFromZodError(parsed.error));
     }
 
-    const result = await upsertFactFindForCase(session.orgId, id, parsed.data);
+    const result = await upsertFactFindWithCompliance(session.orgId, id, parsed.data, {
+      allowWhenComplete: false,
+    });
     if ('error' in result) {
+      if (result.error === 'NOT_FOUND') {
+        return applyCorsHeaders(req, apiNotFound('Case not found'));
+      }
+      if (result.error === 'FORBIDDEN') {
+        return applyCorsHeaders(
+          req,
+          apiError(
+            'FORBIDDEN',
+            'message' in result ? (result.message as string) : 'Fact-find cannot be edited',
+            403,
+          ),
+        );
+      }
       return applyCorsHeaders(req, apiNotFound('Case not found'));
     }
 

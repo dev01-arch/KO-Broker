@@ -12,6 +12,7 @@ const isPublicRoute = createRouteMatcher([
   '/gate(.*)',
   '/sign-in(.*)',
   '/sign-up(.*)',
+  '/portal(.*)',
   // /demo is intentionally excluded — unauthenticated visitors are redirected to sign-in.
   // Handlers enforce auth via Bearer token — never redirect /api to sign-in (cross-origin SPA).
   '/api/(.*)',
@@ -32,7 +33,6 @@ export default clerkMiddleware(
     return isApi ? applyCorsHeaders(req, NextResponse.next()) : undefined;
   },
   {
-    // JWTs are issued on the Vercel frontend; Render must accept that origin as azp.
     authorizedParties: [appOrigin, 'http://localhost:3001'],
   },
 );

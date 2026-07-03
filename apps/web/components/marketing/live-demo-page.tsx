@@ -227,6 +227,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
   const [notifUnread, setNotifUnread] = useState<number>(DEMO_NOTIFICATIONS.length);
   const notifRef = useRef<HTMLDivElement>(null);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!notifOpen && !profileOpen) return;
@@ -279,6 +280,12 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
     const tab = searchParams.get('tab');
     if (tab === 'settings') setActiveTab('settings');
   }, [searchParams]);
+
+  useEffect(() => {
+    if (!isDashboard && clerkLoaded && isClerkUser) {
+      router.replace('/dashboard');
+    }
+  }, [isDashboard, clerkLoaded, isClerkUser, router]);
 
   /** Signed-in app at /dashboard — real API data and personalised UI. */
   const isPersonalDashboard = isDashboard && isClerkUser && clerkLoaded;
@@ -2145,6 +2152,39 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
           }}
         />
       )}
+      {logoutConfirmOpen && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl">
+            <div className="border-b border-gray-100 px-6 py-4">
+              <h2 className="text-sm font-bold text-gray-900">Log out?</h2>
+            </div>
+            <div className="px-6 py-5">
+              <p className="text-sm text-gray-600">
+                You will be signed out of KO Platform on this device. Any unsaved work in open forms may be lost.
+              </p>
+            </div>
+            <div className="flex justify-end gap-3 border-t border-gray-100 px-6 py-4">
+              <button
+                type="button"
+                onClick={() => setLogoutConfirmOpen(false)}
+                className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setLogoutConfirmOpen(false);
+                  void handleProfileLogout();
+                }}
+                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
+              >
+                Log out
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* ── Mobile top bar (logo only, visible below lg) ──────────────────── */}
       <div className="sticky top-0 z-30 flex items-center border-b border-[#E4E4E4] bg-white px-4 py-3 lg:hidden">
         <Link href="/" className="flex cursor-pointer items-center gap-2" aria-label="Go to home">
@@ -2298,9 +2338,10 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
                 <button
                   type="button"
                   onClick={() => {
-                    void handleProfileLogout();
+                    setProfileOpen(false);
+                    setLogoutConfirmOpen(true);
                   }}
-                  className="block w-full px-4 py-3 text-left text-sm font-medium text-gray-900 transition-colors hover:bg-gray-50"
+                  className="block w-full px-4 py-3 text-left text-sm font-medium text-red-600 transition-colors hover:bg-red-50"
                 >
                   Log out
                 </button>

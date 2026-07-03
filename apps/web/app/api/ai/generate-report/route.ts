@@ -32,7 +32,17 @@ export async function POST(req: NextRequest) {
       generatedBy: user.id,
     });
 
-    if ('error' in result) return apiNotFound('Case not found');
+    if ('error' in result) {
+      if (result.error === 'NOT_FOUND') return apiNotFound('Case not found');
+      if (result.error === 'BUSINESS_RULE_VIOLATION') {
+        return apiError(
+          'BUSINESS_RULE_VIOLATION',
+          'message' in result ? (result.message as string) : 'Preconditions not met',
+          422,
+        );
+      }
+      return apiNotFound('Case not found');
+    }
 
     return apiSuccess(result.report, { status: 201 });
   } catch (error) {
