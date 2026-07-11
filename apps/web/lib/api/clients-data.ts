@@ -3,10 +3,29 @@ import { devStore } from '@/lib/api/dev-store';
 import { isPrismaConnectionError, isPrismaUniqueConflict } from '@/lib/api/prisma-errors';
 import { sendClientWelcomeEmail, type EmailDeliveryStatus } from '@/lib/notifications/client-emails';
 import { generateReference } from '@ko/utils';
-import type { ClientType, EmploymentStatus } from '@ko/types';
+import type { ClientType, ClientStatus, ClientCategoryFilter, EmploymentStatus } from '@ko/types';
 
 function useDevStore(error: unknown) {
   return process.env.NODE_ENV === 'development' && isPrismaConnectionError(error);
+}
+
+async function nextClientReferenceSequence(orgId: string): Promise<number> {
+  const year = new Date().getFullYear();
+  const prefix = `KOC-${year}-`;
+
+  const latest = await prisma.client.findFirst({
+    where: {
+      orgId,
+      referenceNumber: { startsWith: prefix },
+    },
+    orderBy: { referenceNumber: 'desc' },
+    select: { referenceNumber: true },
+  });
+
+  if (!latest?.referenceNumber) return 1;
+
+  const parsed = Number.parseInt(latest.referenceNumber.slice(prefix.length), 10);
+  return Number.isFinite(parsed) ? parsed + 1 : 1;
 }
 
 export async function findUserByClerkId(clerkId: string) {
@@ -109,12 +128,35 @@ export async function listClientsForOrg(
     perPage: number;
     search?: string;
     employmentStatus?: EmploymentStatus;
+    clientType?: ClientType;
+    isReferred?: boolean;
+    clientCategory?: ClientCategoryFilter;
+    status?: ClientStatus;
+    assignedMemberId?: string;
   },
 ) {
   try {
+    const categoryWhere =
+      params.clientCategory === 'REFERRAL'
+        ? { isReferred: true }
+        : params.clientCategory === 'INDIVIDUAL'
+          ? { clientType: 'INDIVIDUAL' as const, isReferred: false }
+          : params.clientCategory === 'COMPANY'
+            ? { clientType: 'COMPANY' as const }
+            : {};
+
     const where = {
       orgId,
+      ...categoryWhere,
       ...(params.employmentStatus ? { employmentStatus: params.employmentStatus } : {}),
+      ...(params.clientType && !params.clientCategory
+        ? { clientType: params.clientType }
+        : {}),
+      ...(params.isReferred !== undefined && !params.clientCategory
+        ? { isReferred: params.isReferred }
+        : {}),
+      ...(params.status ? { status: params.status } : {}),
+      ...(params.assignedMemberId ? { assignedMemberId: params.assignedMemberId } : {}),
       ...(params.search
         ? {
             OR: [
@@ -123,6 +165,7 @@ export async function listClientsForOrg(
               { companyName: { contains: params.search, mode: 'insensitive' as const } },
               { email: { contains: params.search, mode: 'insensitive' as const } },
               { referenceNumber: { contains: params.search, mode: 'insensitive' as const } },
+              { referredToCompany: { contains: params.search, mode: 'insensitive' as const } },
             ],
           }
         : {}),
@@ -145,7 +188,14 @@ export async function listClientsForOrg(
           email: true,
           employmentStatus: true,
           annualIncome: true,
+          isReferred: true,
+          referredToCompany: true,
+          status: true,
+          insurerName: true,
           isVulnerable: true,
+          assignedMember: {
+            select: { id: true, firstName: true, lastName: true },
+          },
           _count: { select: { cases: true, messages: true } },
         },
       }),
@@ -173,6 +223,10 @@ export async function createClientForOrg(
     dateOfBirth?: string;
     employmentStatus?: EmploymentStatus;
     annualIncome?: number;
+    isReferred?: boolean;
+    referredToCompany?: string;
+    assignedMemberId?: string;
+    insurerName?: string;
   },
 ) {
   const clientType = input.clientType ?? 'INDIVIDUAL';
@@ -180,21 +234,41 @@ export async function createClientForOrg(
   const companyName = input.companyName?.trim();
   const firstName = isCompany ? companyName! : input.firstName!.trim();
   const lastName = isCompany ? '—' : input.lastName!.trim();
+  const isReferred = !isCompany && input.isReferred === true;
+  const referredToCompany = isReferred ? input.referredToCompany?.trim() : undefined;
+  const insurerName =
+    !isCompany && !isReferred && input.insurerName?.trim()
+      ? input.insurerName.trim()
+      : undefined;
 
-  for (let attempt = 0; attempt < 3; attempt++) {
+  if (input.assignedMemberId) {
     try {
-      const year = new Date().getFullYear();
-      const count = await prisma.client.count({
-        where: {
-          orgId,
-          createdAt: {
-            gte: new Date(`${year}-01-01T00:00:00.000Z`),
-            lt: new Date(`${year + 1}-01-01T00:00:00.000Z`),
-          },
-        },
+      const member = await prisma.organisationMember.findFirst({
+        where: { id: input.assignedMemberId, orgId, isActive: true },
+        select: { id: true },
       });
-      // Use retry offset so collisions after deletes can recover.
-      const referenceNumber = generateReference('KOC', count + 1 + attempt);
+      if (!member) {
+        return {
+          error: 'VALIDATION' as const,
+          fields: { assignedMemberId: 'Selected adviser not found' },
+        };
+      }
+    } catch (error) {
+      if (!useDevStore(error)) throw error;
+      const member = devStore.getMember(orgId, input.assignedMemberId);
+      if (!member?.isActive) {
+        return {
+          error: 'VALIDATION' as const,
+          fields: { assignedMemberId: 'Selected adviser not found' },
+        };
+      }
+    }
+  }
+
+  for (let attempt = 0; attempt < 5; attempt++) {
+    try {
+      const sequence = await nextClientReferenceSequence(orgId);
+      const referenceNumber = generateReference('KOC', sequence);
 
       const created = await prisma.client.create({
         data: {
@@ -211,6 +285,10 @@ export async function createClientForOrg(
           dateOfBirth: !isCompany && input.dateOfBirth ? new Date(input.dateOfBirth) : undefined,
           employmentStatus: input.employmentStatus ?? 'EMPLOYED',
           annualIncome: input.annualIncome,
+          isReferred,
+          referredToCompany,
+          assignedMemberId: input.assignedMemberId,
+          insurerName,
         },
         select: {
           id: true,
@@ -224,7 +302,7 @@ export async function createClientForOrg(
       const welcomeEmail = await sendClientWelcomeEmail(created);
       return { client: created, welcomeEmail };
     } catch (error) {
-      if (isPrismaUniqueConflict(error, 'referenceNumber') && attempt < 2) continue;
+      if (isPrismaUniqueConflict(error, 'referenceNumber') && attempt < 4) continue;
       if (!useDevStore(error)) throw error;
       const client = devStore.createClient(orgId, input);
       const welcomeEmail: EmailDeliveryStatus = { sent: false, error: 'Email skipped in offline dev mode' };

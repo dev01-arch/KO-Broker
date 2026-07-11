@@ -41,6 +41,12 @@ enum ClientType {
   COMPANY
 }
 
+enum ClientStatus {
+  PROSPECT
+  ACTIVE
+  INACTIVE
+}
+
 enum CaseType {
   PURCHASE
   REMORTGAGE
@@ -119,6 +125,7 @@ model Organisation {
   updatedAt        DateTime @updatedAt
 
   users   User[]
+  members OrganisationMember[]
   clients Client[]
   cases   Case[]
 
@@ -137,13 +144,34 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  organisation       Organisation?      @relation(fields: [orgId], references: [id])
-  assignedCases      Case[]             @relation("CaseAdviser")
+  organisation       Organisation?       @relation(fields: [orgId], references: [id])
+  organisationMember OrganisationMember?
+  assignedCases      Case[]              @relation("CaseAdviser")
   complianceRecords  ComplianceRecord[]
   suitabilityReports SuitabilityReport[]
   auditLogs          AuditLog[]
 
   @@map("users")
+}
+
+model OrganisationMember {
+  id        String   @id @default(cuid())
+  orgId     String
+  firstName String
+  lastName  String
+  email     String
+  role      Role     @default(ADVISER)
+  isActive  Boolean  @default(true)
+  userId    String?  @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  organisation Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  user         User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
+  clients      Client[]
+
+  @@unique([orgId, email])
+  @@map("organisation_members")
 }
 
 model Client {
@@ -163,6 +191,11 @@ model Client {
   address          Json?
   employmentStatus EmploymentStatus @default(EMPLOYED)
   annualIncome     Float?
+  isReferred       Boolean          @default(false)
+  referredToCompany String?
+  assignedMemberId String?
+  status           ClientStatus     @default(PROSPECT)
+  insurerName      String?
   isVulnerable     Boolean          @default(false)
   vulnerabilityNotes String?
   portalEnabled    Boolean          @default(false)
@@ -171,8 +204,9 @@ model Client {
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
 
-  organisation Organisation @relation(fields: [orgId], references: [id])
-  cases        Case[]
+  organisation   Organisation        @relation(fields: [orgId], references: [id])
+  assignedMember OrganisationMember? @relation(fields: [assignedMemberId], references: [id], onDelete: SetNull)
+  cases          Case[]
   documents    Document[]
   messages     Message[]
 

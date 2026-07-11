@@ -9,6 +9,10 @@ export type PricingCardProps = {
   mostPopular?: boolean;
   buttonText: string;
   buttonHref?: string;
+  onButtonClick?: () => void;
+  buttonDisabled?: boolean;
+  buttonLoading?: boolean;
+  isCurrentPlan?: boolean;
   v2Design?: 'starter' | 'professional' | 'enterprise';
 };
 
@@ -19,14 +23,18 @@ export function PricingCard({
   mostPopular = false,
   buttonText,
   buttonHref,
+  onButtonClick,
+  buttonDisabled = false,
+  buttonLoading = false,
+  isCurrentPlan = false,
   v2Design,
 }: PricingCardProps) {
   const subtitle =
     tier === 'Starter'
-      ? 'Solo brokers getting set up.'
+      ? 'Solo brokers, new DAs'
       : tier === 'Professional'
-        ? 'Growing brokerages'
-        : 'Networks & multi-office firms.';
+        ? 'Small firms (2–10 users)'
+        : 'Networks, large DAs';
 
   const designTier = v2Design;
 
@@ -77,18 +85,29 @@ export function PricingCard({
           : 'shadow-[0_6.421px_8.883px_0_rgba(167,187,196,0.24)] hover:-translate-y-2 hover:shadow-[0_22px_44px_-14px_rgba(103,141,156,0.38)] hover:ring-2 hover:ring-[#619DB3]/25';
 
     const buttonClass = `relative z-10 w-full rounded-xl text-sm font-bold transition-all duration-200 ${isV2 ? 'py-3' : 'py-4'} ${
-      designTier === 'professional'
-        ? 'bg-[#CE652D] text-white group-hover:bg-[#b85728] group-hover:shadow-md'
-        : 'bg-white/80 text-gray-700 ring-1 ring-gray-200/80 group-hover:bg-white group-hover:ring-brand-teal/25 group-hover:shadow-sm'
-    }`;
+      isCurrentPlan || buttonDisabled
+        ? 'cursor-default bg-white/90 text-gray-500 ring-1 ring-gray-200/80'
+        : designTier === 'professional'
+          ? 'bg-[#CE652D] text-white group-hover:bg-[#b85728] group-hover:shadow-md'
+          : 'bg-white/80 text-gray-700 ring-1 ring-gray-200/80 group-hover:bg-white group-hover:ring-brand-teal/25 group-hover:shadow-sm'
+    } disabled:cursor-not-allowed disabled:opacity-70`;
 
-    const buttonInner = buttonHref ? (
+    const buttonLabel = buttonLoading ? 'Redirecting…' : buttonText;
+
+    const buttonInner = isCurrentPlan ? (
+      <div className={`text-center ${buttonClass}`}>Current plan</div>
+    ) : buttonHref ? (
       <Link href={buttonHref} className={`block text-center ${buttonClass}`}>
-        {buttonText}
+        {buttonLabel}
       </Link>
     ) : (
-      <button type="button" className={buttonClass}>
-        {buttonText}
+      <button
+        type="button"
+        className={buttonClass}
+        disabled={buttonDisabled || buttonLoading}
+        onClick={onButtonClick}
+      >
+        {buttonLabel}
       </button>
     );
 

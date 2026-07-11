@@ -17,7 +17,7 @@ const TOOL_ITEMS = [
   { label: 'Compliance', href: '/dashboard/compliance' },
   { label: 'AI Reports', href: '/dashboard/ai-reports', feature: 'ai_reports' as const },
   { label: 'Calculators', href: '/dashboard/calculators' },
-  { label: 'Settings', href: '/dashboard?tab=settings' },
+  { label: 'Settings', href: '/dashboard/settings' },
 ];
 
 export function DashboardNav({ children }: { children: React.ReactNode }) {

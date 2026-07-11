@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { EmploymentStatusSchema, CreateClientSchema } from '@ko/types';
+import { EmploymentStatusSchema, CreateClientSchema, ClientTypeSchema, ClientStatusSchema, ClientCategoryFilterSchema } from '@ko/types';
 import { requireApiAuth } from '@/lib/api/require-api-auth';
 import { createClientForOrg, listClientsForOrg } from '@/lib/api/clients-data';
 import { serializeClientSummary } from '@/lib/api/clients';
@@ -26,9 +26,14 @@ async function listClients(req: NextRequest) {
   const { searchParams } = req.nextUrl;
 
   const page = Math.max(1, Number(searchParams.get('page') ?? '1') || 1);
-  const perPage = Math.min(100, Math.max(1, Number(searchParams.get('perPage') ?? '25') || 25));
+  const perPage = Math.min(100, Math.max(1, Number(searchParams.get('perPage') ?? '10') || 10));
   const search = searchParams.get('search')?.trim();
   const employmentStatusRaw = searchParams.get('employmentStatus');
+  const clientTypeRaw = searchParams.get('clientType');
+  const clientCategoryRaw = searchParams.get('clientCategory');
+  const statusRaw = searchParams.get('status');
+  const assignedMemberId = searchParams.get('assignedMemberId')?.trim() || undefined;
+  const isReferredRaw = searchParams.get('isReferred');
 
   let employmentStatus;
   if (employmentStatusRaw) {
@@ -39,11 +44,47 @@ async function listClients(req: NextRequest) {
     employmentStatus = parsed.data;
   }
 
+  let clientType;
+  if (clientTypeRaw) {
+    const parsed = ClientTypeSchema.safeParse(clientTypeRaw);
+    if (!parsed.success) {
+      return apiFromZodError(parsed.error);
+    }
+    clientType = parsed.data;
+  }
+
+  let clientCategory;
+  if (clientCategoryRaw) {
+    const parsed = ClientCategoryFilterSchema.safeParse(clientCategoryRaw);
+    if (!parsed.success) {
+      return apiFromZodError(parsed.error);
+    }
+    clientCategory = parsed.data;
+  }
+
+  let status;
+  if (statusRaw) {
+    const parsed = ClientStatusSchema.safeParse(statusRaw);
+    if (!parsed.success) {
+      return apiFromZodError(parsed.error);
+    }
+    status = parsed.data;
+  }
+
+  let isReferred: boolean | undefined;
+  if (isReferredRaw === 'true') isReferred = true;
+  if (isReferredRaw === 'false') isReferred = false;
+
   const { total, clients } = await listClientsForOrg(orgId, {
     page,
     perPage,
     search,
     employmentStatus,
+    clientType,
+    clientCategory,
+    status,
+    assignedMemberId,
+    isReferred,
   });
 
   return apiSuccess(clients.map(serializeClientSummary), {
@@ -94,7 +135,21 @@ async function createClient(req: NextRequest) {
     dateOfBirth: input.dateOfBirth,
     employmentStatus: input.employmentStatus,
     annualIncome: input.annualIncome,
+    isReferred: input.isReferred,
+    referredToCompany: input.referredToCompany,
+    assignedMemberId: input.assignedMemberId,
+    insurerName: input.insurerName,
   });
+
+  if ('error' in result) {
+    const fields = result.fields ?? {};
+    const fieldErrors = Object.fromEntries(
+      Object.entries(fields).map(([key, value]) => [key, [value]]),
+    ) as Record<string, string[]>;
+    return apiError('VALIDATION_ERROR', 'Request validation failed', 422, {
+      fields: fieldErrors,
+    });
+  }
 
   return apiSuccess(result.client, { status: 201 });
 }

@@ -55,7 +55,16 @@ export async function verifyStageChecklist(
           documentType: 'COMPLIANCE',
         },
       });
-      if (!doc) {
+      if (doc) break;
+
+      // Adviser/client may complete the fact-find while the case is still at ENQUIRY
+      // (common in the live demo). A locked fact-find is sufficient evidence to leave
+      // initial disclosure and enter the FACT_FIND compliance stage.
+      const factFind = await prisma.factFind.findFirst({
+        where: { caseId },
+        select: { completedAt: true },
+      });
+      if (!factFind?.completedAt) {
         missingItems.push('Initial disclosure document must be uploaded.');
       }
       break;

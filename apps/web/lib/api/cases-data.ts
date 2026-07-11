@@ -186,6 +186,7 @@ export async function getCaseForOrg(orgId: string, id: string) {
           },
         },
         factFind: true,
+        productsConsidered: { orderBy: { createdAt: 'asc' as const } },
         _count: { select: { messages: true, documents: true } },
       },
     });

@@ -9,6 +9,8 @@ import { Bell, Building2, Calculator as CalculatorIcon, FileText, Loader2, Setti
 import MortgageCalculators from '@/components/marketing/demo-calculator/MortgageCalculators';
 import { IntegrationsSettingsPanel } from '@/components/dashboard/integrations-settings-panel';
 import { clientsQueryKey, useClients, useCreateClient } from '@/hooks/use-clients';
+import { advisersQueryKey, useAdvisers } from '@/hooks/use-settings';
+import { useDashboardBootstrap, LIVE_CLIENTS_QUERY, LIVE_CASES_QUERY } from '@/hooks/use-dashboard-bootstrap';
 import { usePortalInvite } from '@/hooks/use-portal-invite';
 import { casesQueryKey, useCases, useCreateCase } from '@/hooks/use-cases';
 import { usePlanFeature } from '@/hooks/use-org';
@@ -22,22 +24,25 @@ import {
   documentsApi,
   formatApiError,
   getApiErrorFieldMap,
+  getApiErrorDetails,
   isApiErrorCode,
   API_ERROR_CODES,
   messagesApi,
+  normalizeAiReportSections,
   type AiReport,
   type CaseSummary,
   type CaseStage,
   type ClientSummary,
   type CreateCaseInput,
   type CreateClientInput,
+  type AdviserRecord,
   type DocumentType,
   type MessageRecord,
   type MessageChannel,
   type MessageDeliveryMeta,
   type ReportTemplate,
   type TimelineEntry,
-  type UpsertFactFindInput,
+  type ProductConsidered,
 } from '@/lib/api/client';
 import { formatClientName } from '@/lib/api/client-display';
 
@@ -136,8 +141,8 @@ function IframeUploadModal({
   );
 }
 
-const LIVE_CLIENTS_QUERY = { page: 1, perPage: 100 } as const;
-const LIVE_CASES_QUERY = { page: 1, perPage: 100 } as const;
+const LIVE_CLIENTS_QUERY_DEMO = { page: 1, perPage: 100 } as const;
+const LIVE_CASES_QUERY_DEMO = { page: 1, perPage: 100 } as const;
 
 type DemoTab = 'overview' | 'clients' | 'cases' | 'messages' | 'ai' | 'calculator' | 'settings';
 
@@ -210,7 +215,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, isLoaded: clerkLoaded } = useUser();
-  const { getToken, signOut } = useAuth();
+  const { getToken, signOut, isLoaded: authLoaded, isSignedIn } = useAuth();
   const [demoUsername, setDemoUsername] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<DemoTab>('overview');
   const isDashboard = homeHref === '/dashboard';
@@ -269,6 +274,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
   const hubMetaRef = useRef<Record<string, { name: string; caseRef: string; caseSub: string; stage: string; type: 'client' | 'system' }>>({});
   const clientsDataRef = useRef<ClientSummary[]>([]);
   const casesDataRef = useRef<CaseSummary[]>([]);
+  const advisersDataRef = useRef<AdviserRecord[]>([]);
   const clientsLoadingRef = useRef(false);
   const casesLoadingRef = useRef(false);
   const hasMessagesRef = useRef(true);
@@ -278,7 +284,10 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
 
   useEffect(() => {
     const tab = searchParams.get('tab');
-    if (tab === 'settings') setActiveTab('settings');
+    const billing = searchParams.get('billing');
+    if (tab === 'settings' || billing === 'success' || billing === 'cancel') {
+      setActiveTab('settings');
+    }
   }, [searchParams]);
 
   useEffect(() => {
@@ -288,7 +297,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
   }, [isDashboard, clerkLoaded, isClerkUser, router]);
 
   /** Signed-in app at /dashboard — real API data and personalised UI. */
-  const isPersonalDashboard = isDashboard && isClerkUser && clerkLoaded;
+  const isPersonalDashboard = isDashboard && authLoaded && isSignedIn;
   /** Marketing /demo — always mock "Alex" content, never live API. */
   const isMockDemo = !isDashboard;
   const profileInitial = useMemo(() => {
@@ -305,11 +314,19 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
     router.push('/login');
   }, [isClerkUser, router, signOut]);
 
+  const { data: bootstrapData, isLoading: bootstrapLoading, isError: bootstrapError } =
+    useDashboardBootstrap({
+      enabled: isPersonalDashboard,
+    });
+
   const { data: clientsData, isLoading: clientsLoading } = useClients(LIVE_CLIENTS_QUERY, {
-    enabled: isPersonalDashboard,
+    enabled: isPersonalDashboard && bootstrapError,
   });
   const { data: casesData, isLoading: casesLoading } = useCases(LIVE_CASES_QUERY, {
-    enabled: isPersonalDashboard,
+    enabled: isPersonalDashboard && bootstrapError,
+  });
+  const { data: advisersData } = useAdvisers({
+    enabled: isPersonalDashboard && bootstrapError,
   });
   const { mutateAsync: createClient } = useCreateClient();
   const { mutateAsync: inviteToPortal } = usePortalInvite();
@@ -320,10 +337,25 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
   hasMessagesRef.current = hasMessages;
   hasAiReportsRef.current = hasAiReports;
 
-  clientsDataRef.current = clientsData?.data ?? [];
-  casesDataRef.current = casesData?.data ?? [];
-  clientsLoadingRef.current = clientsLoading;
-  casesLoadingRef.current = casesLoading;
+  clientsDataRef.current = isPersonalDashboard
+    ? (bootstrapData?.data.clients ?? clientsData?.data ?? [])
+    : (clientsData?.data ?? []);
+  casesDataRef.current = isPersonalDashboard
+    ? (bootstrapData?.data.cases ?? casesData?.data ?? [])
+    : (casesData?.data ?? []);
+  advisersDataRef.current = isPersonalDashboard
+    ? (bootstrapData?.data.advisers ?? advisersData?.data ?? [])
+    : (advisersData?.data ?? []);
+  clientsLoadingRef.current = isPersonalDashboard
+    ? bootstrapError
+      ? clientsLoading
+      : bootstrapLoading
+    : clientsLoading;
+  casesLoadingRef.current = isPersonalDashboard
+    ? bootstrapError
+      ? casesLoading
+      : bootstrapLoading
+    : casesLoading;
 
   const postClientsSync = useCallback((clients?: ClientSummary[]) => {
     const iframeWindow = iframeRef.current?.contentWindow;
@@ -343,37 +375,20 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
     );
   }, []);
 
+  const postAdvisersSync = useCallback((advisers?: AdviserRecord[]) => {
+    const iframeWindow = iframeRef.current?.contentWindow;
+    if (!iframeWindow) return;
+    iframeWindow.postMessage(
+      { type: 'ko:advisers-sync', advisers: advisers ?? advisersDataRef.current },
+      window.location.origin,
+    );
+  }, []);
+
   const syncLiveDataToIframe = useCallback(() => {
     postClientsSync();
     postCasesSync();
-  }, [postClientsSync, postCasesSync]);
-
-  const postOverviewStats = useCallback(() => {
-    const iframeWindow = iframeRef.current?.contentWindow;
-    if (!iframeWindow) return;
-    if (clientsLoadingRef.current || casesLoadingRef.current) return;
-
-    const clientCount = clientsDataRef.current.length;
-    const caseCount = casesDataRef.current.length;
-    const isEmpty = clientCount === 0 && caseCount === 0;
-
-    iframeWindow.postMessage(
-      { type: 'ko:overview-empty', empty: isEmpty },
-      window.location.origin,
-    );
-
-    if (!isEmpty) {
-      iframeWindow.postMessage(
-        {
-          type: 'ko:overview-stats',
-          stats: { clients: clientCount, cases: caseCount },
-        },
-        window.location.origin,
-      );
-    }
-    const idoc = iframeRef.current?.contentDocument;
-    if (idoc) renderPersonalOverviewSections(idoc);
-  }, []);
+    postAdvisersSync();
+  }, [postClientsSync, postCasesSync, postAdvisersSync]);
 
   const renderPersonalOverviewSections = useCallback((idoc: Document) => {
     if (!isPersonalDashboard) return;
@@ -395,11 +410,11 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
       COMPLETION: 'completion',
     };
     const stageLabel: Record<StageKey, string> = {
-      lead: 'Lead',
+      lead: 'Enquiry',
       factfind: 'Fact-Find',
-      research: 'Recommendation',
+      research: 'Research',
       application: 'Application',
-      completion: 'Completion',
+      completion: 'Offer',
     };
     const stageTone: Record<StageKey, string> = {
       lead: 'lead',
@@ -462,7 +477,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
             <div class="kb-cc-top"><div class="kb-cc-avatar">${initials}</div></div>
             <div><div class="kb-card-name">${clientName}</div><div class="kb-cc-ref">${c.referenceNumber}</div></div>
             <div class="kb-cc-tags"><span class="kb-cc-tag">${c.type.replace(/_/g, ' ')}</span><span class="kb-cc-tag">LTV ${c.ltv}%</span></div>
-            <div class="kb-cc-amt">${amount}</div>
+            <div class="kb-cc-amt kb-cc-amt--${stageTone[stage]}">${amount}</div>
           </div>`;
         }).join('');
       }
@@ -506,15 +521,75 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
       </div>
     </div>`;
     root.appendChild(bottom);
+
+    const iwin = idoc.defaultView as Window & { koRefreshOverviewMobilePipeline?: () => void };
+    iwin?.koRefreshOverviewMobilePipeline?.();
   }, [isPersonalDashboard]);
 
-  // Don't wait for clients API — iframe loads in parallel; data syncs via postMessage.
-  const overviewReady = !isDashboard || !isClerkUser || clerkLoaded;
+  const postOverviewLoading = useCallback((loading: boolean) => {
+    const iframeWindow = iframeRef.current?.contentWindow;
+    if (!iframeWindow) return;
+    iframeWindow.postMessage(
+      { type: 'ko:overview-loading', loading },
+      window.location.origin,
+    );
+  }, []);
+
+  const postOverviewStats = useCallback(() => {
+    const iframeWindow = iframeRef.current?.contentWindow;
+    if (!iframeWindow) return;
+
+    const clientCount = clientsDataRef.current.length;
+    const caseCount = casesDataRef.current.length;
+    const stillLoading = clientsLoadingRef.current || casesLoadingRef.current;
+    const isEmpty = clientCount === 0 && caseCount === 0;
+
+    if (stillLoading && isEmpty) {
+      postOverviewLoading(true);
+      return;
+    }
+
+    postOverviewLoading(false);
+
+    iframeWindow.postMessage(
+      { type: 'ko:overview-empty', empty: isEmpty },
+      window.location.origin,
+    );
+
+    if (!isEmpty) {
+      iframeWindow.postMessage(
+        {
+          type: 'ko:overview-stats',
+          stats: { clients: clientCount, cases: caseCount },
+        },
+        window.location.origin,
+      );
+    }
+    const idoc = iframeRef.current?.contentDocument;
+    if (idoc) renderPersonalOverviewSections(idoc);
+  }, [renderPersonalOverviewSections, postOverviewLoading]);
+
+  // Start iframe as soon as Clerk auth is ready (don't wait for full user profile hydration).
+  const overviewReady = !isDashboard || (authLoaded && isSignedIn);
 
   const displayName = useMemo(() => {
     if (isMockDemo) return 'Alex';
-    return resolveClerkDisplayName(user);
+    return resolveClerkDisplayName(user) ?? 'there';
   }, [isMockDemo, user]);
+
+  const preparePersonalDashboardIframe = useCallback(
+    (idoc: Document) => {
+      if (!isPersonalDashboard) return;
+      const overview = idoc.getElementById('tab-overview');
+      overview?.classList.add('ov-personal-mode', 'ov-empty-mode');
+      if (displayName) applyGreetingToIframe(idoc, displayName);
+      const emptyVals = idoc.querySelectorAll('#tab-overview [data-ov-kpi-val]');
+      emptyVals.forEach((el, index) => {
+        el.textContent = index === 2 ? '£0' : '0';
+      });
+    },
+    [displayName, isPersonalDashboard],
+  );
 
   const iframeSrc = useMemo(() => {
     if (!overviewReady) return null;
@@ -600,18 +675,45 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
 
   useEffect(() => {
     if (!iframeLoaded || !isPersonalDashboard) return;
+    postOverviewLoading(bootstrapLoading || clientsLoading || casesLoading);
+  }, [
+    iframeLoaded,
+    isPersonalDashboard,
+    bootstrapLoading,
+    clientsLoading,
+    casesLoading,
+    postOverviewLoading,
+  ]);
+
+  useEffect(() => {
+    if (!iframeLoaded || !isPersonalDashboard) return;
     syncLiveDataToIframe();
     postOverviewStats();
   }, [
     iframeLoaded,
     isPersonalDashboard,
+    bootstrapLoading,
     clientsLoading,
     casesLoading,
+    bootstrapData,
     clientsData,
     casesData,
+    advisersData,
     syncLiveDataToIframe,
     postOverviewStats,
   ]);
+
+  useEffect(() => {
+    if (!iframeLoaded || !isPersonalDashboard) return;
+    postClientsSync();
+    postOverviewStats();
+  }, [iframeLoaded, isPersonalDashboard, clientsData, clientsLoading, postClientsSync, postOverviewStats]);
+
+  useEffect(() => {
+    if (!iframeLoaded || !isPersonalDashboard) return;
+    postCasesSync();
+    postOverviewStats();
+  }, [iframeLoaded, isPersonalDashboard, casesData, casesLoading, postCasesSync, postOverviewStats]);
 
   useEffect(() => {
     if (!iframeLoaded || !isPersonalDashboard || showEmbeddedPanel) return;
@@ -652,6 +754,12 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
         clientIds?: string[];
         path?: string;
         payload?: CreateClientInput | CreateCaseInput | Record<string, unknown>;
+        file?: {
+          name: string;
+          mimeType: string;
+          base64: string;
+          documentCategory?: string;
+        };
       };
 
       if (data?.type === 'ko:navigate' && typeof data.path === 'string') {
@@ -670,6 +778,11 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
 
       if (data?.type === 'ko:request-cases-sync') {
         postCasesSync();
+        return;
+      }
+
+      if (data?.type === 'ko:request-advisers-sync') {
+        postAdvisersSync();
         return;
       }
 
@@ -881,19 +994,88 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
         try {
           const token = await getToken();
           if (!token) throw new Error('Not authenticated');
-          const saved = await casesApi.upsertFactFind(token, data.caseId, data.payload as UpsertFactFindInput);
-          if (activeCaseIdRef.current === data.caseId) {
-            const updated = await casesApi.get(token, data.caseId);
-            iframeWindow.postMessage(
-              { type: 'ko:case-detail', case: updated.data },
-              window.location.origin,
-            );
+          const { expandFactFindUpsertPayload } = await import('@/lib/fact-find/serializeFactFindForm');
+          const payload = expandFactFindUpsertPayload(
+            data.payload as UpsertFactFindInput,
+          ) as UpsertFactFindInput;
+          const saved = await casesApi.upsertFactFind(token, data.caseId, payload);
+          replyFactFind({
+            success: true,
+            factFind: saved.data.factFind,
+            client: saved.data.client,
+            completed:
+              Boolean(saved.data.factFind?.completedAt) || Boolean(payload.markComplete),
+          });
+
+          void queryClient.invalidateQueries({ queryKey: casesQueryKey(LIVE_CASES_QUERY) });
+
+          // After final submit, refresh case detail so compliance rail reflects FACT_FIND.
+          if (payload.markComplete) {
+            try {
+              const updated = await casesApi.get(token, data.caseId as string);
+              iframeWindow.postMessage(
+                { type: 'ko:case-detail', case: updated.data },
+                window.location.origin,
+              );
+              window.setTimeout(() => {
+                const idoc = iframeRef.current?.contentDocument;
+                if (idoc) updateCompliancePanel(idoc, data.caseId as string, updated.data.stage);
+              }, 80);
+            } catch {
+              // Non-critical — panel refreshes on next case open.
+            }
           }
-          replyFactFind({ success: true, factFind: saved.data });
         } catch (err) {
           replyFactFind({
             success: false,
             error: formatApiError(err, { fallback: 'Could not save fact-find.' }),
+          });
+        }
+        return;
+      }
+
+      if (data?.type === 'ko:fact-find-autofill' && data.requestId != null && data.file) {
+        const replyAutofill = (body: Record<string, unknown>) => {
+          iframeWindow.postMessage(
+            { type: 'ko:fact-find-autofill-result', requestId: data.requestId, ...body },
+            window.location.origin,
+          );
+        };
+
+        try {
+          const token = await getToken();
+          if (!token) throw new Error('Not authenticated');
+
+          const filePayload = data.file as {
+            name: string;
+            mimeType: string;
+            base64: string;
+            documentCategory?: string;
+          };
+          const binary = atob(filePayload.base64);
+          const bytes = new Uint8Array(binary.length);
+          for (let i = 0; i < binary.length; i += 1) {
+            bytes[i] = binary.charCodeAt(i);
+          }
+          const file = new File([bytes], filePayload.name, { type: filePayload.mimeType });
+
+          const result = await aiApi.extractFactFind(token, {
+            file,
+            caseId: typeof data.caseId === 'string' ? data.caseId : undefined,
+            documentCategory: filePayload.documentCategory,
+          });
+
+          replyAutofill({
+            success: true,
+            extracted: result.data.extracted,
+            fieldsFound: result.data.fieldsFound,
+          });
+        } catch (err) {
+          replyAutofill({
+            success: false,
+            error: formatApiError(err, {
+              fallback: 'Document auto-fill unavailable. Please continue manually.',
+            }),
           });
         }
         return;
@@ -918,18 +1100,25 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
         );
         const clients = fresh?.data ?? [];
         clientsDataRef.current = clients;
-        setActiveTab('clients');
-        syncLiveDataToIframe();
-        reply({
-          success: true,
-          client: {
+        const fullClient =
+          clients.find((client) => client.id === created.id) ?? {
             ...created,
             clientType: payload.clientType ?? 'INDIVIDUAL',
             companyName: payload.companyName,
             employmentStatus: payload.employmentStatus ?? 'EMPLOYED',
             annualIncome: payload.annualIncome,
+            isReferred: payload.isReferred ?? false,
+            referredToCompany: payload.referredToCompany,
+            status: 'PROSPECT' as const,
+            isVulnerable: false,
+            assignedMember: null,
             _count: { cases: 0, messages: 0 },
-          },
+          };
+        setActiveTab('clients');
+        syncLiveDataToIframe();
+        reply({
+          success: true,
+          client: fullClient,
           welcomeEmail: undefined,
         });
       } catch (err) {
@@ -944,7 +1133,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
 
     window.addEventListener('message', onMessage);
     return () => window.removeEventListener('message', onMessage);
-  }, [isDashboard, isClerkUser, createClient, createCase, inviteToPortal, getToken, syncLiveDataToIframe, queryClient, router]);
+  }, [isDashboard, isClerkUser, createClient, createCase, inviteToPortal, getToken, syncLiveDataToIframe, postAdvisersSync, queryClient, router]);
 
   // ── Directly update the iframe's documents table ────────────────────────────
   // Works because the iframe is same-origin, so the parent can touch its DOM.
@@ -1752,7 +1941,9 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
   function updateCompliancePanel(idoc: Document, caseId: string, apiStage: string) {
     const compCard = idoc.querySelector<HTMLElement>('.cd-comp-card');
     if (!compCard) return;
-    compCard.querySelectorAll('.ko-comp-advance-btn, .ko-comp-stage-info').forEach(el => el.remove());
+    compCard
+      .querySelectorAll('.ko-comp-advance-btn, .ko-comp-stage-info, .ko-products-panel')
+      .forEach((el) => el.remove());
 
     // Force the compliance progress rail to reflect the real API stage.
     // The prototype defaults some API-loaded cases to enquiry; we correct the
@@ -1812,20 +2003,42 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
 
     const next = NEXT_STAGE[apiStage as CaseStage];
 
-    const info = idoc.createElement('p');
+    // Record products during Fact-Find / Research so RESEARCH → DIP can pass checklist.
+    if (apiStage === 'FACT_FIND' || apiStage === 'RESEARCH') {
+      void mountResearchProductsPanel(compCard, caseId, apiStage).then(() => {
+        appendAdvanceControls(compCard, caseId, apiStage, next);
+      });
+      return;
+    }
+
+    appendAdvanceControls(compCard, caseId, apiStage, next);
+  }
+
+  function appendAdvanceControls(
+    compCard: HTMLElement,
+    caseId: string,
+    apiStage: string,
+    next: { toStage: CaseStage; label: string } | undefined,
+  ) {
+    compCard.querySelectorAll('.ko-comp-advance-btn, .ko-comp-stage-info').forEach((el) => el.remove());
+
+    const info = document.createElement('p');
     info.className = 'ko-comp-stage-info';
-    info.style.cssText = 'margin:16px 0 0;font-size:13px;color:#71717a;font-family:\'DM Sans\',sans-serif';
-    info.textContent = next ? `Current stage: ${apiStage.replace(/_/g, ' ')}` : 'Case is at the final stage (Completion).';
+    info.style.cssText =
+      "margin:16px 0 0;font-size:13px;color:#71717a;font-family:'DM Sans',sans-serif";
+    info.textContent = next
+      ? `Current stage: ${apiStage.replace(/_/g, ' ')}`
+      : 'Case is at the final stage (Completion).';
     compCard.appendChild(info);
     if (!next) return;
 
-    const btn = idoc.createElement('button');
+    const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'ko-comp-advance-btn';
-    btn.style.cssText = 'margin-top:16px;padding:10px 24px;background:#1D9E75;color:#fff;border:none;border-radius:8px;font-family:\'DM Sans\',sans-serif;font-size:14px;font-weight:600;cursor:pointer;width:100%;box-shadow:0 4px 12px rgba(29,158,117,0.2);transition:opacity .15s';
+    btn.style.cssText =
+      "margin-top:16px;padding:10px 24px;background:#1D9E75;color:#fff;border:none;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;width:100%;box-shadow:0 4px 12px rgba(29,158,117,0.2);transition:opacity .15s";
     btn.textContent = `Advance to ${next.label} →`;
 
-    // Direct listener — runs in parent JS context, has full access to refs and APIs.
     btn.addEventListener('click', async (e) => {
       e.preventDefault();
       e.stopPropagation();
@@ -1842,26 +2055,254 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
           { type: 'ko:case-detail', case: updated.data },
           window.location.origin,
         );
-        // Re-fetch timeline (a new audit entry was created by the advance).
         const freshTl = await casesApi.timeline(token, caseId).catch(() => null);
         window.setTimeout(() => {
           const freshIdoc = iframeRef.current?.contentDocument;
           if (!freshIdoc) return;
           updateCompliancePanel(freshIdoc, caseId, updated.data.stage);
           if (freshTl) renderTimelineTrack(freshIdoc, freshTl.data);
-          // Switch back to Compliance tab after the case re-renders on Overview.
-          const compTab = freshIdoc.querySelector<HTMLElement>(`.cd-tab[onclick*="compliance-${caseId}"]`);
+          const compTab = freshIdoc.querySelector<HTMLElement>(
+            `.cd-tab[onclick*="compliance-${caseId}"]`,
+          );
           compTab?.click();
         }, 80);
       } catch (err) {
         (btn as HTMLButtonElement).disabled = false;
         btn.style.opacity = '1';
         btn.textContent = `Advance to ${next.label} →`;
-        window.alert(formatApiError(err, { fallback: 'Could not advance stage. Please check all compliance requirements are met.' }));
+        const details = getApiErrorDetails(err)?.filter(Boolean).join('\n') ?? '';
+        window.alert(
+          [
+            formatApiError(err, {
+              fallback: 'Could not advance stage. Please check all compliance requirements are met.',
+            }),
+            details,
+          ]
+            .filter(Boolean)
+            .join('\n\n'),
+        );
       }
     });
 
     compCard.appendChild(btn);
+  }
+
+  async function mountResearchProductsPanel(
+    compCard: HTMLElement,
+    caseId: string,
+    apiStage: string,
+  ) {
+    const panel = document.createElement('div');
+    panel.className = 'ko-products-panel';
+    panel.style.cssText =
+      'margin-top:20px;padding-top:20px;border-top:1px solid #f4f4f5;font-family:\'DM Sans\',sans-serif';
+    panel.innerHTML = `<p style="margin:0;font-size:13px;color:#71717a">Loading products…</p>`;
+    compCard.appendChild(panel);
+
+    const esc = (s: string) =>
+      s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+    const refresh = async () => {
+      try {
+        const token = await getTokenRef.current();
+        if (!token) throw new Error('Not authenticated');
+        const [productsRes, caseRes] = await Promise.all([
+          casesApi.listProducts(token, caseId),
+          casesApi.get(token, caseId),
+        ]);
+        const products = productsRes.data ?? [];
+        const notes = caseRes.data.adviserNotes ?? '';
+        const selectedCount = products.filter((p) => p.isSelected).length;
+        const ready = products.length >= 3 && selectedCount >= 1 && notes.trim().length > 0;
+
+        caseDetailRef.current[caseId] = {
+          ...caseDetailRef.current[caseId],
+          selectedLender: caseRes.data.selectedLender,
+          selectedProduct: caseRes.data.selectedProduct,
+          selectedRate: caseRes.data.selectedRate,
+          selectedFee: caseRes.data.selectedFee,
+          adviserNotes: caseRes.data.adviserNotes,
+          stage: caseRes.data.stage,
+        };
+
+        const checklist = compCard.querySelector('.cd-comp-checklist');
+        if (checklist && (apiStage === 'FACT_FIND' || apiStage === 'RESEARCH')) {
+          const items = [
+            {
+              ok: products.length >= 3,
+              label: `At least 3 products recorded (${products.length}/3)`,
+            },
+            {
+              ok: selectedCount >= 1,
+              label: 'Recommended product selected',
+            },
+            {
+              ok: notes.trim().length > 0,
+              label: 'Adviser recommendation notes written',
+            },
+          ];
+          checklist.innerHTML = items
+            .map(
+              (item) =>
+                `<li class="cd-comp-check-item"><input type="checkbox" class="cd-comp-check" ${item.ok ? 'checked' : ''} disabled aria-label="${esc(item.label)}"><span>${esc(item.label)}</span></li>`,
+            )
+            .join('');
+        }
+
+        const rows =
+          products.length === 0
+            ? `<p style="margin:0 0 12px;font-size:13px;color:#a1a1aa">No products recorded yet. Add at least 3 before advancing past Research.</p>`
+            : `<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px">${products
+                .map((p) => renderProductRow(p, esc))
+                .join('')}</div>`;
+
+        panel.innerHTML = `
+          <h3 style="margin:0 0 6px;font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:#18181b">Products considered</h3>
+          <p style="margin:0 0 14px;font-size:12px;color:#71717a;line-height:1.45">
+            Record market research options here${apiStage === 'FACT_FIND' ? ' before advancing to Research' : ''}.
+            Compliance needs <strong>3+ products</strong>, one <strong>selected</strong>, and <strong>adviser notes</strong>.
+            ${ready ? '<span style="color:#0F6E56;font-weight:600"> Ready to advance.</span>' : ''}
+          </p>
+          ${rows}
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+            <label style="display:flex;flex-direction:column;gap:4px;font-size:11px;font-weight:600;color:#71717a">Lender
+              <input data-ko-prod="lender" type="text" placeholder="e.g. NatWest" style="padding:8px 10px;border:1px solid #e4e4e7;border-radius:8px;font-size:13px;color:#18181b" />
+            </label>
+            <label style="display:flex;flex-direction:column;gap:4px;font-size:11px;font-weight:600;color:#71717a">Product name
+              <input data-ko-prod="product" type="text" placeholder="e.g. 5yr Fixed" style="padding:8px 10px;border:1px solid #e4e4e7;border-radius:8px;font-size:13px;color:#18181b" />
+            </label>
+            <label style="display:flex;flex-direction:column;gap:4px;font-size:11px;font-weight:600;color:#71717a">Rate (%)
+              <input data-ko-prod="rate" type="number" step="0.01" placeholder="4.20" style="padding:8px 10px;border:1px solid #e4e4e7;border-radius:8px;font-size:13px;color:#18181b" />
+            </label>
+            <label style="display:flex;flex-direction:column;gap:4px;font-size:11px;font-weight:600;color:#71717a">Fee (£)
+              <input data-ko-prod="fee" type="number" step="1" placeholder="999" style="padding:8px 10px;border:1px solid #e4e4e7;border-radius:8px;font-size:13px;color:#18181b" />
+            </label>
+          </div>
+          <label style="display:flex;align-items:center;gap:8px;margin:0 0 10px;font-size:12px;color:#52525b">
+            <input data-ko-prod="selected" type="checkbox" /> Mark as recommended product
+          </label>
+          <button type="button" data-ko-prod-add style="margin-bottom:16px;padding:8px 14px;background:#A552E4;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">Add product</button>
+          <label style="display:flex;flex-direction:column;gap:4px;font-size:11px;font-weight:600;color:#71717a">Adviser recommendation notes
+            <textarea data-ko-prod="notes" rows="3" placeholder="Why this product is suitable…" style="padding:8px 10px;border:1px solid #e4e4e7;border-radius:8px;font-size:13px;color:#18181b;resize:vertical;font-family:inherit">${esc(notes)}</textarea>
+          </label>
+          <button type="button" data-ko-prod-notes style="margin-top:8px;padding:8px 14px;background:#fff;color:#18181b;border:1px solid #e4e4e7;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">Save notes</button>
+          <p data-ko-prod-status style="margin:8px 0 0;font-size:12px;color:#71717a;min-height:16px"></p>
+        `;
+
+        const statusEl = panel.querySelector<HTMLElement>('[data-ko-prod-status]');
+        const setStatus = (text: string, color = '#71717a') => {
+          if (!statusEl) return;
+          statusEl.textContent = text;
+          statusEl.style.color = color;
+        };
+
+        panel.querySelectorAll<HTMLButtonElement>('[data-ko-prod-select]').forEach((btn) => {
+          btn.addEventListener('click', async () => {
+            const productId = btn.getAttribute('data-ko-prod-select');
+            if (!productId) return;
+            btn.disabled = true;
+            setStatus('Selecting…', '#f59e0b');
+            try {
+              const t = await getTokenRef.current();
+              if (!t) throw new Error('Not authenticated');
+              await casesApi.updateProduct(t, caseId, productId, { isSelected: true });
+              await refresh();
+            } catch (err) {
+              setStatus(formatApiError(err, { fallback: 'Could not select product.' }), '#DC2626');
+              btn.disabled = false;
+            }
+          });
+        });
+
+        panel.querySelectorAll<HTMLButtonElement>('[data-ko-prod-delete]').forEach((btn) => {
+          btn.addEventListener('click', async () => {
+            const productId = btn.getAttribute('data-ko-prod-delete');
+            if (!productId) return;
+            btn.disabled = true;
+            setStatus('Removing…', '#f59e0b');
+            try {
+              const t = await getTokenRef.current();
+              if (!t) throw new Error('Not authenticated');
+              await casesApi.deleteProduct(t, caseId, productId);
+              await refresh();
+            } catch (err) {
+              setStatus(formatApiError(err, { fallback: 'Could not remove product.' }), '#DC2626');
+              btn.disabled = false;
+            }
+          });
+        });
+
+        panel.querySelector<HTMLButtonElement>('[data-ko-prod-add]')?.addEventListener('click', async () => {
+          const lender = panel.querySelector<HTMLInputElement>('[data-ko-prod="lender"]')?.value.trim() ?? '';
+          const productName =
+            panel.querySelector<HTMLInputElement>('[data-ko-prod="product"]')?.value.trim() ?? '';
+          const rateRaw = panel.querySelector<HTMLInputElement>('[data-ko-prod="rate"]')?.value ?? '';
+          const feeRaw = panel.querySelector<HTMLInputElement>('[data-ko-prod="fee"]')?.value ?? '';
+          const isSelected =
+            panel.querySelector<HTMLInputElement>('[data-ko-prod="selected"]')?.checked ?? false;
+          if (!lender || !productName) {
+            setStatus('Lender and product name are required.', '#DC2626');
+            return;
+          }
+          setStatus('Saving product…', '#f59e0b');
+          try {
+            const t = await getTokenRef.current();
+            if (!t) throw new Error('Not authenticated');
+            await casesApi.createProduct(t, caseId, {
+              lenderName: lender,
+              productName,
+              rate: rateRaw ? Number(rateRaw) : undefined,
+              fee: feeRaw ? Number(feeRaw) : undefined,
+              isSelected,
+            });
+            await refresh();
+          } catch (err) {
+            setStatus(formatApiError(err, { fallback: 'Could not add product.' }), '#DC2626');
+          }
+        });
+
+        panel.querySelector<HTMLButtonElement>('[data-ko-prod-notes]')?.addEventListener('click', async () => {
+          const value = panel.querySelector<HTMLTextAreaElement>('[data-ko-prod="notes"]')?.value ?? '';
+          setStatus('Saving notes…', '#f59e0b');
+          try {
+            const t = await getTokenRef.current();
+            if (!t) throw new Error('Not authenticated');
+            await casesApi.update(t, caseId, { adviserNotes: value });
+            if (caseDetailRef.current[caseId]) {
+              caseDetailRef.current[caseId].adviserNotes = value;
+            }
+            await refresh();
+            setStatus('Notes saved.', '#0F6E56');
+          } catch (err) {
+            setStatus(formatApiError(err, { fallback: 'Could not save notes.' }), '#DC2626');
+          }
+        });
+      } catch (err) {
+        panel.innerHTML = `<p style="margin:0;font-size:13px;color:#DC2626">${esc(
+          formatApiError(err, { fallback: 'Could not load products.' }),
+        )}</p>`;
+      }
+    };
+
+    await refresh();
+  }
+
+  function renderProductRow(p: ProductConsidered, esc: (s: string) => string) {
+    const rate = p.rate != null ? `${p.rate}%` : '—';
+    const fee = p.fee != null ? `£${p.fee}` : '—';
+    const selected = p.isSelected
+      ? '<span style="color:#0F6E56;font-weight:700;font-size:11px">SELECTED</span>'
+      : `<button type="button" data-ko-prod-select="${esc(p.id)}" style="padding:4px 8px;border:1px solid #e4e4e7;border-radius:6px;background:#fff;font-size:11px;font-weight:600;cursor:pointer">Select</button>`;
+    return `<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border:1px solid #e4e4e7;border-radius:10px;background:${p.isSelected ? '#F5EEFA' : '#fff'}">
+      <div style="min-width:0">
+        <div style="font-size:13px;font-weight:600;color:#18181b">${esc(p.lenderName)} · ${esc(p.productName)}</div>
+        <div style="font-size:12px;color:#71717a;margin-top:2px">Rate ${esc(rate)} · Fee ${esc(fee)}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+        ${selected}
+        <button type="button" data-ko-prod-delete="${esc(p.id)}" style="padding:4px 8px;border:none;background:transparent;color:#a1a1aa;font-size:11px;cursor:pointer">Remove</button>
+      </div>
+    </div>`;
   }
 
   // ── AI report helpers ─────────────────────────────────────────────────────────
@@ -1919,9 +2360,13 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
     riskWarnings: 'Risk Warnings & Disclosures',
     recommendations: 'Adviser Recommendations',
     clientIntroduction: 'Client Introduction',
+    'client-introduction': 'Client Introduction',
     propertyDetails: 'Property Details & Valuation',
+    'property-details': 'Property Details',
     ercAnalysis: 'ERC Analysis',
+    'erc-analysis': 'ERC Analysis',
     consumerDuty: 'Risks & Consumer Duty Evidencing',
+    'risks-consumer-duty': 'Risks & Consumer Duty',
   };
 
   // Attach iframe handlers so prototype onclick="generateCaseReport(id)" calls the live API.
@@ -2000,8 +2445,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
     const body = idoc.getElementById(`cd-rpt-body-${caseId}`);
     if (!body) return;
 
-    const sections = (report.sections ?? {}) as Record<string, string>;
-    const sectionEntries = Object.entries(sections);
+    const sectionEntries = normalizeAiReportSections(report.sections);
     const isApproved = report.status === 'APPROVED' || report.status === 'FINALISED';
     const caseSnap = caseDetailRef.current[caseId];
 
@@ -2041,20 +2485,22 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
     ).join('');
 
     const sectionsHtml = sectionEntries
-      .map(([key, value], i) => {
+      .map((section, i) => {
         const open = i === 0 ? ' is-open' : '';
         const collapsed = i === 0 ? '' : ' collapsed';
-        const title = SECTION_TITLES[key] ?? key.replace(/([A-Z])/g, ' $1').trim();
-        const bodyText = typeof value === 'string' ? value : JSON.stringify(value);
+        const title = section.title || SECTION_TITLES[section.id] || section.id;
+        const bodyText = section.content;
+        const flagLabel =
+          section.complianceFlag === 'REVIEW_REQUIRED' ? '⚠ Review required' : '✓ Compliant';
         const regenBtn = isApproved
           ? ''
-          : `<button type="button" class="cd-rpt-sec-btn cd-rpt-sec-btn--regen ko-ai-regen-btn" data-report-id="${escHtml(report.id)}" data-section-key="${escHtml(key)}" onclick="event.stopPropagation()">↻ Regenerate</button>`;
+          : `<button type="button" class="cd-rpt-sec-btn cd-rpt-sec-btn--regen ko-ai-regen-btn" data-report-id="${escHtml(report.id)}" data-section-key="${escHtml(section.id)}" onclick="event.stopPropagation()">↻ Regenerate</button>`;
         const editBtn = `<button type="button" class="cd-rpt-sec-btn" onclick="event.stopPropagation();openEditor('${escJs(title)}', '${escJs(bodyText)}')">✎ Edit</button>`;
         return `<div class="cd-rpt-section${open}">
       <div class="cd-rpt-section-head" onclick="toggleCaseReportSection(this)">
         <span class="cd-rpt-section-title">${escHtml(title)}</span>
         <div class="cd-rpt-section-actions">
-          <span class="cd-rpt-compliant">✓ Compliant</span>
+          <span class="cd-rpt-compliant">${flagLabel}</span>
           ${regenBtn}
           ${editBtn}
           <span class="cd-rpt-chevron">▼</span>
@@ -2409,7 +2855,11 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
                   aria-live="polite"
                 >
                   <div className="h-9 w-9 animate-spin rounded-full border-2 border-brand-teal border-t-transparent" />
-                  <p className="text-sm font-medium text-gray-600">Loading live demo…</p>
+                  <p className="text-sm font-medium text-gray-600">
+                    {isPersonalDashboard && displayName
+                      ? `${timeGreeting()}, ${displayName} — loading your dashboard…`
+                      : 'Loading live demo…'}
+                  </p>
                   <div className="h-32 w-full max-w-md animate-pulse rounded-md bg-gray-100" />
                 </div>
               )}
@@ -2424,6 +2874,15 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
                   scrolling="no"
                   loading="eager"
                   onLoad={() => {
+                    try {
+                      const idoc = iframeRef.current?.contentDocument;
+                      if (idoc) {
+                        if (isPersonalDashboard) preparePersonalDashboardIframe(idoc);
+                      }
+                    } catch {
+                      // same-origin expected
+                    }
+
                     setIframeLoaded(true);
                     window.setTimeout(() => {
                       if (isPersonalDashboard) {
@@ -2455,8 +2914,6 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
                         const mobileStyle = idoc.createElement('style');
                         mobileStyle.id = 'ko-mobile-msg-styles';
                         mobileStyle.textContent = [
-                          // Kanban scroll fix: let vertical touch events pass through to parent page
-                          '@media(max-width:700px){.ov-kanban-section{touch-action:pan-x pinch-zoom!important;overflow-y:hidden!important}}',
                           '.msg-hub-thread-back{display:none;width:36px;height:36px;align-items:center;justify-content:center;border:none;background:transparent;cursor:pointer;color:#18181b;padding:0;flex-shrink:0;border-radius:8px}',
                           '.msg-hub-thread-back:hover{background:#f4f4f5}',
                           '.msg-hub-thread-hd-av{display:none;width:40px;height:40px;border-radius:50%;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0}',
@@ -2475,6 +2932,11 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
                           '}',
                         ].join('');
                         idoc.head.appendChild(mobileStyle);
+
+                        const iwinOverview = idoc.defaultView as Window & {
+                          koRefreshOverviewMobilePipeline?: () => void;
+                        };
+                        iwinOverview?.koRefreshOverviewMobilePipeline?.();
 
                         idoc.addEventListener('click', async (e: MouseEvent) => {
                           const target = e.target as HTMLElement;
@@ -2639,8 +3101,15 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
                               });
                               // Patch only that section's body text in the DOM.
                               const sectionBodyEl = regenBtn.closest('.cd-rpt-section')?.querySelector('.cd-rpt-section-body');
-                              const newContent = (result.data.sections as Record<string, string>)?.[sectionKey] ?? '';
+                              const updated = normalizeAiReportSections(result.data.sections).find(
+                                (s) => s.id === sectionKey,
+                              );
+                              const newContent = updated?.content ?? '';
                               if (sectionBodyEl) sectionBodyEl.textContent = newContent;
+                              const flagEl = regenBtn.closest('.cd-rpt-section')?.querySelector('.cd-rpt-compliant');
+                              if (flagEl && updated?.complianceFlag === 'REVIEW_REQUIRED') {
+                                flagEl.textContent = '⚠ Review required';
+                              }
                             } catch {
                               // Silently restore on error.
                             } finally {

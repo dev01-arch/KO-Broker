@@ -1,11 +1,13 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useClerk, useUser } from '@clerk/nextjs';
 import {
   AlertTriangle,
   Building2,
   CheckCircle2,
+  CreditCard,
   Loader2,
   LogOut,
   MessageSquare,
@@ -15,6 +17,7 @@ import {
   User,
 } from 'lucide-react';
 import { SystemStatusPanel } from '@/components/dashboard/system-status-panel';
+import { BillingSettingsSection } from '@/components/dashboard/billing-settings-section';
 import {
   emptyIntegrationsDraft,
   emptyMessagingDraft,
@@ -33,7 +36,7 @@ import { useIsAdmin } from '@/hooks/use-org';
 /** Hidden from the UI — code retained for future admin tooling. */
 const SHOW_ARCHIVED_SECTIONS = false;
 
-type SettingsSection = 'organization' | 'messaging' | 'account';
+type SettingsSection = 'organization' | 'messaging' | 'billing' | 'account';
 
 const SETTINGS_SECTIONS: {
   id: SettingsSection;
@@ -48,6 +51,13 @@ const SETTINGS_SECTIONS: {
     icon: Building2,
     containerBg: '#E9FCFF',
     iconColor: '#00B8D9',
+  },
+  {
+    id: 'billing',
+    label: 'Billing',
+    icon: CreditCard,
+    containerBg: '#FFF5E0',
+    iconColor: '#CE652D',
   },
   {
     id: 'messaging',
@@ -108,9 +118,19 @@ function EnabledToggle({
 
 type IntegrationsSettingsPanelProps = {
   embedded?: boolean;
+  initialSection?: SettingsSection;
 };
 
-export function IntegrationsSettingsPanel({ embedded = false }: IntegrationsSettingsPanelProps) {
+export function IntegrationsSettingsPanel({
+  embedded = false,
+  initialSection = 'organization',
+}: IntegrationsSettingsPanelProps) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const billingParam = searchParams.get('billing');
+  const billingNotice =
+    billingParam === 'success' || billingParam === 'cancel' ? billingParam : null;
+  const sectionParam = searchParams.get('section');
   const { signOut } = useClerk();
   const { user, isLoaded: userLoaded } = useUser();
   const isAdmin = useIsAdmin();
@@ -123,7 +143,7 @@ export function IntegrationsSettingsPanel({ embedded = false }: IntegrationsSett
   const { data: advisersData, isLoading: advisersLoading, error: advisersError } = useAdvisers();
   const { mutateAsync: createAdviser, isPending: creatingAdviser } = useCreateAdviser();
 
-  const [activeSection, setActiveSection] = useState<SettingsSection>('organization');
+  const [activeSection, setActiveSection] = useState<SettingsSection>(initialSection);
   const [integrationsDraft, setIntegrationsDraft] = useState<IntegrationsDraft>(
     emptyIntegrationsDraft(),
   );
@@ -133,6 +153,22 @@ export function IntegrationsSettingsPanel({ embedded = false }: IntegrationsSett
   const [error, setError] = useState<string | null>(null);
   const [signingOut, setSigningOut] = useState(false);
   const [adviserDraft, setAdviserDraft] = useState({ firstName: '', lastName: '', email: '' });
+
+  useEffect(() => {
+    if (billingNotice) {
+      setActiveSection('billing');
+      return;
+    }
+    if (sectionParam && SETTINGS_SECTIONS.some((section) => section.id === sectionParam)) {
+      setActiveSection(sectionParam as SettingsSection);
+      return;
+    }
+    setActiveSection(initialSection);
+  }, [billingNotice, initialSection, sectionParam]);
+
+  function handleBillingNoticeDismiss() {
+    router.replace('/dashboard/settings?section=billing');
+  }
 
   useEffect(() => {
     if (integrationsData?.data) {
@@ -260,7 +296,7 @@ export function IntegrationsSettingsPanel({ embedded = false }: IntegrationsSett
   const organizationSection = (
     <div className="space-y-6">
       <p className="text-sm text-ink-60">
-        Add advisers to this organization so they can be assigned to cases.
+        Add organization members so they can be assigned as advisers on new clients and cases.
       </p>
       <div className="space-y-6">
         <div className="grid gap-3 md:grid-cols-3">
@@ -309,9 +345,9 @@ export function IntegrationsSettingsPanel({ embedded = false }: IntegrationsSett
             <span>Status</span>
           </div>
           {advisersLoading ? (
-            <div className="px-4 py-4 text-sm text-ink-60">Loading advisers…</div>
+            <div className="px-4 py-4 text-sm text-ink-60">Loading members…</div>
           ) : advisers.length === 0 ? (
-            <div className="px-4 py-4 text-sm text-ink-60">No advisers added yet.</div>
+            <div className="px-4 py-4 text-sm text-ink-60">No members added yet.</div>
           ) : (
             advisers.map((adviser) => (
               <div key={adviser.id} className="grid grid-cols-[1fr_1fr_1.5fr_auto] gap-3 border-b border-ink-20 px-4 py-3 text-sm text-ink last:border-b-0">
@@ -429,6 +465,13 @@ export function IntegrationsSettingsPanel({ embedded = false }: IntegrationsSett
     switch (activeSection) {
       case 'organization':
         return organizationSection;
+      case 'billing':
+        return (
+          <BillingSettingsSection
+            billingNotice={billingNotice}
+            onBillingNoticeDismiss={handleBillingNoticeDismiss}
+          />
+        );
       case 'messaging':
         return messagingSection;
       case 'account':

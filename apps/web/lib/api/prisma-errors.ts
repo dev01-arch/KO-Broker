@@ -17,3 +17,8 @@ export function isPrismaUniqueConflict(error: unknown, field: string): boolean {
   const target = meta?.target;
   return Array.isArray(target) && target.includes(field);
 }
+
+export function isPrismaAnyUniqueConflict(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false;
+  return 'code' in error && String(error.code) === 'P2002';
+}

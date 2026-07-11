@@ -12,14 +12,14 @@ import {
   Sparkles,
   ThumbsUp,
 } from 'lucide-react';
-import { useAiReports, useGenerateReport, useApproveReport } from '@/hooks/use-ai-reports';
+import { useAiReports, useGenerateReport, useApproveReport, useRegenerateSection } from '@/hooks/use-ai-reports';
 import { ApiErrorState } from '@/components/dashboard/api-error-state';
 import { PlanGate } from '@/components/dashboard/plan-gate';
 import { usePlanFeature } from '@/hooks/use-org';
 import { useHealth } from '@/hooks/use-system';
 import { useCases } from '@/hooks/use-cases';
 import type { AiReport, ReportTemplate, ReportStatus } from '@/lib/api/client';
-import { formatApiError } from '@/lib/api/client';
+import { formatApiError, normalizeAiReportSections } from '@/lib/api/client';
 
 const TEMPLATE_LABELS: Record<ReportTemplate, string> = {
   BTL: 'Buy to Let',
@@ -50,9 +50,13 @@ function formatDate(iso: string) {
 function ReportCard({ report }: { report: AiReport }) {
   const [expanded, setExpanded] = useState(false);
   const [approveError, setApproveError] = useState<string | null>(null);
+  const [regenError, setRegenError] = useState<string | null>(null);
+  const [regeneratingId, setRegeneratingId] = useState<string | null>(null);
   const { mutateAsync: approve, isPending: isApproving } = useApproveReport();
+  const { mutateAsync: regenerateSection } = useRegenerateSection();
   const statusInfo = STATUS_STYLES[report.status];
-  const sections = report.sections as Record<string, string> | undefined;
+  const sections = normalizeAiReportSections(report.sections);
+  const canEdit = report.status === 'DRAFT' || report.status === 'ADVISER_REVIEW' || report.status === 'APPROVED';
 
   return (
     <div className="rounded-xl border border-ink-20 bg-white overflow-hidden">
@@ -86,17 +90,62 @@ function ReportCard({ report }: { report: AiReport }) {
 
       {expanded && (
         <div className="border-t border-ink-20 px-5 py-4 space-y-4">
-          {sections && Object.keys(sections).length > 0 ? (
-            Object.entries(sections).map(([key, value]) => (
-              <div key={key}>
-                <h4 className="text-xs font-bold uppercase tracking-wide text-ink-60 mb-1">
-                  {key.replace(/([A-Z])/g, ' $1').trim()}
-                </h4>
-                <p className="text-sm text-ink">{String(value)}</p>
+          {sections.length > 0 ? (
+            sections.map((section) => (
+              <div key={section.id} className="space-y-2">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <h4 className="text-xs font-bold uppercase tracking-wide text-ink-60 mb-1">
+                      {section.title}
+                    </h4>
+                    {section.complianceFlag === 'REVIEW_REQUIRED' && (
+                      <p className="mb-1 flex items-center gap-1 text-[11px] text-amber">
+                        <AlertTriangle className="h-3 w-3 shrink-0" />
+                        {section.flagReason || 'Review required'}
+                      </p>
+                    )}
+                  </div>
+                  {canEdit && (
+                    <button
+                      type="button"
+                      disabled={regeneratingId === section.id}
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        setRegenError(null);
+                        setRegeneratingId(section.id);
+                        try {
+                          await regenerateSection({
+                            reportId: report.id,
+                            sectionId: section.id,
+                          });
+                        } catch (err) {
+                          setRegenError(
+                            formatApiError(err, { fallback: 'Could not regenerate section.' }),
+                          );
+                        } finally {
+                          setRegeneratingId(null);
+                        }
+                      }}
+                      className="flex shrink-0 items-center gap-1 rounded-md border border-ink-20 px-2 py-1 text-xs font-medium text-ink-60 hover:bg-ink-08 disabled:opacity-50"
+                    >
+                      {regeneratingId === section.id ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        <RefreshCw className="h-3 w-3" />
+                      )}
+                      Regenerate
+                    </button>
+                  )}
+                </div>
+                <p className="text-sm text-ink whitespace-pre-wrap">{section.content}</p>
               </div>
             ))
           ) : (
             <p className="text-sm text-ink-60">No sections generated yet.</p>
+          )}
+
+          {regenError && (
+            <p className="rounded-lg bg-red/10 px-3 py-2 text-xs text-red">{regenError}</p>
           )}
 
           {(report.status === 'DRAFT' || report.status === 'ADVISER_REVIEW') && (
@@ -127,11 +176,22 @@ function ReportCard({ report }: { report: AiReport }) {
             </div>
           )}
 
-          {report.status === 'APPROVED' && (
+          {(report.status === 'APPROVED' || report.status === 'FINALISED') && (
             <div className="flex items-center gap-2 rounded-lg bg-brand-teal-50 px-3 py-2 text-sm text-brand-teal-700">
               <CheckCircle2 className="h-4 w-4 shrink-0" />
-              Report approved.
+              Report {report.status === 'FINALISED' ? 'finalised' : 'approved'}.
               {report.approvedBy && <span className="text-brand-teal-600/70"> by {report.approvedBy.slice(0, 8)}…</span>}
+              {report.pdfUrl && (
+                <a
+                  href={report.pdfUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="ml-auto text-xs font-medium underline"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  View PDF
+                </a>
+              )}
             </div>
           )}
         </div>
@@ -262,7 +322,7 @@ export default function AIReportsPage() {
         <PlanGate
           feature="ai_reports"
           title="AI Reports are a Professional feature"
-          description="Upgrade to generate AI-powered suitability reports with Azure AI Foundry."
+          description="Upgrade to generate AI-powered suitability reports."
         />
       </>
     );
@@ -293,7 +353,7 @@ export default function AIReportsPage() {
             </span>
           )}
           <span className="inline-flex items-center gap-1.5 rounded-full border border-brand-teal-700/25 bg-brand-teal-700/10 px-3 py-1 text-[11px] font-semibold text-brand-teal-700">
-            <Bot className="h-3 w-3" /> Azure AI Foundry
+            <Bot className="h-3 w-3" /> AI Reports
           </span>
         </div>
         <button

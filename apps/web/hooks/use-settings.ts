@@ -82,10 +82,11 @@ export function useUpdateMessagingSettings() {
   });
 }
 
-export function useAdvisers() {
+export function useAdvisers(options?: { enabled?: boolean }) {
   const getToken = useToken();
   return useQuery({
     queryKey: advisersQueryKey,
+    enabled: options?.enabled ?? true,
     queryFn: async () => {
       const token = await requireAuthToken(getToken);
       return settingsApi.listAdvisers(token);

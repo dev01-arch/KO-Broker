@@ -284,12 +284,20 @@ export async function inviteClientToPortal(orgId: string, caseId: string, inviti
       'This link is single-use. If it expires, ask your adviser to send a new invitation.',
     ].join('\n');
 
+    const emailHtml = `
+      <p>Hi ${clientName},</p>
+      <p><strong>${adviserName}</strong> has invited you to complete your mortgage fact-find for case <strong>${caseRecord.referenceNumber}</strong>.</p>
+      <p><a href="${inviteUrl}" style="color:#0F6E56; font-weight:600;">Open your secure client portal</a> to get started.</p>
+      <p>This link is single-use. If it expires, ask your adviser to send a new invitation.</p>
+    `;
+
     const smsBody = `KO Brokers: ${adviserName} invited you to complete your fact-find. Open: ${inviteUrl}`;
 
     const emailResult = await sendEmail({
       to: caseRecord.client.email,
       subject: `Complete your fact-find — ${caseRecord.referenceNumber}`,
       body: emailBody,
+      html: emailHtml,
     });
 
     let smsResult: { ok: boolean; error?: string } = { ok: false, error: 'No phone number' };

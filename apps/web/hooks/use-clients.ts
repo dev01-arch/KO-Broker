@@ -19,9 +19,14 @@ export function clientsQueryKey(params: ListClientsParams = {}) {
   return [
     'clients',
     params.page ?? 1,
-    params.perPage ?? 25,
+    params.perPage ?? 10,
     params.search ?? '',
     params.employmentStatus ?? '',
+    params.clientType ?? '',
+    params.isReferred ?? '',
+    params.clientCategory ?? '',
+    params.status ?? '',
+    params.assignedMemberId ?? '',
   ] as const;
 }
 

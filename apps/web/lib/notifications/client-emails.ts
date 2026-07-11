@@ -19,21 +19,31 @@ export async function sendClientWelcomeEmail(client: {
   referenceNumber: string;
 }): Promise<EmailDeliveryStatus> {
   const clientName = `${client.firstName} ${client.lastName}`.trim();
+  const subject = `Welcome to KO Platform — ${client.referenceNumber}`;
+  const body = [
+    `Hi ${clientName},`,
+    '',
+    'Your mortgage adviser has added you as a client on KO Platform.',
+    '',
+    `Your client reference is ${client.referenceNumber}.`,
+    '',
+    'You will receive a separate invitation when your adviser is ready for you to complete your fact-find in the client portal.',
+    '',
+    'If you have any questions, please contact your adviser directly.',
+  ].join('\n');
+  const html = `
+    <p>Hi ${clientName},</p>
+    <p>Your mortgage adviser has added you as a client on <strong>KO Platform</strong>.</p>
+    <p>Your client reference is <strong>${client.referenceNumber}</strong>.</p>
+    <p>You will receive a separate invitation when your adviser is ready for you to complete your fact-find in the client portal.</p>
+    <p>If you have any questions, please contact your adviser directly.</p>
+  `;
 
   const result = await sendEmail({
     to: client.email,
-    subject: `Welcome to KO Platform — ${client.referenceNumber}`,
-    body: [
-      `Hi ${clientName},`,
-      '',
-      'Your mortgage adviser has added you as a client on KO Platform.',
-      '',
-      `Your client reference is ${client.referenceNumber}.`,
-      '',
-      'You will receive a separate invitation when your adviser is ready for you to complete your fact-find in the client portal.',
-      '',
-      'If you have any questions, please contact your adviser directly.',
-    ].join('\n'),
+    subject,
+    body,
+    html,
     from: formatFromAddress(),
   });
 

@@ -19,17 +19,17 @@ import { PricingCard } from '@/components/marketing/pricing-card';
 import { marketingImages } from '@/components/marketing/marketing-assets';
 
 const KEY_FEATURE_ROWS: { name: string; tiers: [boolean, boolean, boolean] }[] = [
-  { name: 'Pipeline CRM', tiers: [true, true, true] },
-  { name: 'Fact-find templates', tiers: [true, true, true] },
-  { name: 'Up to 50 cases/mo', tiers: [true, true, true] },
-  { name: 'Email support', tiers: [true, true, true] },
-  { name: 'Lender research engine', tiers: [false, true, true] },
-  { name: 'Compliance vault', tiers: [false, true, true] },
-  { name: 'AI report generation', tiers: [false, true, true] },
-  { name: 'Priority support', tiers: [false, true, true] },
-  { name: 'SSO + advanced roles', tiers: [false, false, true] },
-  { name: 'Custom audit reports', tiers: [false, false, true] },
-  { name: 'API access', tiers: [false, false, true] },
+  { name: 'Core CRM & Pipeline', tiers: [true, true, true] },
+  { name: 'Compliance Engine', tiers: [true, true, true] },
+  { name: 'All 8 Calculators', tiers: [true, true, true] },
+  { name: 'Basic Integrations', tiers: [true, true, true] },
+  { name: 'Messages & Notifications', tiers: [false, true, true] },
+  { name: 'AI Report Generation', tiers: [false, true, true] },
+  { name: 'Client Portal', tiers: [false, true, true] },
+  { name: 'Advanced Reporting', tiers: [false, true, true] },
+  { name: 'Full AI Intelligence Suite', tiers: [false, false, true] },
+  { name: 'Lender API Submissions', tiers: [false, false, true] },
+  { name: 'Custom Domain', tiers: [false, false, true] },
 ];
 
 const scrollReveal = {
@@ -265,9 +265,14 @@ export function LandingPage() {
                 v2Design="starter"
                 tier="Starter"
                 price="35"
-                buttonText="Choose Starter"
+                buttonText="Get started"
                 buttonHref="/sign-up"
-                features={['Pipeline CRM', 'Fact-find templates', 'Up to 50 cases/mo', 'Email support']}
+                features={[
+                  'Core CRM & Pipeline',
+                  'Compliance Engine',
+                  'All 8 Calculators',
+                  'Basic Integrations',
+                ]}
               />
             </motion.div>
             <motion.div
@@ -284,7 +289,13 @@ export function LandingPage() {
                 mostPopular
                 buttonText="Try the demo"
                 buttonHref="/demo"
-                features={['Everything in Starter', 'Lender research engine', 'Compliance vault', 'AI report generation', 'Priority support']}
+                features={[
+                  'Everything in Starter',
+                  'Messages & Notifications',
+                  'AI Report Generation',
+                  'Client Portal',
+                  'Advanced Reporting',
+                ]}
               />
             </motion.div>
             <motion.div
@@ -298,9 +309,14 @@ export function LandingPage() {
                 v2Design="enterprise"
                 tier="Enterprise"
                 price="75"
-                buttonText="Choose Enterprise"
+                buttonText="Talk to us"
                 buttonHref="/sign-up"
-                features={['Everything in Professional', 'SSO + advanced roles', 'Custom audit reports', 'API access']}
+                features={[
+                  'Everything in Pro',
+                  'Full AI Intelligence Suite',
+                  'Lender API Submissions',
+                  'Custom Domain',
+                ]}
               />
             </motion.div>
           </div>

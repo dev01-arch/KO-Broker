@@ -1,20 +1,41 @@
 /**
- * Azure AI Foundry client — PRD-09
- *
- * Uses @azure/openai SDK (compatible with Azure AI Foundry endpoints).
- * Initialised with endpoint, apiKey, and apiVersion from env vars.
- *
- * Model selection is via AZURE_AI_FOUNDRY_DEPLOYMENT_NAME env var,
- * making it a zero-code change to swap models.
+ * AI generation client for suitability reports.
+ * Uses OpenRouter (same provider as fact-find extraction).
  */
 
-// TODO (PRD-09): Install @azure/openai and implement
-// import { AzureOpenAI } from '@azure/openai';
-//
-// export const azureClient = new AzureOpenAI({
-//   endpoint: process.env.AZURE_AI_FOUNDRY_ENDPOINT!,
-//   apiKey: process.env.AZURE_AI_FOUNDRY_API_KEY!,
-//   apiVersion: '2024-10-01-preview',
-// });
+import {
+  isOpenRouterConfigured,
+  openRouterChatCompletion,
+} from '@/lib/ai/openRouterClient';
 
-export {};
+export function isReportAiAvailable(): boolean {
+  return isOpenRouterConfigured();
+}
+
+/** @deprecated Prefer isReportAiAvailable() — evaluated at module load. */
+export const AI_AVAILABLE = isOpenRouterConfigured();
+
+export interface GenerationMessage {
+  role: 'system' | 'user' | 'assistant';
+  content: string;
+}
+
+/**
+ * callOpenRouter — chat completion returning raw text (expected JSON).
+ */
+export async function callOpenRouter(
+  messages: GenerationMessage[],
+  maxTokens = 4096,
+): Promise<string> {
+  if (!isOpenRouterConfigured()) {
+    throw new Error(
+      'OpenRouter API key is not configured. Set OPENROUTER_API_KEY and optionally OPENROUTER_MODEL.',
+    );
+  }
+
+  return openRouterChatCompletion({
+    messages,
+    response_format: { type: 'json_object' },
+    max_tokens: maxTokens,
+  });
+}

@@ -1,9 +1,8 @@
 import { NextRequest } from 'next/server';
 import { z } from 'zod';
-import { requireApiAuth } from '@/lib/api/require-api-auth';
-import { createAdviserForOrg, listAdvisersForOrg } from '@/lib/api/settings-data';
+import { requireApiAuth } from '@/lib/api/require-api-auth';import { createAdviserForOrg, listAdvisersForOrg } from '@/lib/api/settings-data';
 import { apiError, apiFromZodError, apiSuccess } from '@/lib/api/responses';
-import { isPrismaConnectionError } from '@/lib/api/prisma-errors';
+import { isPrismaAnyUniqueConflict, isPrismaConnectionError } from '@/lib/api/prisma-errors';
 
 const CreateAdviserSchema = z.object({
   firstName: z.string().trim().min(1, 'First name is required'),
@@ -50,6 +49,16 @@ export async function POST(req: NextRequest) {
     const adviser = await createAdviserForOrg(orgId, parsed.data);
     return apiSuccess(adviser, { status: 201 });
   } catch (error) {
+    if (isPrismaAnyUniqueConflict(error)) {
+      return apiError('VALIDATION_ERROR', 'A member with this email already exists', 422, {
+        fields: { email: ['A member with this email already exists'] },
+      });
+    }
+    if (error instanceof Error && error.message === 'MEMBER_EMAIL_EXISTS') {
+      return apiError('VALIDATION_ERROR', 'A member with this email already exists', 422, {
+        fields: { email: ['A member with this email already exists'] },
+      });
+    }
     console.error('[POST /api/settings/advisers]', error);
     if (isPrismaConnectionError(error)) {
       return apiError('SERVICE_UNAVAILABLE', 'Database is unavailable', 503);

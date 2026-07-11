@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { prisma } from '@/lib/db';
+import { getPlanFromStripePriceId } from '@/lib/billing/stripe-checkout';
 
 type OrgPlan = 'STARTER' | 'PROFESSIONAL' | 'ENTERPRISE';
 
@@ -11,12 +12,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'mock-key', {
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
 function getPlanFromPriceId(priceId: string): OrgPlan {
-  const profPrice = process.env.STRIPE_PRICE_PROFESSIONAL;
-  const entPrice = process.env.STRIPE_PRICE_ENTERPRISE;
-
-  if (priceId === profPrice) return 'PROFESSIONAL';
-  if (priceId === entPrice) return 'ENTERPRISE';
-  return 'STARTER';
+  return getPlanFromStripePriceId(priceId) ?? 'STARTER';
 }
 
 /**
@@ -81,9 +77,18 @@ async function handleEvent(event: Stripe.Event) {
       const subscription = event.data.object as Stripe.Subscription;
       const customerId = subscription.customer as string;
       const priceId = subscription.items.data[0]?.price.id;
+      const metadataPlan = subscription.metadata?.plan as OrgPlan | undefined;
 
-      if (customerId && priceId) {
-        const plan = getPlanFromPriceId(priceId);
+      if (customerId) {
+        const plan =
+          metadataPlan && ['STARTER', 'PROFESSIONAL', 'ENTERPRISE'].includes(metadataPlan)
+            ? metadataPlan
+            : priceId
+              ? getPlanFromPriceId(priceId)
+              : null;
+
+        if (!plan) break;
+
         const org = await prisma.organisation.findFirst({
           where: { stripeCustomerId: customerId },
         });

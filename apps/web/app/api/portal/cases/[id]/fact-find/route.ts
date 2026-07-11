@@ -2,7 +2,10 @@ import { NextRequest } from 'next/server';
 import { UpsertFactFindSchema } from '@ko/types';
 import { requirePortalAuth } from '@/lib/api/require-portal-auth';
 import { getCaseForOrg } from '@/lib/api/cases-data';
-import { upsertFactFindWithCompliance } from '@/lib/api/fact-find-data';
+import {
+  completePortalFactFind,
+  upsertFactFindWithCompliance,
+} from '@/lib/api/fact-find-data';
 import { serializeFactFind } from '@/lib/api/cases';
 import { applyCorsHeaders } from '@/lib/api/cors';
 import { apiError, apiFromZodError, apiNotFound, apiSuccess } from '@/lib/api/responses';
@@ -35,8 +38,10 @@ export async function PUT(req: NextRequest, context: RouteContext) {
       return applyCorsHeaders(req, apiFromZodError(parsed.error));
     }
 
-    const result = await upsertFactFindWithCompliance(session.orgId, id, parsed.data, {
-      allowWhenComplete: false,
+    const { markComplete, ...sectionInput } = parsed.data;
+
+    const result = await upsertFactFindWithCompliance(session.orgId, id, sectionInput, {
+      allowWhenComplete: Boolean(markComplete),
     });
     if ('error' in result) {
       if (result.error === 'NOT_FOUND') {
@@ -53,6 +58,24 @@ export async function PUT(req: NextRequest, context: RouteContext) {
         );
       }
       return applyCorsHeaders(req, apiNotFound('Case not found'));
+    }
+
+    if (markComplete) {
+      const completeResult = await completePortalFactFind({
+        ...session,
+        caseId: id,
+      });
+      if ('error' in completeResult) {
+        return applyCorsHeaders(
+          req,
+          apiNotFound(
+            'message' in completeResult && completeResult.message
+              ? completeResult.message
+              : 'Fact-Find not initialized',
+          ),
+        );
+      }
+      return applyCorsHeaders(req, apiSuccess(serializeFactFind(completeResult.factFind)));
     }
 
     return applyCorsHeaders(req, apiSuccess(serializeFactFind(result.factFind)));

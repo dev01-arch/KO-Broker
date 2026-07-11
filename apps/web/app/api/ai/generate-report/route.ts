@@ -34,6 +34,13 @@ export async function POST(req: NextRequest) {
 
     if ('error' in result) {
       if (result.error === 'NOT_FOUND') return apiNotFound('Case not found');
+      if (result.error === 'SERVICE_UNAVAILABLE') {
+        return apiError(
+          'SERVICE_UNAVAILABLE',
+          'message' in result ? result.message : 'AI service unavailable',
+          503,
+        );
+      }
       if (result.error === 'BUSINESS_RULE_VIOLATION') {
         return apiError(
           'BUSINESS_RULE_VIOLATION',
@@ -49,6 +56,10 @@ export async function POST(req: NextRequest) {
     console.error('[POST /api/ai/generate-report]', error);
     if (isPrismaConnectionError(error))
       return apiError('SERVICE_UNAVAILABLE', 'Database is unavailable', 503);
+    const message = error instanceof Error ? error.message : 'An unexpected error occurred';
+    if (message.includes('OpenRouter') || message.includes('AI response')) {
+      return apiError('INTERNAL_ERROR', message, 502);
+    }
     return apiError('INTERNAL_ERROR', 'An unexpected error occurred', 500);
   }
 }

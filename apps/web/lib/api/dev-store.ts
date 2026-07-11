@@ -5,6 +5,7 @@ import { generateReference } from '@ko/utils';
 import type {
   CaseStage,
   CaseType,
+  ClientStatus,
   ClientType,
   DocumentType,
   EmploymentStatus,
@@ -14,6 +15,8 @@ import type {
   ReportStatus,
   ReportTemplate,
   UpsertFactFindInput,
+  CreateProductConsideredInput,
+  UpdateProductConsideredInput,
 } from '@ko/types';
 import { calculateLTV } from '@ko/utils';
 
@@ -49,6 +52,11 @@ type DevClient = {
   dateOfBirth?: string;
   employmentStatus: EmploymentStatus;
   annualIncome?: number;
+  isReferred?: boolean;
+  referredToCompany?: string;
+  assignedMemberId?: string;
+  status?: ClientStatus;
+  insurerName?: string;
   isVulnerable: boolean;
   portalEnabled: boolean;
   createdAt: string;
@@ -90,6 +98,19 @@ type DevFactFind = {
   updatedAt: string;
 };
 
+type DevProductConsidered = {
+  id: string;
+  orgId: string;
+  caseId: string;
+  lenderName: string;
+  productName: string;
+  rate?: number;
+  fee?: number;
+  isSelected: boolean;
+  reasonNotSelected?: string;
+  createdAt: string;
+};
+
 type DevDocument = {
   id: string;
   orgId: string;
@@ -125,7 +146,7 @@ type DevAiReport = {
   caseId: string;
   templateType: ReportTemplate;
   status: ReportStatus;
-  sections?: Record<string, unknown>;
+  sections?: Record<string, unknown> | unknown[];
   pdfUrl?: string;
   generatedBy?: string;
   approvedBy?: string;
@@ -157,12 +178,25 @@ type DevOrgSettings = {
   };
 };
 
+type DevOrganisationMember = {
+  id: string;
+  orgId: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  role: 'ADMIN' | 'ADVISER' | 'COMPLIANCE' | 'VIEWER';
+  isActive: boolean;
+  createdAt: string;
+};
+
 type DevStore = {
   orgs: DevOrg[];
   users: DevUser[];
+  members: DevOrganisationMember[];
   clients: DevClient[];
   cases: DevCase[];
   factFinds: DevFactFind[];
+  products: DevProductConsidered[];
   documents: DevDocument[];
   messages: DevMessage[];
   aiReports: DevAiReport[];
@@ -176,9 +210,11 @@ function emptyStore(): DevStore {
   return {
     orgs: [],
     users: [],
+    members: [],
     clients: [],
     cases: [],
     factFinds: [],
+    products: [],
     documents: [],
     messages: [],
     aiReports: [],
@@ -195,9 +231,11 @@ function loadStore(): DevStore {
     return {
       orgs: parsed.orgs ?? [],
       users: parsed.users ?? [],
+      members: parsed.members ?? [],
       clients: parsed.clients ?? [],
       cases: parsed.cases ?? [],
       factFinds: parsed.factFinds ?? [],
+      products: parsed.products ?? [],
       documents: parsed.documents ?? [],
       messages: parsed.messages ?? [],
       aiReports: parsed.aiReports ?? [],
@@ -264,12 +302,43 @@ export const devStore = {
     perPage: number;
     search?: string;
     employmentStatus?: EmploymentStatus;
+    clientType?: ClientType;
+    isReferred?: boolean;
+    clientCategory?: 'REFERRAL' | 'INDIVIDUAL' | 'COMPANY';
+    status?: ClientStatus;
+    assignedMemberId?: string;
   }) {
     const store = loadStore();
     let clients = store.clients.filter((client) => client.orgId === orgId);
 
+    if (params.clientCategory === 'REFERRAL') {
+      clients = clients.filter((client) => client.isReferred === true);
+    } else if (params.clientCategory === 'INDIVIDUAL') {
+      clients = clients.filter(
+        (client) => (client.clientType ?? 'INDIVIDUAL') === 'INDIVIDUAL' && !client.isReferred,
+      );
+    } else if (params.clientCategory === 'COMPANY') {
+      clients = clients.filter((client) => client.clientType === 'COMPANY');
+    }
+
     if (params.employmentStatus) {
       clients = clients.filter((client) => client.employmentStatus === params.employmentStatus);
+    }
+
+    if (params.clientType && !params.clientCategory) {
+      clients = clients.filter((client) => (client.clientType ?? 'INDIVIDUAL') === params.clientType);
+    }
+
+    if (params.isReferred !== undefined && !params.clientCategory) {
+      clients = clients.filter((client) => (client.isReferred ?? false) === params.isReferred);
+    }
+
+    if (params.status) {
+      clients = clients.filter((client) => (client.status ?? 'PROSPECT') === params.status);
+    }
+
+    if (params.assignedMemberId) {
+      clients = clients.filter((client) => client.assignedMemberId === params.assignedMemberId);
     }
 
     if (params.search) {
@@ -281,6 +350,7 @@ export const devStore = {
           client.companyName,
           client.email,
           client.referenceNumber,
+          client.referredToCompany,
         ]
           .join(' ')
           .toLowerCase();
@@ -298,6 +368,13 @@ export const devStore = {
       clients: pageItems.map((client) => ({
         ...client,
         clientType: client.clientType ?? 'INDIVIDUAL',
+        status: client.status ?? 'PROSPECT',
+        assignedMember: client.assignedMemberId
+          ? store.members.find(
+              (member) =>
+                member.orgId === orgId && member.id === client.assignedMemberId,
+            ) ?? null
+          : null,
         _count: { cases: 0, messages: 0 },
       })),
     };
@@ -315,23 +392,35 @@ export const devStore = {
     dateOfBirth?: string;
     employmentStatus?: EmploymentStatus;
     annualIncome?: number;
+    isReferred?: boolean;
+    referredToCompany?: string;
+    assignedMemberId?: string;
+    insurerName?: string;
   }) {
     const clientType = input.clientType ?? 'INDIVIDUAL';
     const isCompany = clientType === 'COMPANY';
     const companyName = input.companyName?.trim();
     const firstName = isCompany ? companyName! : input.firstName!.trim();
     const lastName = isCompany ? '—' : input.lastName!.trim();
+    const isReferred = !isCompany && input.isReferred === true;
+    const referredToCompany = isReferred ? input.referredToCompany?.trim() : undefined;
+    const insurerName =
+      !isCompany && !isReferred && input.insurerName?.trim()
+        ? input.insurerName.trim()
+        : undefined;
 
     return mutateStore((store) => {
       const year = new Date().getFullYear();
-      const count = store.clients.filter(
-        (client) =>
-          client.orgId === orgId && client.createdAt.startsWith(String(year)),
-      ).length;
+      const prefix = `KOC-${year}-`;
+      const yearRefs = store.clients
+        .filter((client) => client.orgId === orgId && client.referenceNumber.startsWith(prefix))
+        .map((client) => Number.parseInt(client.referenceNumber.slice(prefix.length), 10))
+        .filter((n) => Number.isFinite(n));
+      const sequence = yearRefs.length > 0 ? Math.max(...yearRefs) + 1 : 1;
       const client: DevClient = {
         id: randomUUID(),
         orgId,
-        referenceNumber: generateReference('KOC', count + 1),
+        referenceNumber: generateReference('KOC', sequence),
         clientType,
         companyName: isCompany ? companyName : undefined,
         companyNumber: isCompany ? input.companyNumber?.trim() || undefined : undefined,
@@ -343,6 +432,11 @@ export const devStore = {
         dateOfBirth: isCompany ? undefined : input.dateOfBirth,
         employmentStatus: input.employmentStatus ?? 'EMPLOYED',
         annualIncome: input.annualIncome,
+        isReferred,
+        referredToCompany,
+        assignedMemberId: input.assignedMemberId,
+        insurerName: input.insurerName,
+        status: 'PROSPECT',
         isVulnerable: false,
         portalEnabled: false,
         createdAt: new Date().toISOString(),
@@ -534,6 +628,7 @@ export const devStore = {
     const client = store.clients.find((c) => c.id === item.clientId);
     if (!client) return null;
     const factFind = store.factFinds.find((f) => f.caseId === item.id) ?? null;
+    const products = (store.products ?? []).filter((p) => p.caseId === item.id);
     return {
       ...item,
       createdAt: new Date(item.createdAt),
@@ -556,6 +651,17 @@ export const devStore = {
             updatedAt: new Date(factFind.updatedAt),
           }
         : null,
+      productsConsidered: products.map((p) => ({
+        id: p.id,
+        caseId: p.caseId,
+        lenderName: p.lenderName,
+        productName: p.productName,
+        rate: p.rate,
+        fee: p.fee,
+        isSelected: p.isSelected,
+        reasonNotSelected: p.reasonNotSelected,
+        createdAt: new Date(p.createdAt),
+      })),
       _count: { messages: 0, documents: 0 },
     };
   },
@@ -658,6 +764,150 @@ export const devStore = {
           updatedAt: new Date(updated.updatedAt),
         },
       };
+    });
+  },
+
+  // ── Products considered (RESEARCH) ─────────────────────────────────────────
+
+  listProducts(orgId: string, caseId: string) {
+    const store = loadStore();
+    const caseRecord = store.cases.find((c) => c.orgId === orgId && c.id === caseId);
+    if (!caseRecord) return { error: 'NOT_FOUND' as const };
+    const products = (store.products ?? [])
+      .filter((p) => p.caseId === caseId)
+      .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+      .map((p) => ({
+        ...p,
+        createdAt: new Date(p.createdAt),
+      }));
+    return { products };
+  },
+
+  createProduct(orgId: string, caseId: string, input: CreateProductConsideredInput) {
+    return mutateStore((store) => {
+      if (!store.products) store.products = [];
+      const caseIndex = store.cases.findIndex((c) => c.orgId === orgId && c.id === caseId);
+      if (caseIndex < 0) return { error: 'NOT_FOUND' as const };
+
+      if (input.isSelected) {
+        store.products = store.products.map((p) =>
+          p.caseId === caseId ? { ...p, isSelected: false } : p,
+        );
+      }
+
+      const product: DevProductConsidered = {
+        id: randomUUID(),
+        orgId,
+        caseId,
+        lenderName: input.lenderName,
+        productName: input.productName,
+        rate: input.rate,
+        fee: input.fee,
+        isSelected: input.isSelected ?? false,
+        reasonNotSelected: input.reasonNotSelected,
+        createdAt: new Date().toISOString(),
+      };
+      store.products.push(product);
+
+      if (product.isSelected) {
+        store.cases[caseIndex] = {
+          ...store.cases[caseIndex],
+          selectedLender: product.lenderName,
+          selectedProduct: product.productName,
+          selectedRate: product.rate,
+          selectedFee: product.fee,
+          updatedAt: new Date().toISOString(),
+        };
+      }
+
+      return { product: { ...product, createdAt: new Date(product.createdAt) } };
+    });
+  },
+
+  updateProduct(
+    orgId: string,
+    caseId: string,
+    productId: string,
+    input: UpdateProductConsideredInput,
+  ) {
+    return mutateStore((store) => {
+      if (!store.products) store.products = [];
+      const caseIndex = store.cases.findIndex((c) => c.orgId === orgId && c.id === caseId);
+      if (caseIndex < 0) return { error: 'NOT_FOUND' as const };
+
+      const index = store.products.findIndex(
+        (p) => p.orgId === orgId && p.caseId === caseId && p.id === productId,
+      );
+      if (index < 0) return { error: 'NOT_FOUND' as const, message: 'Product not found' };
+
+      const existing = store.products[index];
+      if (input.isSelected === true) {
+        store.products = store.products.map((p) =>
+          p.caseId === caseId && p.id !== productId ? { ...p, isSelected: false } : p,
+        );
+      }
+
+      const updated: DevProductConsidered = {
+        ...existing,
+        lenderName: input.lenderName ?? existing.lenderName,
+        productName: input.productName ?? existing.productName,
+        rate: input.rate === undefined ? existing.rate : (input.rate ?? undefined),
+        fee: input.fee === undefined ? existing.fee : (input.fee ?? undefined),
+        isSelected: input.isSelected ?? existing.isSelected,
+        reasonNotSelected:
+          input.reasonNotSelected === undefined
+            ? existing.reasonNotSelected
+            : (input.reasonNotSelected ?? undefined),
+      };
+      store.products[index] = updated;
+
+      if (updated.isSelected) {
+        store.cases[caseIndex] = {
+          ...store.cases[caseIndex],
+          selectedLender: updated.lenderName,
+          selectedProduct: updated.productName,
+          selectedRate: updated.rate,
+          selectedFee: updated.fee,
+          updatedAt: new Date().toISOString(),
+        };
+      } else if (existing.isSelected && input.isSelected === false) {
+        store.cases[caseIndex] = {
+          ...store.cases[caseIndex],
+          selectedLender: undefined,
+          selectedProduct: undefined,
+          selectedRate: undefined,
+          selectedFee: undefined,
+          updatedAt: new Date().toISOString(),
+        };
+      }
+
+      return { product: { ...updated, createdAt: new Date(updated.createdAt) } };
+    });
+  },
+
+  deleteProduct(orgId: string, caseId: string, productId: string) {
+    return mutateStore((store) => {
+      if (!store.products) store.products = [];
+      const caseIndex = store.cases.findIndex((c) => c.orgId === orgId && c.id === caseId);
+      if (caseIndex < 0) return { error: 'NOT_FOUND' as const };
+
+      const index = store.products.findIndex(
+        (p) => p.orgId === orgId && p.caseId === caseId && p.id === productId,
+      );
+      if (index < 0) return { error: 'NOT_FOUND' as const, message: 'Product not found' };
+
+      const [removed] = store.products.splice(index, 1);
+      if (removed.isSelected) {
+        store.cases[caseIndex] = {
+          ...store.cases[caseIndex],
+          selectedLender: undefined,
+          selectedProduct: undefined,
+          selectedRate: undefined,
+          selectedFee: undefined,
+          updatedAt: new Date().toISOString(),
+        };
+      }
+      return { ok: true as const };
     });
   },
 
@@ -807,16 +1057,40 @@ export const devStore = {
         caseId: input.caseId,
         templateType: input.templateType,
         status: 'DRAFT',
-        sections: {
-          clientIntroduction:
-            'Client objectives, income, and risk profile documented during the digital fact-find.',
-          propertyDetails:
-            'Subject property details, valuation, and loan-to-value documented for this case.',
-          ercAnalysis:
-            'Early repayment charge tiers modelled across the recommended product term.',
-          consumerDuty:
-            'Consumer Duty risks communicated; fair value assessment and personalised outcomes recorded.',
-        },
+        sections: [
+          {
+            id: 'client-introduction',
+            title: 'Client Introduction',
+            content:
+              'Client objectives, income, and risk profile documented during the digital fact-find. Consumer Duty outcomes considered.',
+            complianceFlag: 'REVIEW_REQUIRED',
+            flagReason: 'Dev-store draft — requires adviser review.',
+          },
+          {
+            id: 'property-details',
+            title: 'Property Details',
+            content:
+              'Subject property details, valuation, and loan-to-value documented for this case. Fair value assessment recorded.',
+            complianceFlag: 'OK',
+            flagReason: null,
+          },
+          {
+            id: 'product-research-recommendation',
+            title: 'Product Research & Recommendation',
+            content:
+              'Products considered and recommendation rationale recorded with Consumer Duty evidencing.',
+            complianceFlag: 'OK',
+            flagReason: null,
+          },
+          {
+            id: 'risks-consumer-duty',
+            title: 'Risks & Consumer Duty',
+            content:
+              'Consumer Duty risks communicated; fair value assessment and personalised outcomes recorded.',
+            complianceFlag: 'OK',
+            flagReason: null,
+          },
+        ],
         generatedBy: input.generatedBy,
         createdAt: now,
         updatedAt: now,
@@ -840,9 +1114,42 @@ export const devStore = {
       const index = store.aiReports.findIndex((r) => r.orgId === orgId && r.id === reportId);
       if (index < 0) return null;
       const current = store.aiReports[index];
+      const currentSections = current.sections;
+      let nextSections: Record<string, unknown> | unknown[];
+
+      if (Array.isArray(currentSections)) {
+        const found = currentSections.some(
+          (s) => typeof s === 'object' && s !== null && (s as { id?: string }).id === sectionKey,
+        );
+        nextSections = found
+          ? currentSections.map((s) => {
+              if (typeof s !== 'object' || s === null || (s as { id?: string }).id !== sectionKey) {
+                return s;
+              }
+              return {
+                ...s,
+                content,
+                complianceFlag: 'REVIEW_REQUIRED',
+                flagReason: 'Regenerated — requires adviser review before finalisation.',
+              };
+            })
+          : [
+              ...currentSections,
+              {
+                id: sectionKey,
+                title: sectionKey,
+                content,
+                complianceFlag: 'REVIEW_REQUIRED',
+                flagReason: 'Regenerated — requires adviser review before finalisation.',
+              },
+            ];
+      } else {
+        nextSections = { ...(currentSections ?? {}), [sectionKey]: content };
+      }
+
       store.aiReports[index] = {
         ...current,
-        sections: { ...(current.sections ?? {}), [sectionKey]: content },
+        sections: nextSections,
         updatedAt: new Date().toISOString(),
       };
       return store.aiReports[index];
@@ -855,7 +1162,7 @@ export const devStore = {
       if (index < 0) return null;
       store.aiReports[index] = {
         ...store.aiReports[index],
-        status: 'APPROVED',
+        status: 'FINALISED',
         approvedBy,
         updatedAt: new Date().toISOString(),
       };
@@ -902,37 +1209,56 @@ export const devStore = {
 
   listAdvisers(orgId: string) {
     const store = loadStore();
-    return store.users
-      .filter((user) => user.orgId === orgId && user.role === 'ADVISER')
-      .map((user) => ({
-        id: user.id,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        email: user.email,
-        isActive: true,
-        createdAt: new Date(),
+    return store.members
+      .filter((member) => member.orgId === orgId)
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+      .map((member) => ({
+        id: member.id,
+        firstName: member.firstName,
+        lastName: member.lastName,
+        email: member.email,
+        role: member.role,
+        isActive: member.isActive,
+        createdAt: member.createdAt,
       }));
+  },
+
+  getMember(orgId: string, memberId: string) {
+    return (
+      loadStore().members.find(
+        (member) => member.orgId === orgId && member.id === memberId,
+      ) ?? null
+    );
   },
 
   createAdviser(orgId: string, input: { firstName: string; lastName: string; email: string }) {
     return mutateStore((store) => {
-      const user: DevUser = {
+      const email = input.email.toLowerCase();
+      const duplicate = store.members.some(
+        (member) => member.orgId === orgId && member.email === email,
+      );
+      if (duplicate) {
+        throw new Error('MEMBER_EMAIL_EXISTS');
+      }
+
+      const member: DevOrganisationMember = {
         id: randomUUID(),
-        clerkId: `pending_${randomUUID()}`,
         orgId,
-        email: input.email.toLowerCase(),
+        email,
         firstName: input.firstName,
         lastName: input.lastName,
         role: 'ADVISER',
-      };
-      store.users.push(user);
-      return {
-        id: user.id,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        email: user.email,
         isActive: true,
-        createdAt: new Date(),
+        createdAt: new Date().toISOString(),
+      };
+      store.members.push(member);
+      return {
+        id: member.id,
+        firstName: member.firstName,
+        lastName: member.lastName,
+        email: member.email,
+        isActive: member.isActive,
+        createdAt: member.createdAt,
       };
     });
   },

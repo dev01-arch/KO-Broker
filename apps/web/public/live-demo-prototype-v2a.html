@@ -8,6 +8,13 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&display=block" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
+<script>
+(function () {
+  var qs = new URLSearchParams(location.search);
+  if (qs.get('embedded') === '1') document.documentElement.classList.add('ko-embedded');
+  if (qs.get('personal') === '1') document.documentElement.classList.add('ko-personal');
+})();
+</script>
 <style>
 :root {
   --teal-900:#04342C; --teal-800:#085041; --teal-700:#0F6E56; --teal-500:#1D9E75; --teal-400:#5DCAA5; --teal-100:#9FE1CB; --teal-50:#E1F5EE;
@@ -24,6 +31,11 @@
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'DM Sans',sans-serif;background:var(--ink);color:var(--white);min-height:100vh;overflow-x:hidden;overflow-y:hidden}
+html.ko-embedded body{background:#F7F8FA!important;color:var(--ink);overflow:hidden}
+html.ko-embedded nav,html.ko-embedded #landing{display:none!important}
+html.ko-embedded #dashboard.view{display:block!important}
+html.ko-personal #tab-overview .ov-mock-only,
+html.ko-personal #tab-overview .ov-filled-dashboard{display:none!important}
 
 /* ── NAV */
 nav{position:fixed;top:0;left:0;right:0;z-index:200;display:flex;align-items:center;justify-content:space-between;padding:0 40px;height:64px;background:rgba(13,31,26,0.92);backdrop-filter:blur(16px);border-bottom:1px solid rgba(255,255,255,0.07)}
@@ -324,6 +336,30 @@ body.embedded #tab-cases{background:transparent}
 #tab-overview .ov-activity-name{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:#18181b;line-height:1.3;margin:0}
 #tab-overview .ov-activity-ref{font-family:'DM Sans',sans-serif;font-size:11px;font-weight:400;color:#a1a1aa;line-height:normal;margin:0}
 #tab-overview .ov-activity-amt{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:#16856F;flex-shrink:0;white-space:nowrap}
+
+/* Overview — mobile pipeline (stage pills + single column); hidden on desktop */
+#tab-overview .ov-pipeline-mobile{display:none;flex-direction:column;align-items:stretch;gap:14px;width:100%;box-sizing:border-box}
+#tab-overview .ov-pipeline-mobile-stage-label{font-family:'DM Sans',sans-serif;font-size:12px;font-weight:400;color:#71717a;line-height:normal;margin:0}
+#tab-overview .ov-pipeline-mobile-pills{display:flex;flex-wrap:wrap;gap:8px;width:100%}
+#tab-overview .ov-pipeline-mobile-pill{padding:8px 14px;border-radius:999px;border:1px solid #e4e4e7;background:#fff;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;color:#52525b;cursor:pointer;transition:background .15s,border-color .15s,color .15s;line-height:1.2}
+#tab-overview .ov-pipeline-mobile-pill.is-active{background:#EAFCFF;border-color:#066D80;color:#066D80;font-weight:600}
+#tab-overview .ov-pipeline-mobile-summary{width:100%}
+#tab-overview .ov-pipeline-mobile-summary .ov-pb-summary-card{width:100%;min-width:0;min-height:0;border-radius:15px}
+#tab-overview .ov-pipeline-mobile-summary .ov-pb-summary-card .ov-pb-tab{border-radius:15px 15px 0 0}
+#tab-overview .ov-pipeline-mobile-summary .ov-stage-count{font-size:36px}
+#tab-overview .ov-pipeline-mobile-summary .ov-pb-val{font-size:14px}
+#tab-overview .ov-pipeline-mobile-cards-wrap{width:100%;padding:12px;border-radius:16px;background:#EAFCFF;box-sizing:border-box}
+#tab-overview .ov-pipeline-mobile-cards-wrap--lead{background:#EAFCFF}
+#tab-overview .ov-pipeline-mobile-cards-wrap--factfind{background:#FFF9F5}
+#tab-overview .ov-pipeline-mobile-cards-wrap--research{background:#F5EEFA}
+#tab-overview .ov-pipeline-mobile-cards-wrap--application{background:#FFF1FD}
+#tab-overview .ov-pipeline-mobile-cards-wrap--completion{background:#EDFFFA}
+#tab-overview .ov-pipeline-mobile-cards{display:flex;flex-direction:column;gap:10px;width:100%}
+#tab-overview .ov-pipeline-mobile-cards .ov-kbcard{padding:16px;gap:10px;border-radius:16px}
+#tab-overview .ov-pipeline-mobile-cards .kb-cc-top{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%}
+#tab-overview .ov-pipeline-mobile-cards .kb-cc-top .kb-cc-tags{margin-left:auto;flex-wrap:nowrap;gap:6px}
+#tab-overview .ov-pipeline-mobile-cards .kb-cc-amt{font-size:14px;margin-top:2px}
+
 @media(max-width:900px){#tab-overview .ov-bottom-row{grid-template-columns:1fr}}
 @media(max-width:700px){
   /* Replace the desktop card-frame background image with a plain light surface on mobile */
@@ -332,17 +368,22 @@ body.embedded #tab-cases{background:transparent}
   .dash-top-strip{height:0!important;min-height:0!important}
   /* Tighten internal content padding */
   .dash-content{padding:12px 14px}
-  .dash-greet-section{padding:14px 14px 10px}
+  /* Overview: match mobile mock — KPI grid only, no greet/activity rows */
+  #tab-overview .dash-greet-section{display:none}
+  #tab-overview .ov-overview-heading{display:none}
+  #tab-overview .ov-bottom-row{display:none!important}
+  #tab-overview .ov-glass-block.ov-kpi-block{padding:0}
+  #tab-overview .ov-glass-block.ov-pipeline-block,
+  #tab-overview .ov-glass-block.ko-ov-live-block{background:transparent;border:none;box-shadow:none;padding:0;gap:14px}
   /* KPI cards: 2-column grid */
   #tab-overview .ov-kpi-row{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;width:100%}
-  #tab-overview .ov-kpi-card{width:100%;min-width:0;box-sizing:border-box}
-  /* Pipeline summary cards: narrower */
-  #tab-overview .ov-pb-summary-card{width:150px;min-width:150px}
-  /* Kanban board: reduce min-width and column width */
-  #tab-overview .ov-kanban-section .kanban.ov-pb-board{min-width:820px}
-  #tab-overview .ov-pb-kanban-col{width:150px;min-width:150px;padding:14px 12px}
-  /* Pipeline heading: smaller on mobile */
-  #tab-overview .ov-pipeline-title{font-size:18px}
+  #tab-overview .ov-kpi-card{width:100%;min-width:0;box-sizing:border-box;padding:16px 14px}
+  #tab-overview .ov-kpi-card--pipeline .ov-kpi-val{font-size:20px}
+  /* Pipeline: mobile stage selector + vertical cards (hide desktop kanban) */
+  #tab-overview .ov-pipeline-mobile{display:flex}
+  #tab-overview .ov-kanban-section{display:none!important}
+  #tab-overview .ov-pipeline-title{font-size:20px}
+  #tab-overview .ov-pipeline-sub{font-size:13px}
   /* Clients page: reduce heading size and remove top/bottom padding gaps and table-panel border */
   #tab-clients .cl-title{font-size:22px}
   #tab-cases .cs-title{font-size:22px}
@@ -369,9 +410,8 @@ body.embedded #tab-cases{background:transparent}
   #tab-cases .ov-kanban-section .kanban.ov-pb-board{min-width:820px}
   #tab-cases .ov-pb-summary-card{width:150px;min-width:150px}
   #tab-cases .ov-pb-kanban-col{width:150px;min-width:150px;padding:14px 12px}
-  /* Fix: prevent horizontally-scrollable kanban from swallowing vertical touch events.
-     pan-x pinch-zoom lets the parent page scroll vertically while the kanban scrolls horizontally. */
-  .ov-kanban-section{touch-action:pan-x pinch-zoom;overflow-y:hidden}
+  /* Cases kanban: horizontal scroll on mobile */
+  #tab-cases .ov-kanban-section{touch-action:pan-x pinch-zoom;overflow-y:hidden}
 }
 
 /* Personal dashboard (signed-in /dashboard) — KPI cards at zero + welcome empty state; no mock pipeline */
@@ -448,6 +488,15 @@ body.embedded #tab-cases{background:transparent}
 #tab-clients .cl-status--active .cl-status-dot{background:#12B76A}
 #tab-clients .cl-status--inactive{background:#F2F4F7;color:#344054}
 #tab-clients .cl-status--inactive .cl-status-dot{background:#98A2B3}
+#tab-clients .cl-status--prospect{background:#EFF8FF;color:#175CD3}
+#tab-clients .cl-status--prospect .cl-status-dot{background:#2E90FA}
+#tab-clients .cl-row-hidden,#tab-clients .cl-page-hidden{display:none!important}
+#tab-clients .cl-table-pager{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;border-top:1px solid #e4e4e7;background:#fff}
+#tab-clients .cl-table-pager-info{font-family:'DM Sans',sans-serif;font-size:12px;color:#71717a}
+#tab-clients .cl-table-pager-controls{display:flex;align-items:center;gap:6px}
+#tab-clients .cl-table-pager-btn{border:1px solid #e4e4e7;border-radius:8px;background:#fff;width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;color:#3f3f46;cursor:pointer}
+#tab-clients .cl-table-pager-btn:disabled{opacity:.5;cursor:not-allowed}
+#tab-clients .cl-table-pager-label{font-family:'DM Sans',sans-serif;font-size:12px;color:#71717a;padding:0 8px}
 #tab-clients .cl-msg-btn{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border:1px solid #e4e4e7;border-radius:999px;background:#fafafa;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;color:#52525b;cursor:pointer;transition:background .15s}
 #tab-clients .cl-msg-btn:hover{background:#f4f4f5}
 #tab-clients .cl-msg-btn svg{width:14px;height:14px;color:#71717a}
@@ -484,8 +533,11 @@ body.embedded #tab-cases{background:transparent}
 .cl-drawer-title{font-family:'Syne',sans-serif;font-size:20px;font-weight:700;color:#061F18;margin:0;line-height:1.2}
 .cl-drawer-close{display:flex;width:36px;height:36px;align-items:center;justify-content:center;border:none;border-radius:50%;background:#f4f4f5;color:#52525b;font-size:22px;line-height:1;cursor:pointer;transition:background .15s}
 .cl-drawer-close:hover{background:#e4e4e7;color:#18181b}
-.cl-drawer-form{flex:1;overflow-y:auto;padding:24px;display:flex;flex-direction:column;gap:20px}
+.cl-drawer-form{flex:1;overflow-y:auto;padding:24px;display:flex;flex-direction:column;gap:24px}
 .cl-drawer-field{display:flex;flex-direction:column;gap:8px}
+#cl-fields-details,#cl-fields-individual,#cl-fields-company,#cl-fields-insurance,#cl-fields-referral{display:flex;flex-direction:column;gap:20px}
+#cl-fields-insurance .cl-drawer-field + .cl-drawer-field{margin-top:0}
+.cl-drawer-field + .cl-drawer-field{margin-top:0}
 .cl-drawer-label{font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;color:#18181b;line-height:normal}
 .cl-drawer-input,.cl-drawer-select{width:100%;padding:12px 14px;border:1px solid #e4e4e7;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:14px;color:#18181b;background:#fff;outline:none;box-sizing:border-box;transition:border-color .15s,box-shadow .15s}
 .cl-drawer-input::placeholder{color:#a1a1aa}
@@ -505,6 +557,8 @@ body.embedded #tab-cases{background:transparent}
 .cl-drawer-type-label{font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;color:#18181b}
 .cl-drawer-type-desc{font-family:'DM Sans',sans-serif;font-size:11px;color:#71717a;line-height:1.35}
 .cl-drawer-section-hidden{display:none!important}
+.cl-drawer-check{display:flex;align-items:flex-start;gap:10px;font-family:'DM Sans',sans-serif;font-size:14px;color:#18181b;cursor:pointer}
+.cl-drawer-check input{width:16px;height:16px;margin-top:2px;accent-color:#1D9E75;cursor:pointer}
 body.cl-drawer-open{overflow:hidden}
 
 body.embedded #tab-clients{background:transparent}
@@ -1361,6 +1415,30 @@ html.ff-open,body.ff-open{overflow:hidden!important;height:100%}
 .ff-upload-float-ico svg{width:15px;height:15px}
 .ff-upload-float-copy strong{display:block;font-size:12px;font-weight:800;color:#0F6E56;line-height:1.2}
 .ff-upload-float-copy span{display:block;font-size:11px;color:#166534;line-height:1.3;margin-top:2px}
+.ff-upload-tooltip-wrap{position:relative;display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:#DDF4EB;color:#0F6E56;flex-shrink:0;cursor:help}
+.ff-upload-tooltip-wrap svg{width:13px;height:13px}
+.ff-upload-tooltip{position:absolute;left:calc(100% + 10px);top:50%;transform:translateY(-50%);width:220px;padding:10px 12px;border-radius:10px;background:#18181B;color:#fff;font-size:11px;line-height:1.45;font-weight:500;text-align:left;box-shadow:0 10px 24px rgba(24,24,27,.22);opacity:0;visibility:hidden;pointer-events:none;transition:opacity .15s,visibility .15s;z-index:590}
+.ff-upload-tooltip-wrap:hover .ff-upload-tooltip,.ff-upload-tooltip-wrap:focus-visible .ff-upload-tooltip{opacity:1;visibility:visible}
+.ff-upload-tooltip::before{content:'';position:absolute;right:100%;top:50%;transform:translateY(-50%);border:6px solid transparent;border-right-color:#18181B}
+.ff-credit-preview-wrap{position:fixed;inset:0;z-index:588;background:rgba(13,31,26,.35);display:flex;align-items:center;justify-content:center;padding:20px}
+.ff-credit-preview{width:min(520px,100%);max-height:min(82vh,720px);background:#fff;border-radius:16px;box-shadow:0 24px 60px rgba(24,24,27,.2);overflow:hidden;font-family:'DM Sans',sans-serif;display:flex;flex-direction:column}
+.ff-credit-preview-head{padding:18px 20px 14px;border-bottom:1px solid #E4E4E7;display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.ff-credit-preview-head h3{font-size:16px;font-family:'Syne',sans-serif;font-weight:700;color:#18181B;line-height:1.25;margin:0}
+.ff-credit-preview-head p{font-size:13px;color:#71717A;line-height:1.5;margin:4px 0 0}
+.ff-credit-preview-body{padding:16px 20px;overflow:auto}
+.ff-credit-preview-intro{font-size:13px;color:#52525B;line-height:1.5;margin:0 0 14px}
+.ff-credit-preview-group{margin-bottom:14px}
+.ff-credit-preview-group:last-child{margin-bottom:0}
+.ff-credit-preview-group h4{font-size:11px;font-weight:700;color:#0F6E56;letter-spacing:.06em;text-transform:uppercase;margin:0 0 8px}
+.ff-credit-preview-list{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px}
+.ff-credit-preview-list li{font-size:13px;color:#3F3F46;line-height:1.4;padding-left:14px;position:relative}
+.ff-credit-preview-list li::before{content:'';position:absolute;left:0;top:.55em;width:5px;height:5px;border-radius:50%;background:#99DCC5}
+.ff-credit-preview-foot{padding:14px 20px 18px;border-top:1px solid #E4E4E7;display:flex;justify-content:flex-end;gap:10px;background:#FAFAFA}
+.ff-credit-preview-cancel,.ff-credit-preview-continue{height:38px;padding:0 16px;border-radius:8px;font-size:13px;font-weight:600;font-family:inherit;cursor:pointer}
+.ff-credit-preview-cancel{border:1px solid #E4E4E7;background:#fff;color:#52525B}
+.ff-credit-preview-cancel:hover{background:#F4F4F5}
+.ff-credit-preview-continue{border:0;background:#0F6E56;color:#fff}
+.ff-credit-preview-continue:hover{background:#16856F}
 
 /* ── Add New Case button */
 .cs-add-case-btn{display:flex;height:43px;padding:4px 20px;justify-content:center;align-items:center;gap:5.637px;border-radius:32px;background:#0F6E56;color:var(--white);font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;border:none;cursor:pointer;transition:background .2s;white-space:nowrap}
@@ -1569,7 +1647,7 @@ html.ff-open,body.ff-open{overflow:hidden!important;height:100%}
               <div class="ov-kpi-top">
                 <div class="ov-kpi-copy">
                   <div class="ov-kpi-title" data-ov-kpi-title>Active Clients</div>
-                  <div class="ov-kpi-hint" data-ov-kpi-hint>Solo brokers getting setup</div>
+                  <div class="ov-kpi-hint" data-ov-kpi-hint>Solo brokers getting set up</div>
                 </div>
                 <img class="ov-kpi-icon" src="assets/people-1.svg" width="26" height="26" alt="" />
               </div>
@@ -1580,7 +1658,7 @@ html.ff-open,body.ff-open{overflow:hidden!important;height:100%}
               <div class="ov-kpi-top">
                 <div class="ov-kpi-copy">
                   <div class="ov-kpi-title" data-ov-kpi-title>Open cases</div>
-                  <div class="ov-kpi-hint" data-ov-kpi-hint>Across all pipeline stages</div>
+                  <div class="ov-kpi-hint" data-ov-kpi-hint>Solo brokers getting set up</div>
                 </div>
                 <img class="ov-kpi-icon" src="assets/cases.svg" width="26" height="26" alt="" />
               </div>
@@ -1591,7 +1669,7 @@ html.ff-open,body.ff-open{overflow:hidden!important;height:100%}
               <div class="ov-kpi-top">
                 <div class="ov-kpi-copy">
                   <div class="ov-kpi-title" data-ov-kpi-title>Pipeline value</div>
-                  <div class="ov-kpi-hint" data-ov-kpi-hint>Volume and value in flight</div>
+                  <div class="ov-kpi-hint" data-ov-kpi-hint>Solo brokers getting set up</div>
                 </div>
                 <img class="ov-kpi-icon" src="assets/dashboard-pipeline.svg" width="26" height="26" alt="" />
               </div>
@@ -1602,7 +1680,7 @@ html.ff-open,body.ff-open{overflow:hidden!important;height:100%}
               <div class="ov-kpi-top">
                 <div class="ov-kpi-copy">
                   <div class="ov-kpi-title" data-ov-kpi-title>Unread messages</div>
-                  <div class="ov-kpi-hint" data-ov-kpi-hint>Needs your attention</div>
+                  <div class="ov-kpi-hint" data-ov-kpi-hint>Solo brokers getting set up</div>
                 </div>
                 <img class="ov-kpi-icon" src="assets/chat.svg" width="26" height="26" alt="" />
               </div>
@@ -1642,7 +1720,7 @@ html.ff-open,body.ff-open{overflow:hidden!important;height:100%}
               <div class="kanban ov-pb-board">
                 <div class="ov-pb-summary-row">
                   <div class="ov-pb-summary-card">
-                    <h4 class="ov-pb-tab ov-pb-tab--lead">Lead</h4>
+                    <h4 class="ov-pb-tab ov-pb-tab--lead">Enquiry</h4>
                     <div class="ov-pb-stats">
                       <div class="ov-stage-count">2</div>
                       <div class="ov-pb-val ov-pb-val--lead">£835,000</div>
@@ -1656,7 +1734,7 @@ html.ff-open,body.ff-open{overflow:hidden!important;height:100%}
                     </div>
                   </div>
                   <div class="ov-pb-summary-card">
-                    <h4 class="ov-pb-tab ov-pb-tab--research">Recommendation</h4>
+                    <h4 class="ov-pb-tab ov-pb-tab--research">Research</h4>
                     <div class="ov-pb-stats">
                       <div class="ov-stage-count">2</div>
                       <div class="ov-pb-val ov-pb-val--research">£955,000</div>
@@ -1670,7 +1748,7 @@ html.ff-open,body.ff-open{overflow:hidden!important;height:100%}
                     </div>
                   </div>
                   <div class="ov-pb-summary-card">
-                    <h4 class="ov-pb-tab ov-pb-tab--completion">Completion</h4>
+                    <h4 class="ov-pb-tab ov-pb-tab--completion">Offer</h4>
                     <div class="ov-pb-stats">
                       <div class="ov-stage-count">2</div>
                       <div class="ov-pb-val ov-pb-val--completion">£625,000</div>
@@ -1907,6 +1985,7 @@ html.ff-open,body.ff-open{overflow:hidden!important;height:100%}
                     <label class="cl-filter-label" for="cl-filter-status">Status</label>
                     <select class="cl-filter-select" id="cl-filter-status">
                       <option value="">All statuses</option>
+                      <option value="prospect">Prospect</option>
                       <option value="active">Active</option>
                       <option value="inactive">Inactive</option>
                     </select>
@@ -1914,28 +1993,27 @@ html.ff-open,body.ff-open{overflow:hidden!important;height:100%}
                   <div class="cl-filter-field">
                     <label class="cl-filter-label" for="cl-filter-employment">Employment</label>
                     <select class="cl-filter-select" id="cl-filter-employment">
-                      <option value="">All types</option>
-                      <option value="self-employed">Self-employed</option>
+                      <option value="">All employment</option>
                       <option value="employed">Employed</option>
-                      <option value="director">Director</option>
-                      <option value="on-boarding">On-boarding</option>
+                      <option value="self-employed">Self-employed</option>
+                      <option value="contractor">Contractor</option>
+                      <option value="retired">Retired</option>
+                      <option value="unemployed">Unemployed</option>
+                    </select>
+                  </div>
+                  <div class="cl-filter-field">
+                    <label class="cl-filter-label" for="cl-filter-client-type">Client type</label>
+                    <select class="cl-filter-select" id="cl-filter-client-type">
+                      <option value="">All types</option>
+                      <option value="referral">Referral</option>
+                      <option value="individual">Individual</option>
+                      <option value="company">Company</option>
                     </select>
                   </div>
                   <div class="cl-filter-field">
                     <label class="cl-filter-label" for="cl-filter-adviser">Adviser</label>
                     <select class="cl-filter-select" id="cl-filter-adviser">
                       <option value="">All advisers</option>
-                      <option value="alex-morgan">Alex Morgan</option>
-                      <option value="sera-bach">Sera Bach</option>
-                      <option value="richard-chan">Richard Chan</option>
-                    </select>
-                  </div>
-                  <div class="cl-filter-field">
-                    <label class="cl-filter-label" for="cl-filter-messages">Messages</label>
-                    <select class="cl-filter-select" id="cl-filter-messages">
-                      <option value="">All</option>
-                      <option value="new">Has new message</option>
-                      <option value="none">No new message</option>
                     </select>
                   </div>
                   <button type="button" class="cl-filter-apply" id="cl-filter-apply">Apply filters</button>
@@ -1956,6 +2034,7 @@ html.ff-open,body.ff-open{overflow:hidden!important;height:100%}
                   <th class="cl-th-sort"><span class="cl-th-sort-inner">Client <svg class="cl-sort-icon" viewBox="0 0 10 10" fill="none"><path d="M2 4l3 3 3-3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></span></th>
                   <th class="cl-th-sort"><span class="cl-th-sort-inner">Reference <svg class="cl-sort-icon" viewBox="0 0 10 10" fill="none"><path d="M2 4l3 3 3-3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></span></th>
                   <th class="cl-th-sort"><span class="cl-th-sort-inner">Employment <svg class="cl-sort-icon" viewBox="0 0 10 10" fill="none"><path d="M2 4l3 3 3-3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></span></th>
+                  <th class="cl-th-sort"><span class="cl-th-sort-inner">Insurance <svg class="cl-sort-icon" viewBox="0 0 10 10" fill="none"><path d="M2 4l3 3 3-3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></span></th>
                   <th class="cl-th-sort"><span class="cl-th-sort-inner">Income <svg class="cl-sort-icon" viewBox="0 0 10 10" fill="none"><path d="M2 4l3 3 3-3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></span></th>
                   <th class="cl-th-sort"><span class="cl-th-sort-inner">Status <svg class="cl-sort-icon" viewBox="0 0 10 10" fill="none"><path d="M2 4l3 3 3-3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></span></th>
                   <th class="cl-th-sort"><span class="cl-th-sort-inner">Cases <svg class="cl-sort-icon" viewBox="0 0 10 10" fill="none"><path d="M2 4l3 3 3-3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></span></th>
@@ -1969,6 +2048,7 @@ html.ff-open,body.ff-open{overflow:hidden!important;height:100%}
                   <td><div class="cl-client-name">Helena Whitfield</div><div class="cl-client-email">helena@whitfield.co</div></td>
                   <td class="cl-cell-muted">KOC-2025-0001</td>
                   <td class="cl-cell-muted">Self-employed</td>
+                  <td class="cl-cell-muted">Aviva</td>
                   <td class="cl-cell-bold">£142,000</td>
                   <td><span class="cl-status cl-status--active"><span class="cl-status-dot"></span>Active</span></td>
                   <td class="cl-cell-muted">2</td>
@@ -1980,6 +2060,7 @@ html.ff-open,body.ff-open{overflow:hidden!important;height:100%}
                   <td><div class="cl-client-name">Jennifer Blackburn</div><div class="cl-client-email">jennifer@sampletext.com</div></td>
                   <td class="cl-cell-muted">KOC-2025-0003</td>
                   <td class="cl-cell-muted">Employed</td>
+                  <td class="cl-cell-muted">Legal &amp; General</td>
                   <td class="cl-cell-bold">£58,500</td>
                   <td><span class="cl-status cl-status--active"><span class="cl-status-dot"></span>Active</span></td>
                   <td class="cl-cell-muted">5</td>
@@ -1991,6 +2072,7 @@ html.ff-open,body.ff-open{overflow:hidden!important;height:100%}
                   <td><div class="cl-client-name">Teresa Kang</div><div class="cl-client-email">teresa@sampletext.com</div></td>
                   <td class="cl-cell-muted">KOC-2025-0005</td>
                   <td class="cl-cell-muted">Director</td>
+                  <td class="cl-cell-muted">—</td>
                   <td class="cl-cell-bold">£220,000</td>
                   <td><span class="cl-status cl-status--active"><span class="cl-status-dot"></span>Active</span></td>
                   <td class="cl-cell-muted">4</td>
@@ -2003,6 +2085,7 @@ html.ff-open,body.ff-open{overflow:hidden!important;height:100%}
                   <td class="cl-cell-muted">KOC-2025-0002</td>
                   <td class="cl-cell-muted">On-boarding</td>
                   <td class="cl-cell-muted">—</td>
+                  <td class="cl-cell-muted">—</td>
                   <td><span class="cl-status cl-status--inactive"><span class="cl-status-dot"></span>Inactive</span></td>
                   <td class="cl-cell-muted">2</td>
                   <td class="cl-cell-muted">Richard Chan</td>
@@ -2013,6 +2096,7 @@ html.ff-open,body.ff-open{overflow:hidden!important;height:100%}
                   <td><div class="cl-client-name">Callum Hill</div><div class="cl-client-email">callum@sampletext.com</div></td>
                   <td class="cl-cell-muted">KOC-2025-0006</td>
                   <td class="cl-cell-muted">Employed</td>
+                  <td class="cl-cell-muted">Royal London</td>
                   <td class="cl-cell-bold">£72,000</td>
                   <td><span class="cl-status cl-status--active"><span class="cl-status-dot"></span>Active</span></td>
                   <td class="cl-cell-muted">4</td>
@@ -2024,6 +2108,7 @@ html.ff-open,body.ff-open{overflow:hidden!important;height:100%}
                   <td><div class="cl-client-name">Nigel Gibson</div><div class="cl-client-email">nigel@sampletext.com</div></td>
                   <td class="cl-cell-muted">KOC-2025-0007</td>
                   <td class="cl-cell-muted">Director</td>
+                  <td class="cl-cell-muted">—</td>
                   <td class="cl-cell-bold">£305,000</td>
                   <td><span class="cl-status cl-status--active"><span class="cl-status-dot"></span>Active</span></td>
                   <td class="cl-cell-muted">6</td>
@@ -2035,6 +2120,7 @@ html.ff-open,body.ff-open{overflow:hidden!important;height:100%}
                   <td><div class="cl-client-name">Bold text column</div><div class="cl-client-email">Regular text column</div></td>
                   <td class="cl-cell-muted">Regular text column</td>
                   <td class="cl-cell-muted">Regular text column</td>
+                  <td class="cl-cell-muted">—</td>
                   <td class="cl-cell-bold">Bold text column</td>
                   <td><span class="cl-status cl-status--active"><span class="cl-status-dot"></span>Active</span></td>
                   <td class="cl-cell-muted">Regular text column</td>
@@ -2046,6 +2132,7 @@ html.ff-open,body.ff-open{overflow:hidden!important;height:100%}
                   <td><div class="cl-client-name">Bold text column</div><div class="cl-client-email">Regular text column</div></td>
                   <td class="cl-cell-muted">Regular text column</td>
                   <td class="cl-cell-muted">Regular text column</td>
+                  <td class="cl-cell-muted">—</td>
                   <td class="cl-cell-bold">Bold text column</td>
                   <td><span class="cl-status cl-status--inactive"><span class="cl-status-dot"></span>Inactive</span></td>
                   <td class="cl-cell-muted">Regular text column</td>
@@ -2054,6 +2141,14 @@ html.ff-open,body.ff-open{overflow:hidden!important;height:100%}
                 </tr>
               </tbody>
             </table>
+            <div class="cl-table-pager" id="cl-table-pager">
+              <span class="cl-table-pager-info" id="cl-table-pager-info">Showing 0 of 0</span>
+              <div class="cl-table-pager-controls">
+                <button type="button" class="cl-table-pager-btn" id="cl-table-prev" aria-label="Previous page">‹</button>
+                <span class="cl-table-pager-label" id="cl-table-page-label">1 / 1</span>
+                <button type="button" class="cl-table-pager-btn" id="cl-table-next" aria-label="Next page">›</button>
+              </div>
+            </div>
           </div>
           <div class="cl-mobile-list-wrap" id="cl-mobile-list-wrap" aria-live="polite">
             <div class="cl-mobile-list" id="cl-mobile-list"></div>
@@ -2577,6 +2672,30 @@ html.ff-open,body.ff-open{overflow:hidden!important;height:100%}
               </button>
             </div>
           </div>
+          <div id="cl-fields-referral">
+            <div class="cl-drawer-field">
+              <span class="cl-drawer-label">Is this client being referred? *</span>
+              <div class="cl-drawer-type-grid" role="group" aria-label="Client referral">
+                <button type="button" class="cl-drawer-type-btn" id="cl-referral-no" aria-pressed="false">
+                  <span class="cl-drawer-type-label">No</span>
+                </button>
+                <button type="button" class="cl-drawer-type-btn" id="cl-referral-yes" aria-pressed="false">
+                  <span class="cl-drawer-type-label">Yes</span>
+                </button>
+              </div>
+            </div>
+          </div>
+          <div id="cl-fields-referred-company" class="cl-drawer-section-hidden">
+            <div class="cl-drawer-field">
+              <label class="cl-drawer-label" for="cl-new-referred-company">The company the client has been referred to *</label>
+              <input type="text" class="cl-drawer-input" id="cl-new-referred-company" name="referredCompany" placeholder="e.g. ABC Mortgages Ltd">
+            </div>
+            <div class="cl-drawer-actions">
+              <button type="button" class="cl-drawer-create" id="cl-drawer-continue">Continue</button>
+              <button type="button" class="cl-drawer-cancel" id="cl-referred-company-back">Back</button>
+            </div>
+          </div>
+          <div id="cl-fields-details" class="cl-drawer-section-hidden">
           <div id="cl-fields-individual">
             <div class="cl-drawer-field">
               <label class="cl-drawer-label" for="cl-new-name">Full name *</label>
@@ -2608,16 +2727,37 @@ html.ff-open,body.ff-open{overflow:hidden!important;height:100%}
             <input type="email" class="cl-drawer-input" id="cl-new-email" name="email" placeholder="name@company.com" autocomplete="email" required>
           </div>
           <div class="cl-drawer-field">
-            <label class="cl-drawer-label" for="cl-new-income" id="cl-new-income-label">Annual Income *</label>
-            <input type="text" class="cl-drawer-input" id="cl-new-income" name="income" placeholder="e.g. £72,000" required>
+            <label class="cl-drawer-label" for="cl-new-income" id="cl-new-income-label">Annual income</label>
+            <input type="text" class="cl-drawer-input" id="cl-new-income" name="income" placeholder="e.g. £72,000">
+          </div>
+          <div id="cl-fields-insurance" class="cl-drawer-section-hidden">
+            <div class="cl-drawer-field">
+              <label class="cl-drawer-check" for="cl-has-insurer">
+                <input type="checkbox" id="cl-has-insurer">
+                <span>Does the client have an insurer?</span>
+              </label>
+            </div>
+            <div class="cl-drawer-field cl-drawer-section-hidden" id="cl-insurer-wrap">
+              <label class="cl-drawer-label" for="cl-new-insurer">Insurer</label>
+              <select class="cl-drawer-select" id="cl-new-insurer" name="insurer">
+                <option value="" selected>Select insurer</option>
+                <option value="Aviva">Aviva</option>
+                <option value="Legal &amp; General">Legal &amp; General</option>
+                <option value="Scottish Widows">Scottish Widows</option>
+                <option value="Royal London">Royal London</option>
+                <option value="Zurich">Zurich</option>
+                <option value="LV=">LV=</option>
+                <option value="Vitality">Vitality</option>
+                <option value="AIG">AIG</option>
+                <option value="MetLife">MetLife</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
           </div>
           <div class="cl-drawer-field">
             <label class="cl-drawer-label" for="cl-new-adviser">Adviser *</label>
-            <select class="cl-drawer-select" id="cl-new-adviser" name="adviser" required>
+            <select class="cl-drawer-select" id="cl-new-adviser" name="adviser">
               <option value="" disabled selected>Select adviser</option>
-              <option value="alex-morgan">Alex Morgan</option>
-              <option value="sera-bach">Sera Bach</option>
-              <option value="richard-chan">Richard Chan</option>
             </select>
           </div>
           <div class="cl-drawer-field">
@@ -2629,9 +2769,10 @@ html.ff-open,body.ff-open{overflow:hidden!important;height:100%}
             </select>
           </div>
           <p class="cl-drawer-error hidden" id="cl-drawer-error" role="alert"></p>
-          <div class="cl-drawer-actions">
+          <div class="cl-drawer-actions" id="cl-drawer-actions">
             <button type="submit" class="cl-drawer-create" id="cl-drawer-create">Create Client</button>
             <button type="button" class="cl-drawer-cancel" id="cl-drawer-cancel">Cancel</button>
+          </div>
           </div>
         </form>
       </aside>
@@ -2716,6 +2857,17 @@ if (new URLSearchParams(window.location.search).get('embedded') === '1') {
     if (vals[2] && stats.pipelineValue) vals[2].textContent = stats.pipelineValue;
     if (vals[3] && stats.unreadMessages != null) vals[3].textContent = String(stats.unreadMessages);
   };
+  window.koSetOverviewLoading = function (loading) {
+    if (!loading) return;
+    var vals = document.querySelectorAll('#tab-overview [data-ov-kpi-val]');
+    for (var i = 0; i < vals.length; i++) {
+      vals[i].textContent = '…';
+    }
+    var trends = document.querySelectorAll('#tab-overview [data-ov-kpi-trend]');
+    for (var j = 0; j < trends.length; j++) {
+      trends[j].textContent = 'Loading';
+    }
+  };
   window.koSetUserGreeting = function (name) {
     var greetEl = document.getElementById('dash-greet-name');
     if (greetEl && name) {
@@ -2725,6 +2877,142 @@ if (new URLSearchParams(window.location.search).get('embedded') === '1') {
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', refreshOverview);
   else refreshOverview();
 })();
+
+// Overview — mobile pipeline (stage pills + single-column cards; desktop kanban unchanged)
+(function initOverviewMobilePipeline() {
+  var STAGE_ORDER = ['lead', 'factfind', 'research', 'application', 'completion'];
+
+  function stageKeyFromClassList(el) {
+    if (!el || !el.classList) return null;
+    for (var i = 0; i < el.classList.length; i++) {
+      var cls = el.classList[i];
+      if (cls.indexOf('ov-pb-kanban-col--') === 0 || cls.indexOf('ov-pb-tab--') === 0) {
+        return cls.split('--')[1] || null;
+      }
+    }
+    return null;
+  }
+
+  function layoutMobileCard(clone) {
+    var tags = clone.querySelector('.kb-cc-tags');
+    var top = clone.querySelector('.kb-cc-top');
+    if (tags && top && !top.contains(tags)) top.appendChild(tags);
+    return clone;
+  }
+
+  window.koRefreshOverviewMobilePipeline = function () {
+    var tab = document.getElementById('tab-overview');
+    if (!tab) return;
+
+    tab.querySelectorAll('.ov-glass-block').forEach(function (block) {
+      var kanbanSection = block.querySelector('.ov-kanban-section');
+      if (!kanbanSection) return;
+
+      var mobile = block.querySelector('.ov-pipeline-mobile');
+      if (!mobile) {
+        mobile = document.createElement('div');
+        mobile.className = 'ov-pipeline-mobile';
+        mobile.innerHTML =
+          '<div class="ov-pipeline-mobile-stage-label">Select a stage</div>' +
+          '<div class="ov-pipeline-mobile-pills" role="tablist"></div>' +
+          '<div class="ov-pipeline-mobile-summary"></div>' +
+          '<div class="ov-pipeline-mobile-cards-wrap"><div class="ov-pipeline-mobile-cards"></div></div>';
+        block.insertBefore(mobile, kanbanSection);
+      }
+
+      var pillsEl = mobile.querySelector('.ov-pipeline-mobile-pills');
+      var summaryEl = mobile.querySelector('.ov-pipeline-mobile-summary');
+      var cardsEl = mobile.querySelector('.ov-pipeline-mobile-cards');
+      if (!pillsEl || !summaryEl || !cardsEl) return;
+
+      var summaryCards = Array.prototype.slice.call(kanbanSection.querySelectorAll('.ov-pb-summary-card'));
+      var kanbanCols = Array.prototype.slice.call(kanbanSection.querySelectorAll('.ov-pb-kanban-col'));
+      if (!summaryCards.length) return;
+
+      var stages = summaryCards.map(function (card, idx) {
+        var tabEl = card.querySelector('[class*="ov-pb-tab--"]');
+        var key = stageKeyFromClassList(tabEl) || stageKeyFromClassList(kanbanCols[idx]) || STAGE_ORDER[idx] || 'lead';
+        return {
+          key: key,
+          label: tabEl ? tabEl.textContent.trim() : key,
+          summaryCard: card,
+          kanbanCol: kanbanCols[idx] || null,
+        };
+      });
+
+      var activeKey = mobile.getAttribute('data-active-stage') || stages[0].key;
+      if (!stages.some(function (s) { return s.key === activeKey; })) activeKey = stages[0].key;
+
+      pillsEl.innerHTML = stages
+        .map(function (s) {
+          var active = s.key === activeKey;
+          return (
+            '<button type="button" class="ov-pipeline-mobile-pill' +
+            (active ? ' is-active' : '') +
+            '" data-stage="' +
+            s.key +
+            '" role="tab" aria-selected="' +
+            (active ? 'true' : 'false') +
+            '">' +
+            s.label +
+            '</button>'
+          );
+        })
+        .join('');
+
+      function renderStage(key) {
+        mobile.setAttribute('data-active-stage', key);
+        var stage = stages.find(function (s) { return s.key === key; }) || stages[0];
+        summaryEl.innerHTML = stage.summaryCard.outerHTML;
+
+        var cardsWrap = stage.kanbanCol ? stage.kanbanCol.querySelector('.ov-pb-cards') : null;
+        var sourceCards = cardsWrap ? Array.prototype.slice.call(cardsWrap.children) : [];
+        cardsEl.innerHTML = '';
+        sourceCards.forEach(function (card) {
+          var clone = layoutMobileCard(card.cloneNode(true));
+          var onclick = card.getAttribute('onclick');
+          if (onclick) clone.setAttribute('onclick', onclick);
+          cardsEl.appendChild(clone);
+        });
+
+        Array.prototype.forEach.call(pillsEl.querySelectorAll('.ov-pipeline-mobile-pill'), function (btn) {
+          var isActive = btn.getAttribute('data-stage') === key;
+          btn.classList.toggle('is-active', isActive);
+          btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
+        });
+
+        var wrap = mobile.querySelector('.ov-pipeline-mobile-cards-wrap');
+        if (wrap) {
+          wrap.className = 'ov-pipeline-mobile-cards-wrap ov-pipeline-mobile-cards-wrap--' + stage.key;
+        }
+      }
+
+      renderStage(activeKey);
+
+      pillsEl.onclick = function (e) {
+        var btn = e.target.closest('.ov-pipeline-mobile-pill');
+        if (!btn) return;
+        renderStage(btn.getAttribute('data-stage'));
+      };
+    });
+  };
+
+  function maybeRefresh() {
+    if (window.matchMedia('(max-width: 700px)').matches && typeof window.koRefreshOverviewMobilePipeline === 'function') {
+      window.koRefreshOverviewMobilePipeline();
+    }
+  }
+
+  window.addEventListener('resize', maybeRefresh);
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function () {
+      window.setTimeout(maybeRefresh, 0);
+    });
+  } else {
+    window.setTimeout(maybeRefresh, 0);
+  }
+})();
+
 function requestAddClient() {
   if (typeof window.openClDrawer === 'function') {
     window.openClDrawer();
@@ -4174,18 +4462,26 @@ function calcRun() {
   const filterApply = document.getElementById('cl-filter-apply');
   const filterStatus = document.getElementById('cl-filter-status');
   const filterEmployment = document.getElementById('cl-filter-employment');
+  const filterClientType = document.getElementById('cl-filter-client-type');
   const filterAdviser = document.getElementById('cl-filter-adviser');
-  const filterMessages = document.getElementById('cl-filter-messages');
+  const tablePager = document.getElementById('cl-table-pager');
+  const tablePagerInfo = document.getElementById('cl-table-pager-info');
+  const tablePageLabel = document.getElementById('cl-table-page-label');
+  const tablePrev = document.getElementById('cl-table-prev');
+  const tableNext = document.getElementById('cl-table-next');
   const mobileList = document.getElementById('cl-mobile-list');
   const mobilePager = document.getElementById('cl-mobile-pager');
   const mobilePrev = document.getElementById('cl-mobile-prev');
   const mobileNext = document.getElementById('cl-mobile-next');
   const mobilePageIndicator = document.getElementById('cl-mobile-page-indicator');
-  const mobilePageSize = 5;
+  const mobilePageSize = 10;
+  const tablePageSize = 10;
   let mobilePage = 1;
+  let tablePage = 1;
 
   const allRows = () => Array.from(tbody.querySelectorAll('[data-cl-row]'));
-  const visibleRows = () => allRows().filter((tr) => !tr.classList.contains('cl-row-hidden'));
+  const filterMatchedRows = () => allRows().filter((tr) => !tr.classList.contains('cl-row-hidden'));
+  const visibleRows = () => filterMatchedRows().filter((tr) => !tr.classList.contains('cl-page-hidden'));
   const visibleCbs = () => visibleRows().map((tr) => tr.querySelector('.cl-row-cb')).filter(Boolean);
 
   let emptyRow = tbody.querySelector('[data-cl-empty]');
@@ -4193,7 +4489,7 @@ function calcRun() {
     emptyRow = document.createElement('tr');
     emptyRow.setAttribute('data-cl-empty', '');
     emptyRow.className = 'cl-empty-row cl-row-hidden';
-    emptyRow.innerHTML = '<td colspan="9">No clients match your search or filters.</td>';
+    emptyRow.innerHTML = '<td colspan="10">No clients match your search or filters.</td>';
     tbody.appendChild(emptyRow);
   }
 
@@ -4205,9 +4501,25 @@ function calcRun() {
     let n = 0;
     if (filterStatus?.value) n++;
     if (filterEmployment?.value) n++;
+    if (filterClientType?.value) n++;
     if (filterAdviser?.value) n++;
-    if (filterMessages?.value) n++;
     return n;
+  }
+
+  function renderAdviserFilterOptions(advisers) {
+    if (!filterAdviser) return;
+    const previous = filterAdviser.value;
+    const active = (advisers || []).filter(function (a) { return a && a.isActive !== false; });
+    filterAdviser.innerHTML = '<option value="">All advisers</option>';
+    active.forEach(function (a) {
+      const opt = document.createElement('option');
+      opt.value = a.id;
+      opt.textContent = [a.firstName, a.lastName].filter(Boolean).join(' ') || a.email || 'Adviser';
+      filterAdviser.appendChild(opt);
+    });
+    if (previous && active.some(function (a) { return a.id === previous; })) {
+      filterAdviser.value = previous;
+    }
   }
 
   function updateFilterUI() {
@@ -4223,10 +4535,16 @@ function calcRun() {
   function rowMatchesFilters(tr) {
     if (filterStatus?.value && tr.dataset.status !== filterStatus.value) return false;
     if (filterEmployment?.value && tr.dataset.employment !== filterEmployment.value) return false;
+    if (filterClientType?.value && tr.dataset.clientCategory !== filterClientType.value) return false;
     if (filterAdviser?.value && tr.dataset.adviser !== filterAdviser.value) return false;
-    if (filterMessages?.value === 'new' && tr.dataset.newMsg !== 'true') return false;
-    if (filterMessages?.value === 'none' && tr.dataset.newMsg === 'true') return false;
     return true;
+  }
+
+  function clientStatusMeta(status) {
+    const key = String(status || 'PROSPECT').toLowerCase();
+    if (key === 'inactive') return { key: 'inactive', label: 'Inactive', className: 'inactive' };
+    if (key === 'active') return { key: 'active', label: 'Active', className: 'active' };
+    return { key: 'prospect', label: 'Prospect', className: 'prospect' };
   }
 
   function formatIncome(amount) {
@@ -4248,24 +4566,36 @@ function calcRun() {
     const employment = isCompany
       ? 'Limited Company'
       : (employmentLabels[client.employmentStatus] || 'Employed');
-    const employmentKey = isCompany ? 'director' : (employmentKeys[client.employmentStatus] || 'employed');
+    const employmentKey = isCompany ? 'company' : (employmentKeys[client.employmentStatus] || 'employed');
     const cases = client._count?.cases ?? 0;
+    const clientCategory = client.isReferred ? 'referral' : (isCompany ? 'company' : 'individual');
+    const statusMeta = clientStatusMeta(client.status);
+    const adviser = client.assignedMember;
+    const adviserId = adviser?.id || '';
+    const adviserName = adviser
+      ? [adviser.firstName, adviser.lastName].filter(Boolean).join(' ')
+      : '—';
+    const insurance = client.insurerName || '—';
+    const referralNote = !isCompany && client.isReferred
+      ? '<div class="cl-client-email">Referred' + (client.referredToCompany ? ' · ' + client.referredToCompany : '') + '</div>'
+      : '';
     tr.setAttribute('data-cl-row', '');
     tr.setAttribute('data-client-id', client.id);
-    tr.setAttribute('data-status', 'active');
+    tr.setAttribute('data-status', statusMeta.key);
     tr.setAttribute('data-employment', employmentKey);
-    tr.setAttribute('data-adviser', '');
-    tr.setAttribute('data-new-msg', 'false');
+    tr.setAttribute('data-client-category', clientCategory);
+    tr.setAttribute('data-adviser', adviserId);
     tr.setAttribute('data-ref', client.referenceNumber || '');
     tr.innerHTML =
       '<td class="cl-col-check"><input type="checkbox" class="cl-checkbox cl-row-cb" aria-label="Select ' + fullName + '"></td>' +
-      '<td><div class="cl-client-name">' + fullName + '</div><div class="cl-client-email">' + (client.email || '') + '</div></td>' +
+      '<td><div class="cl-client-name">' + fullName + '</div><div class="cl-client-email">' + (client.email || '') + '</div>' + referralNote + '</td>' +
       '<td class="cl-cell-muted">' + (client.referenceNumber || '—') + '</td>' +
       '<td class="cl-cell-muted">' + employment + '</td>' +
+      '<td class="cl-cell-muted">' + insurance + '</td>' +
       '<td class="cl-cell-bold">' + formatIncome(client.annualIncome) + '</td>' +
-      '<td><span class="cl-status cl-status--active"><span class="cl-status-dot"></span>Active</span></td>' +
+      '<td><span class="cl-status cl-status--' + statusMeta.className + '"><span class="cl-status-dot"></span>' + statusMeta.label + '</span></td>' +
       '<td class="cl-cell-muted">' + cases + '</td>' +
-      '<td class="cl-cell-muted">—</td>' +
+      '<td class="cl-cell-muted">' + adviserName + '</td>' +
       '<td><button type="button" class="cl-msg-btn" onclick="showTab(\'messages\')"><svg viewBox="0 0 16 16" fill="none"><path d="M3 4h10v7H5l-2 2V4Z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>Message</button></td>';
     bindRowEvents(tr);
     return tr;
@@ -4297,6 +4627,9 @@ function calcRun() {
     if (data?.type === 'ko:clients-sync' && Array.isArray(data.clients)) {
       renderLiveClients(data.clients);
     }
+    if (data?.type === 'ko:advisers-sync' && Array.isArray(data.advisers)) {
+      renderAdviserFilterOptions(data.advisers);
+    }
     if (data?.type === 'ko:switch-tab' && data.tab && typeof showTab === 'function') {
       const tabMap = { calculator: 'calculators' };
       const tab = tabMap[data.tab] || data.tab;
@@ -4308,6 +4641,9 @@ function calcRun() {
     }
     if (data?.type === 'ko:overview-stats' && data.stats && typeof window.koSetOverviewStats === 'function') {
       window.koSetOverviewStats(data.stats);
+    }
+    if (data?.type === 'ko:overview-loading' && typeof data.loading === 'boolean' && typeof window.koSetOverviewLoading === 'function') {
+      window.koSetOverviewLoading(data.loading);
     }
     if (data?.type === 'ko:user-greeting' && data.name && typeof window.koSetUserGreeting === 'function') {
       window.koSetUserGreeting(data.name);
@@ -4328,14 +4664,32 @@ function calcRun() {
     if (!isLiveClients || window.parent === window) return;
     window.parent.postMessage({ type: 'ko:request-clients-sync' }, window.location.origin);
     window.parent.postMessage({ type: 'ko:request-cases-sync' }, window.location.origin);
+    window.parent.postMessage({ type: 'ko:request-advisers-sync' }, window.location.origin);
   }
   requestLiveSync();
   window.setTimeout(requestLiveSync, 300);
   window.setTimeout(requestLiveSync, 1000);
 
+  function updateTablePager(filteredCount) {
+    const totalPages = Math.max(1, Math.ceil(filteredCount / tablePageSize));
+    if (tablePage > totalPages) tablePage = totalPages;
+    if (tablePage < 1) tablePage = 1;
+    const start = filteredCount === 0 ? 0 : (tablePage - 1) * tablePageSize + 1;
+    const end = Math.min(tablePage * tablePageSize, filteredCount);
+    if (tablePagerInfo) {
+      tablePagerInfo.textContent = filteredCount
+        ? `Showing ${start}–${end} of ${filteredCount}`
+        : 'Showing 0 of 0';
+    }
+    if (tablePageLabel) tablePageLabel.textContent = `${filteredCount ? tablePage : 1} / ${totalPages}`;
+    if (tablePrev) tablePrev.disabled = tablePage <= 1 || filteredCount === 0;
+    if (tableNext) tableNext.disabled = tablePage >= totalPages || filteredCount === 0;
+    if (tablePager) tablePager.style.display = filteredCount > 0 ? 'flex' : 'none';
+  }
+
   function applyClientsView() {
     const q = (searchInput?.value || '').trim().toLowerCase();
-    let visible = 0;
+    let filteredCount = 0;
     const total = allRows().length;
 
     allRows().forEach((tr) => {
@@ -4347,13 +4701,24 @@ function calcRun() {
         const cb = tr.querySelector('.cl-row-cb');
         if (cb) cb.checked = false;
         tr.classList.remove('cl-row-selected');
+        tr.classList.remove('cl-page-hidden');
       } else {
-        visible++;
+        filteredCount++;
       }
     });
 
-    emptyRow.classList.toggle('cl-row-hidden', visible > 0);
-    if (subtitle) subtitle.textContent = visible + ' of ' + total + ' clients';
+    const matched = filterMatchedRows();
+    const totalPages = Math.max(1, Math.ceil(matched.length / tablePageSize));
+    if (tablePage > totalPages) tablePage = totalPages;
+    const start = (tablePage - 1) * tablePageSize;
+    const pageSet = new Set(matched.slice(start, start + tablePageSize));
+    matched.forEach((tr) => {
+      tr.classList.toggle('cl-page-hidden', !pageSet.has(tr));
+    });
+
+    emptyRow.classList.toggle('cl-row-hidden', filteredCount > 0);
+    if (subtitle) subtitle.textContent = filteredCount + ' of ' + total + ' clients';
+    updateTablePager(filteredCount);
     renderMobileClients();
     updateFilterUI();
     syncSelectAll();
@@ -4362,7 +4727,7 @@ function calcRun() {
 
   function renderMobileClients() {
     if (!mobileList) return;
-    const rows = visibleRows();
+    const rows = filterMatchedRows();
     const totalPages = Math.max(1, Math.ceil(rows.length / mobilePageSize));
     if (mobilePage > totalPages) mobilePage = totalPages;
     if (mobilePage < 1) mobilePage = 1;
@@ -4378,10 +4743,11 @@ function calcRun() {
         const clientEmail = cells[1]?.querySelector('.cl-client-email')?.textContent?.trim() || '—';
         const reference = cells[2]?.textContent?.trim() || '—';
         const employment = cells[3]?.textContent?.trim() || '—';
-        const income = cells[4]?.textContent?.trim() || '—';
-        const status = cells[5]?.textContent?.trim() || '—';
-        const casesText = cells[6]?.textContent?.trim() || '0';
-        const adviser = cells[7]?.textContent?.trim() || '—';
+        const insurance = cells[4]?.textContent?.trim() || '—';
+        const income = cells[5]?.textContent?.trim() || '—';
+        const status = cells[6]?.textContent?.trim() || '—';
+        const casesText = cells[7]?.textContent?.trim() || '0';
+        const adviser = cells[8]?.textContent?.trim() || '—';
         const checked = tr.querySelector('.cl-row-cb')?.checked ? 'checked' : '';
         return `
           <div class="cl-mobile-card" data-mobile-page-index="${pageIndex}">
@@ -4395,6 +4761,7 @@ function calcRun() {
             <div class="cl-mobile-meta">
               <div class="cl-mobile-meta-item"><b>Reference</b>${reference}</div>
               <div class="cl-mobile-meta-item"><b>Employment</b>${employment}</div>
+              <div class="cl-mobile-meta-item"><b>Insurance</b>${insurance}</div>
               <div class="cl-mobile-meta-item"><b>Income</b>${income}</div>
               <div class="cl-mobile-meta-item"><b>Status</b>${status}</div>
               <div class="cl-mobile-meta-item"><b>Cases</b>${casesText}</div>
@@ -4429,11 +4796,13 @@ function calcRun() {
   function syncRowHighlight() {
     allRows().forEach((tr) => {
       const cb = tr.querySelector('.cl-row-cb');
-      tr.classList.toggle('cl-row-selected', !!(cb && cb.checked && !tr.classList.contains('cl-row-hidden')));
+      const onPage = !tr.classList.contains('cl-row-hidden') && !tr.classList.contains('cl-page-hidden');
+      tr.classList.toggle('cl-row-selected', !!(cb && cb.checked && onPage));
     });
     const selectedCount = allRows().filter((tr) => {
       const cb = tr.querySelector('.cl-row-cb');
-      return !!(cb && cb.checked && !tr.classList.contains('cl-row-hidden'));
+      const onPage = !tr.classList.contains('cl-row-hidden') && !tr.classList.contains('cl-page-hidden');
+      return !!(cb && cb.checked && onPage);
     }).length;
     if (deleteBtn) {
       deleteBtn.disabled = selectedCount === 0;
@@ -4561,12 +4930,14 @@ function calcRun() {
   }
 
   searchInput?.addEventListener('input', () => {
+    tablePage = 1;
     mobilePage = 1;
     applyClientsView();
   });
 
-  [filterStatus, filterEmployment, filterAdviser, filterMessages].forEach((el) => {
+  [filterStatus, filterEmployment, filterClientType, filterAdviser].forEach((el) => {
     el?.addEventListener('change', () => {
+      tablePage = 1;
       mobilePage = 1;
       applyClientsView();
     });
@@ -4578,6 +4949,7 @@ function calcRun() {
   });
 
   filterApply?.addEventListener('click', () => {
+    tablePage = 1;
     mobilePage = 1;
     applyClientsView();
     toggleFilterPanel(false);
@@ -4586,9 +4958,21 @@ function calcRun() {
   filterClear?.addEventListener('click', () => {
     if (filterStatus) filterStatus.value = '';
     if (filterEmployment) filterEmployment.value = '';
+    if (filterClientType) filterClientType.value = '';
     if (filterAdviser) filterAdviser.value = '';
-    if (filterMessages) filterMessages.value = '';
+    tablePage = 1;
     mobilePage = 1;
+    applyClientsView();
+  });
+
+  tablePrev?.addEventListener('click', () => {
+    tablePage = Math.max(1, tablePage - 1);
+    applyClientsView();
+  });
+
+  tableNext?.addEventListener('click', () => {
+    const total = Math.max(1, Math.ceil(filterMatchedRows().length / tablePageSize));
+    tablePage = Math.min(total, tablePage + 1);
     applyClientsView();
   });
 
@@ -4598,7 +4982,7 @@ function calcRun() {
   });
 
   mobileNext?.addEventListener('click', () => {
-    const total = Math.max(1, Math.ceil(visibleRows().length / mobilePageSize));
+    const total = Math.max(1, Math.ceil(filterMatchedRows().length / mobilePageSize));
     mobilePage = Math.min(total, mobilePage + 1);
     renderMobileClients();
   });
@@ -4857,6 +5241,9 @@ function calcRun() {
     }
     if (data?.type === 'ko:case-detail' && data.case && data.case.id) {
       cases[data.case.id] = mapApiCaseToPrototypeView(data.case);
+      const ffOverlay = document.getElementById('ff-overlay');
+      const factFindOpen = ffOverlay && !ffOverlay.classList.contains('ff-hidden');
+      if (factFindOpen) return;
       openCase(data.case.id);
     }
     if (data?.type === 'ko:open-case-error') {
@@ -4890,6 +5277,14 @@ function calcRun() {
   const form = document.getElementById('cl-drawer-form');
   const typeIndividualBtn = document.getElementById('cl-type-individual');
   const typeCompanyBtn = document.getElementById('cl-type-company');
+  const fieldsReferral = document.getElementById('cl-fields-referral');
+  const fieldsDetails = document.getElementById('cl-fields-details');
+  const fieldsReferredCompany = document.getElementById('cl-fields-referred-company');
+  const referralNoBtn = document.getElementById('cl-referral-no');
+  const referralYesBtn = document.getElementById('cl-referral-yes');
+  const referredCompanyInput = document.getElementById('cl-new-referred-company');
+  const continueBtn = document.getElementById('cl-drawer-continue');
+  const referredCompanyBackBtn = document.getElementById('cl-referred-company-back');
   const fieldsIndividual = document.getElementById('cl-fields-individual');
   const fieldsCompany = document.getElementById('cl-fields-company');
   const nameInput = document.getElementById('cl-new-name');
@@ -4899,13 +5294,20 @@ function calcRun() {
   const employmentSelect = document.getElementById('cl-new-employment');
   const incomeInput = document.getElementById('cl-new-income');
   const incomeLabel = document.getElementById('cl-new-income-label');
+  const fieldsInsurance = document.getElementById('cl-fields-insurance');
+  const hasInsurerCheckbox = document.getElementById('cl-has-insurer');
+  const insurerWrap = document.getElementById('cl-insurer-wrap');
+  const insurerSelect = document.getElementById('cl-new-insurer');
   const adviserSelect = document.getElementById('cl-new-adviser');
   const statusSelect = document.getElementById('cl-new-status');
   const submitBtn = document.getElementById('cl-drawer-create');
+  const drawerActions = document.getElementById('cl-drawer-actions');
   const errorEl = document.getElementById('cl-drawer-error');
   const isEmbedded = document.body.classList.contains('embedded');
   let createRequestId = 0;
   let clientType = 'INDIVIDUAL';
+  let individualStep = 'referral';
+  let isReferred = null;
   if (!root) return;
 
   const employmentMap = {
@@ -4915,9 +5317,48 @@ function calcRun() {
     'on-boarding': 'EMPLOYED',
   };
 
+  function renderAdviserSelectOptions(advisers) {
+    if (!adviserSelect) return;
+    const active = (advisers || []).filter(function (a) { return a && a.isActive !== false; });
+    const previous = adviserSelect.value;
+    adviserSelect.innerHTML = '<option value="" disabled' + (previous ? '' : ' selected') + '>Select adviser</option>';
+    active.forEach(function (a) {
+      const opt = document.createElement('option');
+      opt.value = a.id;
+      opt.textContent = [a.firstName, a.lastName].filter(Boolean).join(' ') || a.email || 'Adviser';
+      adviserSelect.appendChild(opt);
+    });
+    adviserSelect.required = active.length > 0;
+    if (previous && active.some(function (a) { return a.id === previous; })) {
+      adviserSelect.value = previous;
+    }
+  }
+
+  function requestAdvisersSync() {
+    if (!isEmbedded || window.parent === window) return;
+    window.parent.postMessage({ type: 'ko:request-advisers-sync' }, window.location.origin);
+  }
+
+  window.addEventListener('message', function (event) {
+    if (event.origin !== window.location.origin) return;
+    const data = event.data;
+    if (data?.type === 'ko:advisers-sync' && Array.isArray(data.advisers)) {
+      renderAdviserSelectOptions(data.advisers);
+    }
+  });
+
+  requestAdvisersSync();
+  window.setTimeout(requestAdvisersSync, 300);
+  window.setTimeout(requestAdvisersSync, 1000);
+
   function setClientType(nextType) {
     clientType = nextType === 'COMPANY' ? 'COMPANY' : 'INDIVIDUAL';
     const isCompany = clientType === 'COMPANY';
+    if (!isCompany) {
+      individualStep = 'referral';
+      isReferred = null;
+      if (referredCompanyInput) referredCompanyInput.value = '';
+    }
     typeIndividualBtn?.classList.toggle('is-selected', !isCompany);
     typeCompanyBtn?.classList.toggle('is-selected', isCompany);
     typeIndividualBtn?.setAttribute('aria-pressed', isCompany ? 'false' : 'true');
@@ -4925,16 +5366,94 @@ function calcRun() {
     fieldsIndividual?.classList.toggle('cl-drawer-section-hidden', isCompany);
     fieldsCompany?.classList.toggle('cl-drawer-section-hidden', !isCompany);
     if (incomeLabel) {
-      incomeLabel.textContent = isCompany ? 'Annual turnover / income *' : 'Annual Income *';
+      incomeLabel.textContent = isCompany ? 'Annual turnover / income' : 'Annual income';
     }
     if (incomeInput) {
       incomeInput.placeholder = isCompany ? 'e.g. £250,000' : 'e.g. £72,000';
+      incomeInput.required = false;
     }
     if (emailInput) {
       emailInput.placeholder = isCompany ? 'accounts@acmeholdings.co.uk' : 'name@company.com';
     }
+    updateDrawerStep();
     showDrawerError('');
   }
+
+  function updateInsuranceFields() {
+    const showInsurance = clientType !== 'COMPANY' && isReferred === false;
+    fieldsInsurance?.classList.toggle('cl-drawer-section-hidden', !showInsurance);
+    if (!showInsurance) {
+      if (hasInsurerCheckbox) hasInsurerCheckbox.checked = false;
+      if (insurerSelect) insurerSelect.value = '';
+      insurerWrap?.classList.add('cl-drawer-section-hidden');
+      return;
+    }
+    const showInsurerSelect = !!hasInsurerCheckbox?.checked;
+    insurerWrap?.classList.toggle('cl-drawer-section-hidden', !showInsurerSelect);
+    if (!showInsurerSelect && insurerSelect) insurerSelect.value = '';
+  }
+
+  hasInsurerCheckbox?.addEventListener('change', updateInsuranceFields);
+
+  function updateDrawerStep() {
+    const isCompany = clientType === 'COMPANY';
+    const onReferralStep = !isCompany && individualStep === 'referral';
+    const onReferredCompanyStep = !isCompany && individualStep === 'referred-company';
+    const onDetailsStep = isCompany || individualStep === 'details';
+    fieldsReferral?.classList.toggle('cl-drawer-section-hidden', isCompany || !onReferralStep);
+    fieldsReferredCompany?.classList.toggle('cl-drawer-section-hidden', !onReferredCompanyStep);
+    fieldsDetails?.classList.toggle('cl-drawer-section-hidden', !onDetailsStep);
+    drawerActions?.classList.toggle('cl-drawer-section-hidden', !onDetailsStep);
+    referralNoBtn?.classList.toggle('is-selected', isReferred === false);
+    referralYesBtn?.classList.toggle('is-selected', isReferred === true);
+    referralNoBtn?.setAttribute('aria-pressed', isReferred === false ? 'true' : 'false');
+    referralYesBtn?.setAttribute('aria-pressed', isReferred === true ? 'true' : 'false');
+    updateInsuranceFields();
+  }
+
+  function handleReferralAnswer(referred) {
+    isReferred = referred;
+    if (!referred) {
+      if (referredCompanyInput) referredCompanyInput.value = '';
+      individualStep = 'details';
+    } else {
+      individualStep = 'referred-company';
+    }
+    updateDrawerStep();
+    showDrawerError('');
+    if (!referred) nameInput?.focus();
+    else referredCompanyInput?.focus();
+  }
+
+  function handleContinueFromReferredCompany() {
+    const referredToCompany = referredCompanyInput?.value?.trim() ?? '';
+    if (!referredToCompany) {
+      showDrawerError('The referred company is required.');
+      referredCompanyInput?.focus();
+      return;
+    }
+    individualStep = 'details';
+    updateDrawerStep();
+    showDrawerError('');
+    nameInput?.focus();
+  }
+
+  continueBtn?.addEventListener('click', handleContinueFromReferredCompany);
+  referredCompanyInput?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleContinueFromReferredCompany();
+    }
+  });
+  referredCompanyBackBtn?.addEventListener('click', () => {
+    isReferred = null;
+    individualStep = 'referral';
+    updateDrawerStep();
+    showDrawerError('');
+  });
+
+  referralNoBtn?.addEventListener('click', () => handleReferralAnswer(false));
+  referralYesBtn?.addEventListener('click', () => handleReferralAnswer(true));
 
   typeIndividualBtn?.addEventListener('click', () => setClientType('INDIVIDUAL'));
   typeCompanyBtn?.addEventListener('click', () => setClientType('COMPANY'));
@@ -4963,11 +5482,6 @@ function calcRun() {
     return Number.isFinite(num) && num > 0 ? num : undefined;
   }
 
-  function getAnnualIncomeRequiredMessage() {
-    return clientType === 'COMPANY'
-      ? 'Annual turnover / income is required.'
-      : 'Annual income is required.';
-  }
 
   function setSubmitting(submitting) {
     if (submitBtn) {
@@ -4979,13 +5493,15 @@ function calcRun() {
 
   function openClDrawer() {
     showDrawerError('');
+    individualStep = 'referral';
+    isReferred = null;
     setClientType('INDIVIDUAL');
     root.classList.add('is-open');
     root.setAttribute('aria-hidden', 'false');
     document.body.classList.add('cl-drawer-open');
     window.setTimeout(() => {
       if (clientType === 'COMPANY') companyNameInput?.focus();
-      else nameInput?.focus();
+      else referralNoBtn?.focus();
     }, 300);
   }
 
@@ -4994,6 +5510,8 @@ function calcRun() {
     root.setAttribute('aria-hidden', 'true');
     document.body.classList.remove('cl-drawer-open');
     form?.reset();
+    individualStep = 'referral';
+    isReferred = null;
     setClientType('INDIVIDUAL');
     if (statusSelect) statusSelect.value = 'prospect';
     setSubmitting(false);
@@ -5101,12 +5619,7 @@ function calcRun() {
         emailInput?.focus();
         return;
       }
-      if (!annualIncome) {
-        showDrawerError(getAnnualIncomeRequiredMessage());
-        incomeInput?.focus();
-        return;
-      }
-      if (!adviser) {
+      if (adviserSelect?.required && !adviser) {
         showDrawerError('Adviser is required.');
         adviserSelect?.focus();
         return;
@@ -5116,13 +5629,29 @@ function calcRun() {
         companyName,
         companyNumber,
         email,
-        annualIncome,
+        ...(annualIncome ? { annualIncome } : {}),
+        ...(adviser ? { assignedMemberId: adviser } : {}),
       };
     } else {
+      if (individualStep === 'referral' || isReferred === null) {
+        showDrawerError('Please indicate whether this client is being referred.');
+        return;
+      }
+      if (individualStep === 'referred-company') {
+        handleContinueFromReferredCompany();
+        return;
+      }
       const fullName = nameInput?.value?.trim() ?? '';
       const { firstName, lastName } = splitFullName(fullName);
       const employmentKey = employmentSelect?.value ?? '';
       const employmentStatus = employmentMap[employmentKey];
+      const referredToCompany = referredCompanyInput?.value?.trim() ?? '';
+
+      if (isReferred && !referredToCompany) {
+        showDrawerError('The referred company is required.');
+        referredCompanyInput?.focus();
+        return;
+      }
 
       if (!firstName || !lastName) {
         showDrawerError('Please enter first and last name.');
@@ -5139,12 +5668,7 @@ function calcRun() {
         employmentSelect?.focus();
         return;
       }
-      if (!annualIncome) {
-        showDrawerError(getAnnualIncomeRequiredMessage());
-        incomeInput?.focus();
-        return;
-      }
-      if (!adviser) {
+      if (adviserSelect?.required && !adviser) {
         showDrawerError('Adviser is required.');
         adviserSelect?.focus();
         return;
@@ -5156,7 +5680,15 @@ function calcRun() {
         lastName,
         email,
         employmentStatus,
-        annualIncome,
+        ...(annualIncome ? { annualIncome } : {}),
+        isReferred: isReferred === true,
+        referredToCompany: isReferred ? referredToCompany : undefined,
+        ...(adviser ? { assignedMemberId: adviser } : {}),
+        ...(isReferred === false &&
+        hasInsurerCheckbox?.checked &&
+        insurerSelect?.value
+          ? { insurerName: insurerSelect.value }
+          : {}),
       };
     }
 
@@ -5218,11 +5750,16 @@ calcRun();
     errorState: '',
     fieldErrors: {},
     showUploadModal: false,
+    showCreditReportPreview: false,
+    pendingAutofillFile: null,
+    pendingAutofillCategory: '',
     uploadError: '',
     simulatedAutoFill: { stalled: false, paused: false, apiFailure: false, offline: false },
     simulatedTimers: [],
     saveRequestId: 0,
     pendingSaveRequestId: 0,
+    autofillRequestId: 0,
+    pendingAutofillRequestId: 0,
   };
 
   const FF_ERROR_STATES = {
@@ -5302,37 +5839,159 @@ calcRun();
     }
   }
 
+  const FF_CREDIT_REPORT_FIELDS = [
+    {
+      section: 'Personal details',
+      fields: [
+        'Full name, date of birth and nationality',
+        'Contact number and email',
+        'Marital status and dependants',
+        'Current and previous addresses',
+      ],
+    },
+    {
+      section: 'Employment',
+      fields: [
+        'Employment status',
+        'Employer name, address and phone',
+        'Employment start date and contract type',
+      ],
+    },
+    {
+      section: 'Income',
+      fields: [
+        'Gross annual salary',
+        'National Insurance number',
+        'Bonus, overtime or rental income (where shown)',
+      ],
+    },
+    {
+      section: 'Financial commitments',
+      fields: [
+        'Credit cards — limit, balance and monthly payment',
+        'Personal or secured loans — balance and monthly payment',
+        'Existing mortgage — lender, balance, monthly payment and rate',
+      ],
+    },
+    {
+      section: 'Adverse credit',
+      fields: [
+        'Missed mortgage or loan repayments',
+        'CCJs, defaults, IVAs or bankruptcy markers',
+      ],
+    },
+    {
+      section: 'Case hints',
+      fields: [
+        'Remortgage or purchase intent',
+        'Property value and mortgage amount (where stated)',
+      ],
+    },
+  ];
+
+  function ffIsCreditReportCategory(category) {
+    return String(category || '').trim().toLowerCase() === 'credit report';
+  }
+
+  function ffClearPendingAutofill() {
+    ff.pendingAutofillFile = null;
+    ff.pendingAutofillCategory = '';
+    ff.showCreditReportPreview = false;
+  }
+
   function ffClearAutoFillSimulation() {
     ff.simulatedTimers.forEach((timerId) => window.clearTimeout(timerId));
     ff.simulatedTimers = [];
     ff.simulatedAutoFill = { stalled: false, paused: false, apiFailure: false, offline: false };
   }
 
-  function ffStartAutoFillSimulation() {
+  function ffDeepMerge(base, patch) {
+    if (!patch || typeof patch !== 'object') return base;
+    const out = { ...base };
+    Object.keys(patch).forEach((key) => {
+      const pv = patch[key];
+      const bv = base[key];
+      if (Array.isArray(pv)) {
+        if (pv.length) out[key] = pv;
+      } else if (typeof pv === 'boolean') {
+        out[key] = pv;
+      } else if (pv && typeof pv === 'object' && bv && typeof bv === 'object' && !Array.isArray(bv)) {
+        out[key] = ffDeepMerge(bv, pv);
+      } else if (pv !== undefined && pv !== null && pv !== '') {
+        out[key] = pv;
+      }
+    });
+    return out;
+  }
+
+  function ffApplyExtractedFields(extracted) {
+    if (!extracted || typeof extracted !== 'object') return 0;
+    const beforeVis = ffVisible();
+    const stepId = beforeVis[ff.idx]?.id;
+    ff.form = ffDeepMerge(ff.form, extracted);
+    if (stepId) {
+      const afterVis = ffVisible();
+      const nextIdx = afterVis.findIndex((q) => q.id === stepId);
+      if (nextIdx >= 0) ff.idx = nextIdx;
+      else ff.idx = Math.min(ff.idx, Math.max(afterVis.length - 1, 0));
+    }
+    let count = 0;
+    const walk = (obj) => {
+      if (obj === null || obj === undefined || obj === '') return;
+      if (typeof obj !== 'object') { count += 1; return; }
+      if (Array.isArray(obj)) { obj.forEach(walk); return; }
+      Object.values(obj).forEach(walk);
+    };
+    walk(extracted);
+    ffSaveIndicator();
+    ffRenderCard();
+    ffUpdateHdr();
+    return count;
+  }
+
+  function ffStartAutoFillFromDocument(file, documentCategory) {
     ffClearAutoFillSimulation();
+    if (!file) return;
+
+    if (window.parent === window) {
+      ff.simulatedAutoFill.apiFailure = true;
+      ffRender();
+      return;
+    }
+
     ff.simulatedAutoFill.stalled = true;
     ffRender();
 
-    const toPaused = window.setTimeout(() => {
-      ff.simulatedAutoFill.stalled = false;
-      ff.simulatedAutoFill.paused = true;
-      ffRender();
-    }, 3500);
+    ff.autofillRequestId += 1;
+    ff.pendingAutofillRequestId = ff.autofillRequestId;
+    const requestId = ff.autofillRequestId;
 
-    const toApiFailure = window.setTimeout(() => {
-      ff.simulatedAutoFill.paused = false;
+    const reader = new FileReader();
+    reader.onload = function () {
+      const dataUrl = String(reader.result || '');
+      const base64 = dataUrl.includes(',') ? dataUrl.split(',')[1] : dataUrl;
+      window.parent.postMessage(
+        {
+          type: 'ko:fact-find-autofill',
+          requestId,
+          caseId: ff.caseId,
+          file: {
+            name: file.name,
+            mimeType: file.type || 'application/octet-stream',
+            base64,
+            documentCategory: documentCategory || 'Other / general',
+          },
+        },
+        window.location.origin,
+      );
+    };
+    reader.onerror = function () {
+      if (ff.pendingAutofillRequestId !== requestId) return;
+      ff.simulatedAutoFill.stalled = false;
       ff.simulatedAutoFill.apiFailure = true;
       ffRender();
-    }, 7000);
-
-    const toOffline = window.setTimeout(() => {
-      ff.simulatedAutoFill.offline = true;
-      clearTimeout(ff.saveTimer);
-      clearTimeout(ff.saveClearTimer);
-      ffRender();
-    }, 10500);
-
-    ff.simulatedTimers.push(toPaused, toApiFailure, toOffline);
+    };
+    reader.readAsDataURL(file);
   }
 
   const FF_ALPHA_FIELD_KEYS = new Set(['firstName', 'middleName', 'lastName', 'nationality', 'employerName', 'city']);
@@ -5609,9 +6268,12 @@ calcRun();
     ff.form   = ffHydrateFromStored(ff.caseId);
     ff.idx    = 0;
     ff.done   = false;
+    ff.submitting = false;
+    ff.pendingSubmitRequestId = null;
     ff.dir    = 1;
     ff.showUploadModal = false;
     ff.uploadError = '';
+    ffClearPendingAutofill();
     ffClearAutoFillSimulation();
     const ov = document.getElementById('ff-overlay');
     ov.classList.remove('ff-hidden');
@@ -5648,6 +6310,7 @@ calcRun();
     document.body.style.minHeight = '';
     ff.showUploadModal = false;
     ff.uploadError = '';
+    ffClearPendingAutofill();
     ffClearAutoFillSimulation();
     document.removeEventListener('keydown', ffKeyDown);
   }
@@ -5658,8 +6321,16 @@ calcRun();
   };
 
   function ffKeyDown(e) {
-    if (e.key === 'Escape') { ffClose(); return; }
-    if (ff.showUploadModal || ff.simulatedAutoFill.stalled || ff.simulatedAutoFill.paused) return;
+    if (e.key === 'Escape') {
+      if (ff.showCreditReportPreview) {
+        ffClearPendingAutofill();
+        ffRender();
+        return;
+      }
+      ffClose();
+      return;
+    }
+    if (ff.showUploadModal || ff.showCreditReportPreview || ff.simulatedAutoFill.stalled || ff.simulatedAutoFill.paused) return;
     const vis = ffVisible(), cur = vis[ff.idx];
     if (!cur) return;
     if (e.key === 'Enter' && !e.shiftKey && !(e.target instanceof HTMLTextAreaElement)) {
@@ -5671,6 +6342,31 @@ calcRun();
   window.addEventListener('message', function (event) {
     if (event.origin !== window.location.origin) return;
     const data = event.data;
+
+    if (data?.type === 'ko:fact-find-autofill-result') {
+      if (data.requestId !== ff.pendingAutofillRequestId) return;
+      ff.simulatedAutoFill.stalled = false;
+      ff.simulatedAutoFill.paused = false;
+
+      if (data.success) {
+        const count = ffApplyExtractedFields(data.extracted);
+        ffUpdateSaveStatus({
+          text: count ? 'Auto-filled ' + count + ' field' + (count === 1 ? '' : 's') : 'Auto-fill complete',
+          color: '#0F6E56',
+        });
+        clearTimeout(ff.saveClearTimer);
+        ff.saveClearTimer = setTimeout(() => {
+          if (!ffIsOfflineSave()) ffUpdateSaveStatus();
+        }, 3500);
+        ffRender();
+        return;
+      }
+
+      ff.simulatedAutoFill.apiFailure = true;
+      ffRender();
+      return;
+    }
+
     if (data?.type !== 'ko:fact-find-save-result') return;
     if (data.requestId !== ff.pendingSaveRequestId) return;
 
@@ -5679,11 +6375,27 @@ calcRun();
       if (c) {
         c.factFind = data.factFind || c.factFind || {};
       }
+      const wasSubmit = data.requestId === ff.pendingSubmitRequestId;
+      if (wasSubmit) {
+        ff.pendingSubmitRequestId = null;
+        ff.submitting = false;
+        ff.done = true;
+        ffUpdateSaveStatus({ text: 'Submitted', color: '#0F6E56' });
+        ffRender();
+        return;
+      }
       ffUpdateSaveStatus({ text: 'Saved', color: '#0F6E56' });
       clearTimeout(ff.saveClearTimer);
       ff.saveClearTimer = setTimeout(() => {
         if (!ffIsOfflineSave()) ffUpdateSaveStatus();
       }, 2500);
+      return;
+    }
+
+    if (data.requestId === ff.pendingSubmitRequestId) {
+      ff.pendingSubmitRequestId = null;
+      ff.submitting = false;
+      ffUpdateSaveStatus({ text: 'Submit failed', color: '#DC2626' });
       return;
     }
 
@@ -5696,23 +6408,43 @@ calcRun();
     ffSaveIndicator();
   }
 
-  function ffPersist() {
+  function ffBuildPayload(markComplete) {
+    const payload = {
+      personalDetails: {
+        portalFactFindForm: ff.form,
+      },
+    };
+    if (markComplete) payload.markComplete = true;
+    return payload;
+  }
+
+  function ffPersist(opts) {
     if (!ff.caseId || window.parent === window || ffIsOfflineSave()) return;
+    const markComplete = !!(opts && opts.markComplete);
     ff.saveRequestId += 1;
     ff.pendingSaveRequestId = ff.saveRequestId;
+    if (markComplete) ff.pendingSubmitRequestId = ff.saveRequestId;
     window.parent.postMessage(
       {
         type: 'ko:fact-find-save',
         requestId: ff.saveRequestId,
         caseId: ff.caseId,
-        payload: {
-          personalDetails: {
-            portalFactFindForm: ff.form,
-          },
-        },
+        payload: ffBuildPayload(markComplete),
       },
       window.location.origin,
     );
+  }
+
+  function ffSubmitToApi() {
+    if (!ff.caseId || window.parent === window || ffIsOfflineSave()) {
+      ff.done = true;
+      ffRender();
+      return;
+    }
+    if (ff.submitting) return;
+    ff.submitting = true;
+    ffUpdateSaveStatus({ text: 'Submitting…', color: '#f59e0b' });
+    ffPersist({ markComplete: true });
   }
 
   function ffSaveIndicator() {
@@ -5734,10 +6466,11 @@ calcRun();
 
   // ── Navigation ────────────────────────────────────────────────────────────
   function ffGoNext() {
-    if (ff.showUploadModal || ff.simulatedAutoFill.stalled || ff.simulatedAutoFill.paused) return;
+    if (ff.showUploadModal || ff.showCreditReportPreview || ff.simulatedAutoFill.stalled || ff.simulatedAutoFill.paused) return;
+    if (ff.submitting) return;
     if (!ffValidateCurrentCard()) return;
     const vis = ffVisible();
-    if (ff.idx >= vis.length - 1) { ff.done = true; ffRender(); return; }
+    if (ff.idx >= vis.length - 1) { ffSubmitToApi(); return; }
     ff.dir = 1;
     ff.idx = Math.min(ff.idx + 1, vis.length - 1);
     ffRenderCard(); ffUpdateHdr();
@@ -5845,21 +6578,57 @@ calcRun();
   }
 
   function ffUploadFloatHTML() {
+    const tooltipText = 'AI isn\u2019t perfect and can be wrong sometimes. Please check that extracted values are correct.';
     return `<button type="button" class="ff-upload-float" id="ff-upload-float" aria-label="Auto-fill from uploaded document">
       <span class="ff-upload-float-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 16V4"/><path d="M8 8l4-4 4 4"/><path d="M20 16.5v2a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18.5v-2"/></svg></span>
       <span class="ff-upload-float-copy"><strong>Auto-fill from documents</strong><span>Upload a file to prefill key fact-find fields.</span></span>
+      <span class="ff-upload-tooltip-wrap" tabindex="0" role="note" aria-label="${tooltipText}" data-ff-stop-prop>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v.01"/><path d="M11 12h1v4h1"/></svg>
+        <span class="ff-upload-tooltip">${tooltipText}</span>
+      </span>
     </button>`;
+  }
+
+  function ffCreditReportPreviewHTML() {
+    const groups = FF_CREDIT_REPORT_FIELDS.map(function (group) {
+      const items = group.fields.map(function (field) {
+        return '<li>' + field + '</li>';
+      }).join('');
+      return '<div class="ff-credit-preview-group"><h4>' + group.section + '</h4><ul class="ff-credit-preview-list">' + items + '</ul></div>';
+    }).join('');
+    const fileName = ff.pendingAutofillFile ? ff.pendingAutofillFile.name : 'your credit report';
+    return `<div class="ff-credit-preview-wrap"><div class="ff-credit-preview" role="dialog" aria-modal="true" aria-labelledby="ff-credit-preview-title">
+      <div class="ff-credit-preview-head">
+        <div>
+          <h3 id="ff-credit-preview-title">What we can extract from a credit report</h3>
+          <p>${fileName}</p>
+        </div>
+        <button type="button" class="ff-close-btn" style="position:static" data-ff-credit-preview-cancel aria-label="Close">✕</button>
+      </div>
+      <div class="ff-credit-preview-body">
+        <p class="ff-credit-preview-intro">Before we analyse this document, here are the fact-find fields our AI will try to fill. Review anything it extracts — you can skip sections and complete them manually if needed.</p>
+        ${groups}
+      </div>
+      <div class="ff-credit-preview-foot">
+        <button type="button" class="ff-credit-preview-cancel" data-ff-credit-preview-cancel>Cancel</button>
+        <button type="button" class="ff-credit-preview-continue" data-ff-credit-preview-continue>Analyse document</button>
+      </div>
+    </div></div>`;
   }
 
   function ffBindOverlayActions(scope) {
     const openBtn = scope.querySelector('#ff-upload-float');
     if (openBtn) {
-      openBtn.addEventListener('click', () => {
+      openBtn.addEventListener('click', (e) => {
+        if (e.target instanceof HTMLElement && e.target.closest('[data-ff-stop-prop]')) return;
         ff.showUploadModal = true;
         ff.uploadError = '';
         ffRender();
       });
     }
+    scope.querySelectorAll('[data-ff-stop-prop]').forEach((el) => {
+      el.addEventListener('click', (e) => e.stopPropagation());
+    });
     scope.querySelectorAll('[data-ff-upload-close]').forEach((btn) => {
       btn.addEventListener('click', () => {
         ff.showUploadModal = false;
@@ -5867,6 +6636,23 @@ calcRun();
         ffRender();
       });
     });
+
+    scope.querySelectorAll('[data-ff-credit-preview-cancel]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        ffClearPendingAutofill();
+        ffRender();
+      });
+    });
+    const continueBtn = scope.querySelector('[data-ff-credit-preview-continue]');
+    if (continueBtn) {
+      continueBtn.addEventListener('click', () => {
+        const file = ff.pendingAutofillFile;
+        const documentCategory = ff.pendingAutofillCategory || 'Credit report';
+        ffClearPendingAutofill();
+        if (file) ffStartAutoFillFromDocument(file, documentCategory);
+        else ffRender();
+      });
+    }
 
     const fileInput = scope.querySelector('#ff-upload-file-input');
     const browseBtn = scope.querySelector('#ff-upload-browse');
@@ -5907,8 +6693,18 @@ calcRun();
         return;
       }
       ff.uploadError = '';
+      const categorySelect = scope.querySelector('.ff-upload-select');
+      const documentCategory = categorySelect && categorySelect.value ? categorySelect.value : 'Other / general';
+      if (ffIsCreditReportCategory(documentCategory)) {
+        ff.pendingAutofillFile = file;
+        ff.pendingAutofillCategory = documentCategory;
+        ff.showCreditReportPreview = true;
+        ff.showUploadModal = false;
+        ffRender();
+        return;
+      }
       ff.showUploadModal = false;
-      ffStartAutoFillSimulation();
+      ffStartAutoFillFromDocument(file, documentCategory);
     };
 
     if (fileInput) {
@@ -5980,6 +6776,7 @@ calcRun();
           <option>Employment</option>
           <option>Income</option>
           <option>Financial commitments</option>
+          <option>Credit report</option>
           <option>Property details</option>
           <option>Adverse credit</option>
           <option>Goals &amp; preferences</option>
@@ -6005,7 +6802,10 @@ calcRun();
       ffState(FF_ERROR_STATES.UNSUPPORTED_FILE_TYPE) ||
       ffState(FF_ERROR_STATES.AI_PROCESSING_STALLED);
     if (ffState(FF_ERROR_STATES.AI_PROCESSING_STALLED) || ff.simulatedAutoFill.stalled) {
-      html += `<div class="ff-floating-alert ff-floating-alert--amber"><span class="ff-mini-spinner" aria-hidden="true"></span>Processing stalled</div>`;
+      const label = ff.simulatedAutoFill.stalled && !ffState(FF_ERROR_STATES.AI_PROCESSING_STALLED)
+        ? 'Reading document\u2026'
+        : 'Processing stalled';
+      html += `<div class="ff-floating-alert ff-floating-alert--amber"><span class="ff-mini-spinner" aria-hidden="true"></span>${label}</div>`;
     }
     if (ffState(FF_ERROR_STATES.AI_PROCESSING_PAUSED) || ff.simulatedAutoFill.paused) {
       html += `<div class="ff-floating-alert ff-floating-alert--red"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v5"/><path d="M12 16h.01"/></svg>AI processing paused. Click to retry.</div>`;
@@ -6028,6 +6828,9 @@ calcRun();
     if (ffState(FF_ERROR_STATES.NOTIFICATION_FAILED)) {
       html += `<div class="ff-state-toast ff-state-toast--notif"><p style="font-size:11px;font-weight:700;color:#15803D;margin-bottom:4px">Status updated · Fact-Find Complete</p><h4>Email notification failed</h4><p>Case status was updated, but the email notice to the client failed to send.</p><div class="ff-toast-actions"><button type="button" class="ff-toast-btn">Copy client link</button><button type="button" class="ff-toast-btn ff-toast-btn--primary" style="background:#F59E0B;border-color:#F59E0B">Retry email</button></div></div>`;
     }
+    if (ff.showCreditReportPreview) {
+      html += ffCreditReportPreviewHTML();
+    }
     if (stateForcesUploadModal || ff.showUploadModal) {
       html += ffUploadModalHTML();
     }
@@ -6045,7 +6848,7 @@ calcRun();
     const fieldValidationError = ffState(FF_ERROR_STATES.FIELD_VALIDATION_ERROR);
     return `
       <div class="ff-section-label">${esc(cur.s)}</div>
-      ${autoFillFailure ? `<div class="ff-state-banner"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4l16 16"/><path d="M12 3a9 9 0 0 1 9 9"/><path d="M3 12a9 9 0 0 0 9 9"/></svg><div><strong>Open Banking connection unavailable</strong><span>We couldn’t securely pull data from Open Banking right now. Switching you seamlessly to manual entry — your progress is unaffected.</span></div></div>` : ''}
+      ${autoFillFailure ? `<div class="ff-state-banner"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4l16 16"/><path d="M12 3a9 9 0 0 1 9 9"/><path d="M3 12a9 9 0 0 0 9 9"/></svg><div><strong>Document auto-fill unavailable</strong><span>We couldn\u2019t extract fields from your upload right now. You can continue manually \u2014 your progress is unaffected.</span></div></div>` : ''}
       <div class="ff-q-row">
         <div class="ff-q-num-wrap">
           <span>${ff.idx+1}</span>

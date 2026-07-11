@@ -142,15 +142,14 @@ export function SystemStatusPanel() {
 
         <div className="space-y-3">
           <ServiceRow label="Database" healthy={health?.services.db ?? false} loading={isLoading} />
-          <ServiceRow label="AI (Azure Foundry)" healthy={health?.services.ai ?? false} loading={isLoading} />
+          <ServiceRow label="AI (OpenRouter)" healthy={health?.services.ai ?? false} loading={isLoading} />
           {!isLoading && health && !health.services.ai && (
             <p className="rounded-lg border border-amber/30 bg-amber/10 px-3 py-2 text-xs text-ink-60">
-              Azure AI Foundry is not configured. Add{' '}
-              <code className="font-mono text-[11px] text-ink">AZURE_AI_FOUNDRY_API_KEY</code>,{' '}
-              <code className="font-mono text-[11px] text-ink">AZURE_AI_FOUNDRY_ENDPOINT</code>, and{' '}
-              <code className="font-mono text-[11px] text-ink">AZURE_AI_FOUNDRY_DEPLOYMENT_NAME</code>{' '}
-              to your environment, then restart the dev server. Reports still generate draft content locally
-              without these keys.
+              OpenRouter is not configured. Add{' '}
+              <code className="font-mono text-[11px] text-ink">OPENROUTER_API_KEY</code>
+              {', optionally '}
+              <code className="font-mono text-[11px] text-ink">OPENROUTER_MODEL</code>
+              {', then restart the dev server. AI report generation requires this key.'}
             </p>
           )}
         </div>

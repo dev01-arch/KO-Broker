@@ -5,7 +5,7 @@ const LEGACY_DASHBOARD_SECTIONS =
 
 const nextConfig: NextConfig = {
   // Enable server-side external packages for Prisma
-  serverExternalPackages: ['@prisma/client'],
+  serverExternalPackages: ['@prisma/client', 'pdf-parse'],
   transpilePackages: ['@ko/db', '@ko/types', '@ko/utils'],
 
   async redirects() {

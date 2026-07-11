@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { requireApiAuth } from '@/lib/api/require-api-auth';
 import { approveAiReportForOrg } from '@/lib/api/ai-data';
-import { apiError, apiNotFound, apiSuccess } from '@/lib/api/responses';
+import { apiBusinessRuleViolation, apiError, apiNotFound, apiSuccess } from '@/lib/api/responses';
 import { isPrismaConnectionError } from '@/lib/api/prisma-errors';
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -14,9 +14,15 @@ export async function POST(_req: NextRequest, context: RouteContext) {
     const { id } = await context.params;
 
     const result = await approveAiReportForOrg(orgId, id, user.id);
-    if (!result) return apiNotFound('Report not found');
+    if ('error' in result) {
+      if (result.error === 'NOT_FOUND') return apiNotFound('Report not found');
+      if (result.error === 'BUSINESS_RULE_VIOLATION') {
+        return apiBusinessRuleViolation(result.message, result.details);
+      }
+      return apiError('INTERNAL_ERROR', 'Could not approve report', 500);
+    }
 
-    return apiSuccess(result);
+    return apiSuccess(result.report);
   } catch (error) {
     console.error('[POST /api/ai/reports/:id/approve]', error);
     if (isPrismaConnectionError(error))

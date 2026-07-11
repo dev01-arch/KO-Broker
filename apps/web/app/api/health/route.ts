@@ -13,7 +13,7 @@ export async function GET() {
     timestamp: new Date().toISOString(),
     services: {
       db: false,
-      ai: Boolean(process.env.AZURE_AI_FOUNDRY_API_KEY),
+      ai: Boolean(process.env.OPENROUTER_API_KEY?.trim()),
     },
     version: '0.1.0',
   };

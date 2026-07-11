@@ -110,6 +110,38 @@ export async function upsertFactFindWithCompliance(
       ),
     });
 
+    // Completing a fact-find while still at ENQUIRY should move the case into FACT_FIND
+    // so the next compliance advance is RESEARCH (not blocked on disclosure alone).
+    if (markComplete && caseRecord.stage === 'ENQUIRY') {
+      await prisma.$transaction(async (tx) => {
+        await tx.complianceRecord.create({
+          data: {
+            caseId,
+            stage: 'INITIAL_DISCLOSURE',
+            completedAt: new Date(),
+            isApproved: true,
+            userId: options?.userId ?? null,
+          },
+        });
+        await tx.case.update({
+          where: { id: caseId },
+          data: { stage: 'FACT_FIND', updatedAt: new Date() },
+        });
+      });
+
+      await logAuditEvent({
+        orgId,
+        userId: options?.userId,
+        entityType: 'Case',
+        entityId: caseId,
+        action: 'CASE_STAGE_CHANGED',
+        diff: {
+          stage: { before: 'ENQUIRY', after: 'FACT_FIND' },
+          reason: 'Fact-find completed while case was at ENQUIRY',
+        },
+      });
+    }
+
     return { factFind, client: { id: caseRecord.clientId, isVulnerable: newIsVulnerable } };
   } catch (error) {
     if (!useDevStore(error)) throw error;
@@ -205,14 +237,48 @@ export async function completePortalFactFind(session: {
       },
     });
 
+    if (caseRecord.stage === 'ENQUIRY') {
+      await prisma.$transaction(async (tx) => {
+        await tx.complianceRecord.create({
+          data: {
+            caseId: session.caseId,
+            stage: 'INITIAL_DISCLOSURE',
+            completedAt: completedDate,
+            isApproved: true,
+          },
+        });
+        await tx.case.update({
+          where: { id: session.caseId },
+          data: { stage: 'FACT_FIND', updatedAt: new Date() },
+        });
+      });
+
+      await logAuditEvent({
+        orgId: session.orgId,
+        entityType: 'Case',
+        entityId: session.caseId,
+        action: 'CASE_STAGE_CHANGED',
+        diff: {
+          stage: { before: 'ENQUIRY', after: 'FACT_FIND' },
+          reason: 'Fact-find completed while case was at ENQUIRY',
+        },
+      });
+    }
+
     const adviser = caseRecord.adviser;
     if (adviser?.email) {
       const { deliverEmail } = await import('@/lib/notifications/email');
-      await deliverEmail({
-        to: adviser.email,
-        subject: `Fact-Find Completed: Client ${caseRecord.client.firstName} ${caseRecord.client.lastName}`,
-        body: `Hello ${adviser.firstName || 'Adviser'},\n\nYour client ${caseRecord.client.firstName} ${caseRecord.client.lastName} has completed their Fact-Find questionnaire for Case Ref ${caseRecord.referenceNumber}.\n\nYou can now review the information on your dashboard and proceed with the research or AI Suitability Report generation.\n\nBest regards,\nKO Broker Platform`,
-      }).catch((err) => {
+      const adviserName = adviser.firstName || 'Adviser';
+      const clientName = `${caseRecord.client.firstName} ${caseRecord.client.lastName}`.trim();
+      const subject = `Fact-Find Completed: Client ${clientName}`;
+      const body = `Hello ${adviserName},\n\nYour client ${clientName} has completed their Fact-Find questionnaire for Case Ref ${caseRecord.referenceNumber}.\n\nYou can now review the information on your dashboard and proceed with the research or AI Suitability Report generation.\n\nBest regards,\nKO Broker Platform`;
+      const html = `
+        <p>Hello ${adviserName},</p>
+        <p>Your client <strong>${clientName}</strong> has completed their Fact-Find questionnaire for case <strong>${caseRecord.referenceNumber}</strong>.</p>
+        <p>You can now review the information on your dashboard and proceed with the research or AI Suitability Report generation.</p>
+        <p>Best regards,<br/>KO Broker Platform</p>
+      `;
+      await deliverEmail({ to: adviser.email, subject, body, html }).catch((err) => {
         console.error('[NOTIFY ERROR] Failed to send complete email to adviser:', err);
       });
     }

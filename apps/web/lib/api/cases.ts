@@ -95,6 +95,17 @@ export function serializeCaseDetail(caseRecord: {
     completedAt?: Date | null;
     updatedAt: Date;
   } | null;
+  productsConsidered?: Array<{
+    id: string;
+    caseId: string;
+    lenderName: string;
+    productName: string;
+    rate?: number | null;
+    fee?: number | null;
+    isSelected: boolean;
+    reasonNotSelected?: string | null;
+    createdAt: Date;
+  }>;
   _count: { messages: number; documents: number };
 }) {
   return {
@@ -143,6 +154,17 @@ export function serializeCaseDetail(caseRecord: {
           updatedAt: caseRecord.factFind.updatedAt.toISOString(),
         }
       : null,
+    productsConsidered: (caseRecord.productsConsidered ?? []).map((p) => ({
+      id: p.id,
+      caseId: p.caseId,
+      lenderName: p.lenderName,
+      productName: p.productName,
+      rate: p.rate ?? undefined,
+      fee: p.fee ?? undefined,
+      isSelected: p.isSelected,
+      reasonNotSelected: p.reasonNotSelected ?? undefined,
+      createdAt: p.createdAt.toISOString(),
+    })),
     _count: caseRecord._count,
   };
 }

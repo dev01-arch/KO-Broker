@@ -6,8 +6,10 @@ import {
   casesApi,
   requireAuthToken,
   type CreateCaseInput,
+  type CreateProductConsideredInput,
   type ListCasesParams,
   type UpdateCaseInput,
+  type UpdateProductConsideredInput,
   type UpsertFactFindInput,
 } from '@/lib/api/client';
 
@@ -96,6 +98,69 @@ export function useUpsertFactFind(caseId: string) {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['cases', caseId] });
+    },
+  });
+}
+
+export function useCaseProducts(caseId: string, options?: { enabled?: boolean }) {
+  const getToken = useToken();
+  return useQuery({
+    queryKey: ['cases', caseId, 'products'],
+    queryFn: async () => {
+      const token = await requireAuthToken(getToken);
+      return casesApi.listProducts(token, caseId);
+    },
+    enabled: (options?.enabled ?? true) && Boolean(caseId),
+  });
+}
+
+export function useCreateProduct(caseId: string) {
+  const getToken = useToken();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: CreateProductConsideredInput) => {
+      const token = await requireAuthToken(getToken);
+      return casesApi.createProduct(token, caseId, input);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['cases', caseId] });
+      qc.invalidateQueries({ queryKey: ['cases', caseId, 'products'] });
+    },
+  });
+}
+
+export function useUpdateProduct(caseId: string) {
+  const getToken = useToken();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      productId,
+      input,
+    }: {
+      productId: string;
+      input: UpdateProductConsideredInput;
+    }) => {
+      const token = await requireAuthToken(getToken);
+      return casesApi.updateProduct(token, caseId, productId, input);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['cases', caseId] });
+      qc.invalidateQueries({ queryKey: ['cases', caseId, 'products'] });
+    },
+  });
+}
+
+export function useDeleteProduct(caseId: string) {
+  const getToken = useToken();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (productId: string) => {
+      const token = await requireAuthToken(getToken);
+      return casesApi.deleteProduct(token, caseId, productId);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['cases', caseId] });
+      qc.invalidateQueries({ queryKey: ['cases', caseId, 'products'] });
     },
   });
 }

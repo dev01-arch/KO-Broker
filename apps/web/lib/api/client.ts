@@ -43,6 +43,16 @@ export type EmploymentStatus =
 
 export type ClientType = 'INDIVIDUAL' | 'COMPANY';
 
+export type ClientStatus = 'PROSPECT' | 'ACTIVE' | 'INACTIVE';
+
+export type ClientCategoryFilter = 'REFERRAL' | 'INDIVIDUAL' | 'COMPANY';
+
+export interface ClientMemberRef {
+  id: string;
+  firstName: string;
+  lastName: string;
+}
+
 export interface ClientSummary {
   id: string;
   referenceNumber: string;
@@ -53,7 +63,12 @@ export interface ClientSummary {
   email: string;
   employmentStatus: EmploymentStatus;
   annualIncome?: number;
+  isReferred?: boolean;
+  referredToCompany?: string;
+  status: ClientStatus;
+  insurerName?: string;
   isVulnerable: boolean;
+  assignedMember: ClientMemberRef | null;
   _count: {
     cases: number;
     messages: number;
@@ -139,10 +154,41 @@ export interface Case extends CaseSummary {
     employmentStatus: string;
   };
   factFind: FactFind | null;
+  productsConsidered?: ProductConsidered[];
   _count: {
     messages: number;
     documents: number;
   };
+}
+
+export interface ProductConsidered {
+  id: string;
+  caseId: string;
+  lenderName: string;
+  productName: string;
+  rate?: number;
+  fee?: number;
+  isSelected: boolean;
+  reasonNotSelected?: string;
+  createdAt: string;
+}
+
+export interface CreateProductConsideredInput {
+  lenderName: string;
+  productName: string;
+  rate?: number;
+  fee?: number;
+  isSelected?: boolean;
+  reasonNotSelected?: string;
+}
+
+export interface UpdateProductConsideredInput {
+  lenderName?: string;
+  productName?: string;
+  rate?: number | null;
+  fee?: number | null;
+  isSelected?: boolean;
+  reasonNotSelected?: string | null;
 }
 
 /** Minimal case row embedded on client detail responses. */
@@ -174,6 +220,12 @@ export interface ListClientsParams {
   perPage?: number;
   search?: string;
   employmentStatus?: EmploymentStatus;
+  clientType?: ClientType;
+  isReferred?: boolean;
+  clientCategory?: ClientCategoryFilter;
+  status?: ClientStatus;
+  assignedMemberId?: string;
+  insurerName?: string;
 }
 
 export interface CreateClientInput {
@@ -188,6 +240,10 @@ export interface CreateClientInput {
   dateOfBirth?: string;
   employmentStatus?: EmploymentStatus;
   annualIncome?: number;
+  isReferred?: boolean;
+  referredToCompany?: string;
+  assignedMemberId?: string;
+  insurerName?: string;
 }
 
 export interface UpdateClientInput {
@@ -350,6 +406,11 @@ export const clientsApi = {
     if (params.perPage) qs.set('perPage', String(params.perPage));
     if (params.search) qs.set('search', params.search);
     if (params.employmentStatus) qs.set('employmentStatus', params.employmentStatus);
+    if (params.clientType) qs.set('clientType', params.clientType);
+    if (params.isReferred !== undefined) qs.set('isReferred', String(params.isReferred));
+    if (params.clientCategory) qs.set('clientCategory', params.clientCategory);
+    if (params.status) qs.set('status', params.status);
+    if (params.assignedMemberId) qs.set('assignedMemberId', params.assignedMemberId);
     const query = qs.toString() ? `?${qs}` : '';
     return apiFetch<ClientSummary[]>(`/api/clients${query}`, token);
   },
@@ -431,17 +492,47 @@ export type ReportTemplate =
   | 'VULNERABLE_OVERLAY';
 export type ReportStatus = 'DRAFT' | 'ADVISER_REVIEW' | 'APPROVED' | 'FINALISED';
 
+export interface AiReportSection {
+  id: string;
+  title: string;
+  content: string;
+  complianceFlag?: 'OK' | 'REVIEW_REQUIRED';
+  flagReason?: string | null;
+}
+
 export interface AiReport {
   id: string;
   caseId: string;
   templateType: ReportTemplate;
   status: ReportStatus;
-  sections?: Record<string, unknown>;
+  /** Array of sections (current API) or legacy key→content object. */
+  sections?: AiReportSection[] | Record<string, unknown>;
   pdfUrl?: string;
   generatedBy?: string;
   approvedBy?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+/** Normalise array or legacy object section shapes for UI rendering. */
+export function normalizeAiReportSections(sections: AiReport['sections']): AiReportSection[] {
+  if (!sections) return [];
+  if (Array.isArray(sections)) {
+    return sections
+      .filter((s): s is AiReportSection => Boolean(s) && typeof s === 'object' && 'content' in s)
+      .map((s) => ({
+        id: String(s.id ?? ''),
+        title: String(s.title ?? s.id ?? 'Section'),
+        content: String(s.content ?? ''),
+        complianceFlag: s.complianceFlag,
+        flagReason: s.flagReason ?? null,
+      }));
+  }
+  return Object.entries(sections).map(([key, value]) => ({
+    id: key,
+    title: key.replace(/([A-Z])/g, ' $1').replace(/^./, (c) => c.toUpperCase()).trim(),
+    content: typeof value === 'string' ? value : JSON.stringify(value),
+  }));
 }
 
 // ─── Timeline types ────────────────────────────────────────────────────────────
@@ -551,6 +642,18 @@ export interface RegenerateSectionInput {
   adviserContext?: string;
 }
 
+export interface ExtractFactFindInput {
+  file: File;
+  caseId?: string;
+  documentCategory?: string;
+}
+
+export interface ExtractFactFindResult {
+  extracted: Record<string, unknown>;
+  fieldsFound: number;
+  documentCategory?: string;
+}
+
 export interface AdvanceStageInput {
   caseId: string;
   targetStage: CaseStage;
@@ -610,9 +713,42 @@ export const casesApi = {
   },
 
   upsertFactFind(token: string, id: string, input: UpsertFactFindInput) {
-    return apiFetch<FactFind>(`/api/cases/${id}/fact-find`, token, {
-      method: 'PUT',
+    return apiFetch<{ factFind: FactFind; client?: { id: string; isVulnerable: boolean } }>(
+      `/api/cases/${id}/fact-find`,
+      token,
+      {
+        method: 'PUT',
+        body: JSON.stringify(input),
+      },
+    );
+  },
+
+  listProducts(token: string, caseId: string) {
+    return apiFetch<ProductConsidered[]>(`/api/cases/${caseId}/products`, token);
+  },
+
+  createProduct(token: string, caseId: string, input: CreateProductConsideredInput) {
+    return apiFetch<ProductConsidered>(`/api/cases/${caseId}/products`, token, {
+      method: 'POST',
       body: JSON.stringify(input),
+    });
+  },
+
+  updateProduct(
+    token: string,
+    caseId: string,
+    productId: string,
+    input: UpdateProductConsideredInput,
+  ) {
+    return apiFetch<ProductConsidered>(`/api/cases/${caseId}/products/${productId}`, token, {
+      method: 'PATCH',
+      body: JSON.stringify(input),
+    });
+  },
+
+  deleteProduct(token: string, caseId: string, productId: string) {
+    return apiFetch<{ deleted: boolean }>(`/api/cases/${caseId}/products/${productId}`, token, {
+      method: 'DELETE',
     });
   },
 
@@ -717,6 +853,17 @@ export const aiApi = {
   approveReport(token: string, id: string) {
     return apiFetch<AiReport>(`/api/ai/reports/${id}/approve`, token, { method: 'POST' });
   },
+
+  extractFactFind(token: string, input: ExtractFactFindInput) {
+    const fd = new FormData();
+    fd.append('file', input.file);
+    if (input.caseId) fd.append('caseId', input.caseId);
+    if (input.documentCategory) fd.append('documentCategory', input.documentCategory);
+    return apiFetch<ExtractFactFindResult>('/api/ai/extract-fact-find', token, {
+      method: 'POST',
+      body: fd,
+    });
+  },
 };
 
 // ─── Compliance endpoints ──────────────────────────────────────────────────────
@@ -736,6 +883,21 @@ export interface OrgProfile {
   orgId: string;
   orgName: string;
 }
+
+export interface DashboardBootstrapPayload {
+  org: OrgProfile | null;
+  clients: ClientSummary[];
+  cases: CaseSummary[];
+  advisers: AdviserRecord[];
+}
+
+// ─── Dashboard bootstrap ───────────────────────────────────────────────────────
+
+export const dashboardApi = {
+  bootstrap(token: string) {
+    return apiFetch<DashboardBootstrapPayload>('/api/dashboard/bootstrap', token);
+  },
+};
 
 // ─── Settings endpoints ────────────────────────────────────────────────────────
 
@@ -908,6 +1070,20 @@ export const billingApi = {
       { method: 'POST', body: JSON.stringify(input) },
     );
   },
+
+  getSubscription(token: string) {
+    return apiFetch<{
+      hasBillingAccount: boolean;
+      hasSubscription: boolean;
+      status: string | null;
+      cancelAtPeriodEnd: boolean;
+      currentPeriodEnd: string | null;
+    }>('/api/billing/subscription', token);
+  },
+
+  createPortalSession(token: string) {
+    return apiFetch<{ url: string }>('/api/billing/portal', token, { method: 'POST' });
+  },
 };
 
 // ─── Client portal endpoints ───────────────────────────────────────────────────
@@ -917,6 +1093,32 @@ export const portalApi = {
     return apiRequest<{ message: string }>('/api/portal/invite', token, {
       method: 'POST',
       body: JSON.stringify({ caseId }),
+    });
+  },
+
+  /** Cookie-auth portal session — pass empty token; apiFetch still sends Authorization if provided. */
+  getFactFind(token: string) {
+    return apiFetch<FactFind>('/api/portal/fact-find', token);
+  },
+
+  updateFactFind(token: string, input: UpsertFactFindInput) {
+    return apiFetch<FactFind>('/api/portal/fact-find', token, {
+      method: 'PUT',
+      body: JSON.stringify(input),
+    });
+  },
+
+  updateCaseFactFind(token: string, caseId: string, input: UpsertFactFindInput) {
+    return apiFetch<FactFind>(`/api/portal/cases/${caseId}/fact-find`, token, {
+      method: 'PUT',
+      body: JSON.stringify(input),
+    });
+  },
+
+  /** Marks fact-find complete (sets completedAt, vulnerability, notifies adviser). */
+  completeFactFind(token: string) {
+    return apiFetch<FactFind>('/api/portal/fact-find/complete', token, {
+      method: 'POST',
     });
   },
 };

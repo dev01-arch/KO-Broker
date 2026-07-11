@@ -47,10 +47,13 @@ export async function PUT(req: NextRequest) {
       return applyCorsHeaders(req, apiFromZodError(parsed.error));
     }
 
+    // Portal section saves never finalise — clients must POST /api/portal/fact-find/complete.
+    const { markComplete: _markComplete, ...sectionInput } = parsed.data;
+
     const result = await upsertFactFindWithCompliance(
       authResult.session.orgId,
       authResult.session.caseId,
-      parsed.data,
+      sectionInput,
       { allowWhenComplete: false },
     );
 

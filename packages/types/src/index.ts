@@ -27,6 +27,12 @@ export type EmploymentStatus = z.infer<typeof EmploymentStatusSchema>;
 export const ClientTypeSchema = z.enum(['INDIVIDUAL', 'COMPANY']);
 export type ClientType = z.infer<typeof ClientTypeSchema>;
 
+export const ClientStatusSchema = z.enum(['PROSPECT', 'ACTIVE', 'INACTIVE']);
+export type ClientStatus = z.infer<typeof ClientStatusSchema>;
+
+export const ClientCategoryFilterSchema = z.enum(['REFERRAL', 'INDIVIDUAL', 'COMPANY']);
+export type ClientCategoryFilter = z.infer<typeof ClientCategoryFilterSchema>;
+
 export const CaseTypeSchema = z.enum([
   'PURCHASE',
   'REMORTGAGE',
@@ -214,6 +220,10 @@ export const CreateClientSchema = z
     dateOfBirth: z.string().optional(),
     employmentStatus: EmploymentStatusSchema.optional(),
     annualIncome: z.number().positive().optional(),
+    isReferred: z.boolean().optional(),
+    referredToCompany: z.string().optional(),
+    assignedMemberId: z.string().optional(),
+    insurerName: z.string().optional(),
   })
   .superRefine((data, ctx) => {
     if (!data.email?.trim()) {
@@ -221,13 +231,6 @@ export const CreateClientSchema = z
         code: z.ZodIssueCode.custom,
         message: 'Email is required',
         path: ['email'],
-      });
-    }
-    if (data.annualIncome === undefined || Number.isNaN(data.annualIncome)) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: 'Annual income is required',
-        path: ['annualIncome'],
       });
     }
 
@@ -247,6 +250,21 @@ export const CreateClientSchema = z
         });
       }
       return;
+    }
+
+    if (data.isReferred === undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Please indicate whether this client is being referred',
+        path: ['isReferred'],
+      });
+    }
+    if (data.isReferred && !data.referredToCompany?.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Referred company is required',
+        path: ['referredToCompany'],
+      });
     }
 
     if (!data.employmentStatus) {
@@ -300,6 +318,27 @@ export const UpdateCaseSchema = z.object({
   assignedAdviserId: z.string().nullable().optional(),
 });
 export type UpdateCaseInput = z.infer<typeof UpdateCaseSchema>;
+
+/** Product considered during RESEARCH stage (compliance: ≥3 + one selected). */
+export const CreateProductConsideredSchema = z.object({
+  lenderName: z.string().min(1, 'Lender name is required'),
+  productName: z.string().min(1, 'Product name is required'),
+  rate: z.number().optional(),
+  fee: z.number().optional(),
+  isSelected: z.boolean().optional(),
+  reasonNotSelected: z.string().optional(),
+});
+export type CreateProductConsideredInput = z.infer<typeof CreateProductConsideredSchema>;
+
+export const UpdateProductConsideredSchema = z.object({
+  lenderName: z.string().min(1).optional(),
+  productName: z.string().min(1).optional(),
+  rate: z.number().nullable().optional(),
+  fee: z.number().nullable().optional(),
+  isSelected: z.boolean().optional(),
+  reasonNotSelected: z.string().nullable().optional(),
+});
+export type UpdateProductConsideredInput = z.infer<typeof UpdateProductConsideredSchema>;
 
 const factFindSectionSchema = z.record(z.string(), z.unknown());
 
