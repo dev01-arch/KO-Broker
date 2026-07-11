@@ -43,6 +43,7 @@ import {
   type ReportTemplate,
   type TimelineEntry,
   type ProductConsidered,
+  type UpsertFactFindInput,
 } from '@/lib/api/client';
 import { formatClientName } from '@/lib/api/client-display';
 
