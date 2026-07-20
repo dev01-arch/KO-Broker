@@ -1,57 +1,66 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { createHandler } from '@/lib/api/handler';
+import { requirePortalAuth } from '@/lib/auth/portalAuth';
 import { z } from 'zod';
-import { requirePortalAuth } from '@/lib/api/require-portal-auth';
 import { listPortalMessages, sendPortalMessage } from '@/lib/api/portal-data';
-import { applyCorsHeaders } from '@/lib/api/cors';
-import {
-  apiError,
-  apiFromZodError,
-  apiSuccess,
-} from '@/lib/api/responses';
-import { isPrismaConnectionError } from '@/lib/api/prisma-errors';
+import type { PortalSessionPayload } from '@/lib/api/portal-session';
 
 const SendMessageSchema = z.object({
   body: z.string().min(1, 'Message body is required'),
 });
 
-export async function GET(req: NextRequest) {
-  try {
-    const authResult = await requirePortalAuth();
-    if ('response' in authResult) return applyCorsHeaders(req, authResult.response);
-
-    const messages = await listPortalMessages(authResult.session);
-    return applyCorsHeaders(req, apiSuccess(messages));
-  } catch (error) {
-    console.error('[GET /api/portal/messages]', error);
-    if (isPrismaConnectionError(error)) {
-      return applyCorsHeaders(req, apiError('SERVICE_UNAVAILABLE', 'Database is unavailable', 503));
-    }
-    return applyCorsHeaders(req, apiError('INTERNAL_ERROR', 'An unexpected error occurred', 500));
-  }
+function sessionFromClient(client: Awaited<ReturnType<typeof requirePortalAuth>>): PortalSessionPayload | null {
+  const activeCase = client.cases[0];
+  if (!activeCase) return null;
+  return {
+    clientId: client.id,
+    orgId: client.orgId,
+    caseId: activeCase.id,
+    email: client.email,
+  };
 }
 
-export async function POST(req: NextRequest) {
-  try {
-    const authResult = await requirePortalAuth();
-    if ('response' in authResult) return applyCorsHeaders(req, authResult.response);
+export const GET = createHandler({
+  method: 'GET',
+  requireAuth: false,
+  handler: async () => {
+    const client = await requirePortalAuth();
+    const session = sessionFromClient(client);
 
-    let body: unknown;
-    try {
-      body = await req.json();
-    } catch {
-      return applyCorsHeaders(req, apiError('VALIDATION_ERROR', 'Invalid JSON body', 422));
+    if (!session) {
+      return NextResponse.json(
+        { success: false, error: { code: 'NOT_FOUND', message: 'No active case found' } },
+        { status: 404 }
+      );
     }
 
-    const parsed = SendMessageSchema.safeParse(body);
-    if (!parsed.success) return applyCorsHeaders(req, apiFromZodError(parsed.error));
+    // === FRONTEND ADDITION: portal-data list (consistent serializers) ===
+    const messages = await listPortalMessages(session);
+    // === END FRONTEND ADDITION ===
 
-    const message = await sendPortalMessage(authResult.session, parsed.data.body);
-    return applyCorsHeaders(req, apiSuccess(message, { status: 201 }));
-  } catch (error) {
-    console.error('[POST /api/portal/messages]', error);
-    if (isPrismaConnectionError(error)) {
-      return applyCorsHeaders(req, apiError('SERVICE_UNAVAILABLE', 'Database is unavailable', 503));
+    return NextResponse.json({ success: true, data: messages }, { status: 200 });
+  },
+});
+
+export const POST = createHandler({
+  method: 'POST',
+  requireAuth: false,
+  schema: SendMessageSchema,
+  handler: async (_req: NextRequest, { body }) => {
+    const client = await requirePortalAuth();
+    const session = sessionFromClient(client);
+
+    if (!session) {
+      return NextResponse.json(
+        { success: false, error: { code: 'NOT_FOUND', message: 'No active case found' } },
+        { status: 404 }
+      );
     }
-    return applyCorsHeaders(req, apiError('INTERNAL_ERROR', 'An unexpected error occurred', 500));
-  }
-}
+
+    // === FRONTEND ADDITION: sendPortalMessage (adviser digest notifications) ===
+    const result = await sendPortalMessage(session, body.body);
+    // === END FRONTEND ADDITION ===
+
+    return NextResponse.json({ success: true, data: result }, { status: 201 });
+  },
+});

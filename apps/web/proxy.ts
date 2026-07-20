@@ -13,8 +13,7 @@ const isPublicRoute = createRouteMatcher([
   '/sign-in(.*)',
   '/sign-up(.*)',
   '/portal(.*)',
-  // /demo is intentionally excluded — unauthenticated visitors are redirected to sign-in.
-  // Handlers enforce auth via Bearer token — never redirect /api to sign-in (cross-origin SPA).
+  // Handlers enforce auth — never redirect /api to sign-in (cross-origin SPA).
   '/api/(.*)',
 ]);
 
@@ -26,7 +25,43 @@ export default clerkMiddleware(
     const isApi = req.nextUrl.pathname.startsWith('/api/');
 
     if (isPublicRoute(req)) {
-      return isApi ? applyCorsHeaders(req, NextResponse.next()) : undefined;
+      // === FRONTEND ADDITION: inject Clerk identity headers for createHandler auth ===
+      // Same pattern as backend proxy.ts — API routes read x-user-id / x-org-id.
+      if (isApi) {
+        const authObj = await auth();
+        const requestHeaders = new Headers(req.headers);
+        requestHeaders.delete('x-user-id');
+        requestHeaders.delete('x-org-id');
+        requestHeaders.delete('x-user-role');
+
+        if (authObj.userId) {
+          requestHeaders.set('x-user-id', authObj.userId);
+        }
+        if (authObj.orgId) {
+          requestHeaders.set('x-org-id', authObj.orgId);
+        }
+        if (authObj.orgRole) {
+          const lowerRole = authObj.orgRole.toLowerCase();
+          let role = 'ADVISER';
+          if (lowerRole === 'org:admin' || lowerRole.includes('admin')) {
+            role = 'ADMIN';
+          } else if (lowerRole === 'org:compliance' || lowerRole.includes('compliance')) {
+            role = 'COMPLIANCE';
+          } else if (lowerRole === 'org:viewer' || lowerRole.includes('viewer')) {
+            role = 'VIEWER';
+          }
+          requestHeaders.set('x-user-role', role);
+        }
+
+        return applyCorsHeaders(
+          req,
+          NextResponse.next({
+            request: { headers: requestHeaders },
+          }),
+        );
+      }
+      // === END FRONTEND ADDITION ===
+      return undefined;
     }
 
     await auth.protect();

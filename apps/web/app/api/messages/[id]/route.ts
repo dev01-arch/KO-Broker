@@ -1,38 +1,43 @@
-import { NextRequest } from 'next/server';
-import { MarkMessageReadSchema } from '@ko/types';
-import { requireApiAuth } from '@/lib/api/require-api-auth';
-import { markMessageReadForOrg } from '@/lib/api/messages-data';
-import { apiError, apiFromZodError, apiNotFound, apiSuccess } from '@/lib/api/responses';
-import { isPrismaConnectionError } from '@/lib/api/prisma-errors';
+/**
+ * PATCH /api/messages/[id]  — mark message as read / unread
+ */
 
-type RouteContext = { params: Promise<{ id: string }> };
+import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
+import { createParamHandler } from '@/lib/api/handler';
+import { prisma } from '@/lib/db';
+import { PatchMessageSchema } from '@ko/types';
+import { cancelPendingDigestsIfCaughtUp } from '@/lib/notifications/message-email-digest';
 
-export async function PATCH(req: NextRequest, context: RouteContext) {
-  try {
-    const authResult = await requireApiAuth();
-    if ('response' in authResult) return authResult.response;
-    const { orgId } = authResult;
-    const { id } = await context.params;
+export const PATCH = createParamHandler<z.infer<typeof PatchMessageSchema>, { id: string }>({
+    method: 'PATCH',
+    requiredFeature: 'messages',
+    schema: PatchMessageSchema,
+    handler: async (_req: NextRequest, { body, orgId, params }) => {
+        const { id } = params;
 
-    let body: unknown = { isRead: true };
-    try {
-      const text = await req.text();
-      if (text) body = JSON.parse(text);
-    } catch {
-      return apiError('VALIDATION_ERROR', 'Invalid JSON body', 422);
-    }
+        const existing = await prisma.message.findFirst({ where: { id, orgId } });
+        if (!existing) {
+            return NextResponse.json(
+                { success: false, error: { code: 'NOT_FOUND', message: 'Message not found' } },
+                { status: 404 }
+            );
+        }
 
-    const parsed = MarkMessageReadSchema.safeParse(body);
-    if (!parsed.success) return apiFromZodError(parsed.error);
+        const updated = await prisma.message.update({
+            where: { id },
+            data: { isRead: body.isRead },
+        });
 
-    const result = await markMessageReadForOrg(orgId, id, parsed.data.isRead);
-    if (!result) return apiNotFound('Message not found');
+        // === FRONTEND ADDITION: cancel pending digests when inbox is caught up ===
+        if (body.isRead && existing.clientId) {
+            await cancelPendingDigestsIfCaughtUp({
+                orgId: orgId!,
+                clientId: existing.clientId,
+            }).catch((err) => console.error('[messages] digest cancel failed:', err));
+        }
+        // === END FRONTEND ADDITION ===
 
-    return apiSuccess(result);
-  } catch (error) {
-    console.error('[PATCH /api/messages/:id]', error);
-    if (isPrismaConnectionError(error))
-      return apiError('SERVICE_UNAVAILABLE', 'Database is unavailable', 503);
-    return apiError('INTERNAL_ERROR', 'An unexpected error occurred', 500);
-  }
-}
+        return NextResponse.json({ success: true, data: updated }, { status: 200 });
+    },
+});

@@ -15,6 +15,10 @@ export function isReportAiAvailable(): boolean {
 /** @deprecated Prefer isReportAiAvailable() — evaluated at module load. */
 export const AI_AVAILABLE = isOpenRouterConfigured();
 
+/** === FRONTEND ADDITION: health endpoint model label === */
+export const MODEL_NAME = process.env.OPENROUTER_MODEL?.trim() || 'openrouter';
+/** === END FRONTEND ADDITION === */
+
 export interface GenerationMessage {
   role: 'system' | 'user' | 'assistant';
   content: string;

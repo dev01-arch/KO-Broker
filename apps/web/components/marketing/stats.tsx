@@ -11,7 +11,7 @@ export function MarketingStats() {
             key={i}
             className="space-y-2 border-b border-gray-100 pb-10 text-center last:border-b-0 last:pb-0 md:border-r md:border-b-0 md:border-gray-200 md:pb-0 md:pr-10 md:last:border-r-0"
           >
-            <div className="heading-bold text-4xl md:text-7xl" style={{ color: s.valColor }}>
+            <div className="heading-numeric text-4xl md:text-7xl" style={{ color: s.valColor }}>
               {s.val}
             </div>
             <div className="text-xs font-medium tracking-wider text-gray-500 uppercase">{s.label}</div>

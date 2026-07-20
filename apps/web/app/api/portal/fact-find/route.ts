@@ -1,85 +1,110 @@
-import { NextRequest } from 'next/server';
-import { UpsertFactFindSchema } from '@ko/types';
-import { requirePortalAuth } from '@/lib/api/require-portal-auth';
-import { getPortalFactFind } from '@/lib/api/portal-data';
-import { upsertFactFindWithCompliance } from '@/lib/api/fact-find-data';
-import { serializeFactFind } from '@/lib/api/cases';
-import { applyCorsHeaders } from '@/lib/api/cors';
-import { apiError, apiFromZodError, apiNotFound, apiSuccess } from '@/lib/api/responses';
-import { isPrismaConnectionError } from '@/lib/api/prisma-errors';
+import { NextRequest, NextResponse } from 'next/server';
+import { createHandler } from '@/lib/api/handler';
+import { prisma } from '@/lib/db';
+import { requirePortalAuth } from '@/lib/auth/portalAuth';
+import { FactFindUpdateSchema } from '@ko/types';
+import { logAuditEvent, computeDiff } from '@/lib/compliance/audit';
 
-export async function GET(req: NextRequest) {
-  try {
-    const authResult = await requirePortalAuth();
-    if ('response' in authResult) return applyCorsHeaders(req, authResult.response);
+export const GET = createHandler({
+  method: 'GET',
+  requireAuth: false,
+  handler: async () => {
+    const client = await requirePortalAuth();
+    const activeCase = client.cases[0];
 
-    const factFind = await getPortalFactFind(authResult.session);
-    if (factFind && 'error' in factFind) {
-      return applyCorsHeaders(req, apiNotFound('Case not found'));
+    if (!activeCase) {
+      return NextResponse.json(
+        { success: false, error: { code: 'NOT_FOUND', message: 'No active case found' } },
+        { status: 404 }
+      );
     }
+
+    const factFind = await prisma.factFind.findUnique({
+      where: { caseId: activeCase.id },
+    });
+
     if (!factFind) {
-      return applyCorsHeaders(req, apiNotFound('Fact-Find not initialized'));
-    }
-    return applyCorsHeaders(req, apiSuccess(factFind));
-  } catch (error) {
-    console.error('[GET /api/portal/fact-find]', error);
-    if (isPrismaConnectionError(error)) {
-      return applyCorsHeaders(req, apiError('SERVICE_UNAVAILABLE', 'Database is unavailable', 503));
-    }
-    return applyCorsHeaders(req, apiError('INTERNAL_ERROR', 'An unexpected error occurred', 500));
-  }
-}
-
-export async function PUT(req: NextRequest) {
-  try {
-    const authResult = await requirePortalAuth();
-    if ('response' in authResult) return applyCorsHeaders(req, authResult.response);
-
-    let body: unknown;
-    try {
-      body = await req.json();
-    } catch {
-      return applyCorsHeaders(req, apiError('VALIDATION_ERROR', 'Invalid JSON body', 422));
+      return NextResponse.json(
+        { success: false, error: { code: 'NOT_FOUND', message: 'Fact-Find not initialized' } },
+        { status: 404 }
+      );
     }
 
-    const parsed = UpsertFactFindSchema.safeParse(body);
-    if (!parsed.success) {
-      return applyCorsHeaders(req, apiFromZodError(parsed.error));
+    return NextResponse.json({ success: true, data: factFind }, { status: 200 });
+  },
+});
+
+export const PUT = createHandler({
+  method: 'PUT',
+  requireAuth: false,
+  schema: FactFindUpdateSchema,
+  handler: async (req: NextRequest, { body }) => {
+    const client = await requirePortalAuth();
+    const activeCase = client.cases[0];
+
+    if (!activeCase) {
+      return NextResponse.json(
+        { success: false, error: { code: 'NOT_FOUND', message: 'No active case found' } },
+        { status: 404 }
+      );
     }
 
-    // Portal section saves never finalise — clients must POST /api/portal/fact-find/complete.
-    const { markComplete: _markComplete, ...sectionInput } = parsed.data;
+    // Retrieve current fact-find
+    const factFind = await prisma.factFind.findUnique({
+      where: { caseId: activeCase.id },
+    });
 
-    const result = await upsertFactFindWithCompliance(
-      authResult.session.orgId,
-      authResult.session.caseId,
-      sectionInput,
-      { allowWhenComplete: false },
+    if (!factFind) {
+      return NextResponse.json(
+        { success: false, error: { code: 'NOT_FOUND', message: 'Fact-Find not initialized' } },
+        { status: 404 }
+      );
+    }
+
+    // Check if already complete/locked
+    if (factFind.completedAt) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: 'FORBIDDEN',
+            message: 'This fact-find is already complete and cannot be edited.',
+          },
+        },
+        { status: 403 }
+      );
+    }
+
+    // Save updates
+    const updatedFactFind = await prisma.factFind.update({
+      where: { caseId: activeCase.id },
+      data: {
+        // === FRONTEND ADDITION: cast JSON sections for Prisma InputJsonValue ===
+        personalDetails: (body.personalDetails ?? undefined) as object | undefined,
+        employmentDetails: (body.employmentDetails ?? undefined) as object | undefined,
+        incomeDetails: (body.incomeDetails ?? undefined) as object | undefined,
+        expenditureDetails: (body.expenditureDetails ?? undefined) as object | undefined,
+        propertyDetails: (body.propertyDetails ?? undefined) as object | undefined,
+        existingMortgages: (body.existingMortgages ?? undefined) as object | undefined,
+        clientPreferences: (body.clientPreferences ?? undefined) as object | undefined,
+        // === END FRONTEND ADDITION ===
+      },
+    });
+
+    // Compute diff for audit logs
+    const factFindDiff = computeDiff(
+      (factFind ?? {}) as unknown as Record<string, unknown>,
+      updatedFactFind as unknown as Record<string, unknown>
     );
 
-    if ('error' in result) {
-      if (result.error === 'NOT_FOUND') {
-        return applyCorsHeaders(req, apiNotFound('Case not found'));
-      }
-      if (result.error === 'FORBIDDEN') {
-        return applyCorsHeaders(
-          req,
-          apiError(
-            'FORBIDDEN',
-            'message' in result ? (result.message as string) : 'Fact-find cannot be edited',
-            403,
-          ),
-        );
-      }
-      return applyCorsHeaders(req, apiNotFound('Case not found'));
-    }
+    await logAuditEvent({
+      orgId: client.orgId,
+      entityType: 'Case',
+      entityId: activeCase.id,
+      action: 'FACT_FIND_UPDATED',
+      diff: factFindDiff,
+    });
 
-    return applyCorsHeaders(req, apiSuccess(serializeFactFind(result.factFind)));
-  } catch (error) {
-    console.error('[PUT /api/portal/fact-find]', error);
-    if (isPrismaConnectionError(error)) {
-      return applyCorsHeaders(req, apiError('SERVICE_UNAVAILABLE', 'Database is unavailable', 503));
-    }
-    return applyCorsHeaders(req, apiError('INTERNAL_ERROR', 'An unexpected error occurred', 500));
-  }
-}
+    return NextResponse.json({ success: true, data: updatedFactFind }, { status: 200 });
+  },
+});

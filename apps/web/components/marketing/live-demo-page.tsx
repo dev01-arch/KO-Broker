@@ -15,6 +15,7 @@ import { usePortalInvite } from '@/hooks/use-portal-invite';
 import { casesQueryKey, useCases, useCreateCase } from '@/hooks/use-cases';
 import { usePlanFeature } from '@/hooks/use-org';
 import { useUploadDocument } from '@/hooks/use-documents';
+import { useMarkMessageRead, useMessages, applyMessagesReadToCache } from '@/hooks/use-messages';
 import { clearAuthenticated, getSessionUsername } from '@/lib/auth/demo-session';
 import {
   aiApi,
@@ -45,7 +46,7 @@ import {
   type ProductConsidered,
   type UpsertFactFindInput,
 } from '@/lib/api/client';
-import { formatClientName } from '@/lib/api/client-display';
+import { formatClientName, formatClientInitials } from '@/lib/api/client-display';
 
 // ── Inline upload modal used by the live demo iframe ─────────────────────────
 
@@ -200,12 +201,48 @@ function applyGreetingToIframe(doc: Document, displayName: string) {
 }
 
 const DEMO_NOTIFICATIONS = [
-  { initials: 'SM', name: 'Sarah Mitchell', preview: 'Uploaded 2 new documents to KOC-0001-A', time: '2m ago', color: '#CE652D' },
-  { initials: 'JJ', name: 'James John', preview: 'Requested a call-back for KOC-0012', time: '14m ago', color: '#2D9D7A' },
-  { initials: 'S', name: 'System', preview: 'Lender criteria updated — 3 products affected', time: '1h ago', color: '#00B8D9' },
-  { initials: 'JJ', name: 'Jane Joe', preview: 'Signed the suitability letter', time: '2h ago', color: '#857ABE' },
-  { initials: 'AS', name: 'Amon Stone', preview: 'New enquiry submitted via portal', time: '3h ago', color: '#E04B4B' },
+  { id: 'demo-1', initials: 'SM', name: 'Sarah Mitchell', preview: 'Uploaded 2 new documents to KOC-0001-A', time: '2m ago', color: '#CE652D' },
+  { id: 'demo-2', initials: 'JJ', name: 'James John', preview: 'Requested a call-back for KOC-0012', time: '14m ago', color: '#2D9D7A' },
+  { id: 'demo-3', initials: 'S', name: 'System', preview: 'Lender criteria updated — 3 products affected', time: '1h ago', color: '#00B8D9' },
+  { id: 'demo-4', initials: 'JJ', name: 'Jane Joe', preview: 'Signed the suitability letter', time: '2h ago', color: '#857ABE' },
+  { id: 'demo-5', initials: 'AS', name: 'Amon Stone', preview: 'New enquiry submitted via portal', time: '3h ago', color: '#E04B4B' },
 ] as const;
+
+const NOTIF_AVATAR_COLORS = ['#CE652D', '#2D9D7A', '#00B8D9', '#857ABE', '#E04B4B', '#0F6E56'] as const;
+
+type NotificationItem = {
+  id: string;
+  initials: string;
+  name: string;
+  preview: string;
+  time: string;
+  color: string;
+  caseId?: string;
+};
+
+type MessageWithContext = MessageRecord & {
+  client?: {
+    id?: string;
+    firstName?: string;
+    lastName?: string;
+    companyName?: string | null;
+    clientType?: ClientSummary['clientType'];
+  } | null;
+  case?: { id?: string; referenceNumber?: string } | null;
+};
+
+function formatNotifRelativeTime(isoDate: string): string {
+  const diff = Date.now() - new Date(isoDate).getTime();
+  const mins = Math.round(diff / 60000);
+  const hours = Math.round(diff / 3600000);
+  const days = Math.round(diff / 86400000);
+  if (mins < 2) return 'Just now';
+  if (mins < 60) return `${mins}m ago`;
+  if (hours < 24) return `${hours}h ago`;
+  if (days === 1) return 'Yesterday';
+  if (days < 7) return `${days}d ago`;
+  return new Date(isoDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+}
 
 type LiveDemoPageProps = {
   /** Logo link target — `/` on marketing demo, `/dashboard` when signed in. */
@@ -230,7 +267,10 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const [uploadModal, setUploadModal] = useState<{ caseId: string } | null>(null);
   const [notifOpen, setNotifOpen] = useState(false);
-  const [notifUnread, setNotifUnread] = useState<number>(DEMO_NOTIFICATIONS.length);
+  const [demoUnreadNotifIds, setDemoUnreadNotifIds] = useState<string[]>(() =>
+    DEMO_NOTIFICATIONS.map((n) => n.id),
+  );
+  const [markingAllNotifs, setMarkingAllNotifs] = useState(false);
   const notifRef = useRef<HTMLDivElement>(null);
   const [profileOpen, setProfileOpen] = useState(false);
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
@@ -278,6 +318,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
   const advisersDataRef = useRef<AdviserRecord[]>([]);
   const clientsLoadingRef = useRef(false);
   const casesLoadingRef = useRef(false);
+  const unreadMessagesCountRef = useRef(0);
   const hasMessagesRef = useRef(true);
   const hasAiReportsRef = useRef(true);
   const showEmbeddedPanel = isEmbeddedPanelTab(activeTab);
@@ -334,9 +375,18 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
   const { mutateAsync: createCase } = useCreateCase();
   const hasMessages = usePlanFeature('messages');
   const hasAiReports = usePlanFeature('ai_reports');
+  const canFetchUnreadNotifs = isPersonalDashboard && hasMessages;
+  const { data: unreadMessagesResponse } = useMessages(
+    { unreadOnly: true, page: 1, perPage: 50 },
+    { enabled: canFetchUnreadNotifs },
+  );
+  const { mutateAsync: markMessageRead, isPending: markingNotifsRead } = useMarkMessageRead();
 
   hasMessagesRef.current = hasMessages;
   hasAiReportsRef.current = hasAiReports;
+  unreadMessagesCountRef.current = !hasMessages
+    ? 0
+    : (unreadMessagesResponse?.meta?.total ?? unreadMessagesResponse?.data?.length ?? 0);
 
   clientsDataRef.current = isPersonalDashboard
     ? (bootstrapData?.data.clients ?? clientsData?.data ?? [])
@@ -357,6 +407,114 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
       ? casesLoading
       : bootstrapLoading
     : casesLoading;
+
+  const liveUnreadNotifMessages = useMemo(() => {
+    const rows = (unreadMessagesResponse?.data ?? []) as MessageWithContext[];
+    return rows.filter((m) => m.direction === 'INBOUND' || m.direction === 'SYSTEM');
+  }, [unreadMessagesResponse?.data]);
+
+  const notificationItems = useMemo((): NotificationItem[] => {
+    if (!isPersonalDashboard) {
+      return DEMO_NOTIFICATIONS.filter((n) => demoUnreadNotifIds.includes(n.id)).map((n) => ({
+        ...n,
+      }));
+    }
+    if (!hasMessages) return [];
+
+    return liveUnreadNotifMessages.map((message, index) => {
+      const caseFromRef = message.caseId
+        ? casesDataRef.current.find((c) => c.id === message.caseId)
+        : undefined;
+      const clientFromRef = message.clientId
+        ? clientsDataRef.current.find((c) => c.id === message.clientId)
+        : caseFromRef?.client;
+
+      const clientFields = message.client
+        ? {
+            firstName: message.client.firstName ?? '',
+            lastName: message.client.lastName ?? '',
+            companyName: message.client.companyName,
+            clientType: message.client.clientType,
+          }
+        : clientFromRef
+          ? {
+              firstName: clientFromRef.firstName,
+              lastName: clientFromRef.lastName,
+              companyName: clientFromRef.companyName,
+              clientType: clientFromRef.clientType,
+            }
+          : null;
+
+      const name =
+        message.direction === 'SYSTEM'
+          ? 'System'
+          : clientFields
+            ? formatClientName(clientFields)
+            : 'Client';
+      const initials =
+        message.direction === 'SYSTEM'
+          ? 'S'
+          : clientFields
+            ? formatClientInitials(clientFields)
+            : 'CL';
+      const caseRef =
+        message.case?.referenceNumber ?? caseFromRef?.referenceNumber;
+      const bodyPreview = message.body.replace(/\s+/g, ' ').trim();
+      const preview = caseRef
+        ? `${bodyPreview.slice(0, 72)}${bodyPreview.length > 72 ? '…' : ''} · ${caseRef}`
+        : bodyPreview.slice(0, 90) + (bodyPreview.length > 90 ? '…' : '');
+
+      return {
+        id: message.id,
+        initials,
+        name,
+        preview: message.subject?.trim() || preview || 'New message',
+        time: formatNotifRelativeTime(message.createdAt),
+        color: NOTIF_AVATAR_COLORS[index % NOTIF_AVATAR_COLORS.length],
+        caseId: message.caseId,
+      };
+    });
+  }, [demoUnreadNotifIds, hasMessages, isPersonalDashboard, liveUnreadNotifMessages]);
+
+  const notifUnread = notificationItems.length;
+
+  const handleMarkAllNotifsRead = useCallback(async () => {
+    if (!isPersonalDashboard) {
+      setDemoUnreadNotifIds([]);
+      return;
+    }
+    const ids = liveUnreadNotifMessages.map((message) => message.id);
+    if (!ids.length) return;
+    setMarkingAllNotifs(true);
+    applyMessagesReadToCache(queryClient, ids);
+    try {
+      const token = await getToken();
+      if (!token) return;
+      await Promise.allSettled(ids.map((id) => messagesApi.markRead(token, id)));
+    } finally {
+      void queryClient.invalidateQueries({ queryKey: ['messages'] });
+      setMarkingAllNotifs(false);
+    }
+  }, [getToken, isPersonalDashboard, liveUnreadNotifMessages, queryClient]);
+
+  const handleNotifItemClick = useCallback(
+    async (item: NotificationItem) => {
+      setNotifOpen(false);
+      setActiveTab('messages');
+      if (!isPersonalDashboard) {
+        setDemoUnreadNotifIds((prev) => prev.filter((id) => id !== item.id));
+        return;
+      }
+      if (!item.id.startsWith('demo-')) {
+        try {
+          await markMessageRead(item.id);
+        } catch {
+          // Cache rolls back via mutation onError; next poll will resync.
+        }
+      }
+    },
+    [isPersonalDashboard, markMessageRead],
+  );
 
   const postClientsSync = useCallback((clients?: ClientSummary[]) => {
     const iframeWindow = iframeRef.current?.contentWindow;
@@ -561,7 +719,11 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
       iframeWindow.postMessage(
         {
           type: 'ko:overview-stats',
-          stats: { clients: clientCount, cases: caseCount },
+          stats: {
+            clients: clientCount,
+            cases: caseCount,
+            unreadMessages: unreadMessagesCountRef.current,
+          },
         },
         window.location.origin,
       );
@@ -715,6 +877,17 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
     postCasesSync();
     postOverviewStats();
   }, [iframeLoaded, isPersonalDashboard, casesData, casesLoading, postCasesSync, postOverviewStats]);
+
+  useEffect(() => {
+    if (!iframeLoaded || !isPersonalDashboard) return;
+    postOverviewStats();
+  }, [
+    iframeLoaded,
+    isPersonalDashboard,
+    hasMessages,
+    unreadMessagesResponse,
+    postOverviewStats,
+  ]);
 
   useEffect(() => {
     if (!iframeLoaded || !isPersonalDashboard || showEmbeddedPanel) return;
@@ -1488,23 +1661,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
     }).join('');
   }
 
-  // ── Message helpers (broadcast: IN_APP · EMAIL · SMS) ────────────────────────
-  const MSG_CHANNEL_LABELS: Record<MessageChannel, string> = {
-    IN_APP: 'In-app',
-    EMAIL: 'Email',
-    SMS: 'SMS',
-  };
-
-  function msgChannelBadgeHtml(channel: MessageChannel): string {
-    const mod =
-      channel === 'EMAIL' ? 'msg-channel--email' : channel === 'SMS' ? 'msg-channel--sms' : 'msg-channel--inapp';
-    return `<span class="msg-channel-badge ${mod}">${MSG_CHANNEL_LABELS[channel]}</span>`;
-  }
-
-  function msgChannelsBadgeHtml(channels: MessageChannel[]): string {
-    return channels.map((channel) => msgChannelBadgeHtml(channel)).join(' ');
-  }
-
+  // ── Message helpers (group multi-channel deliveries into one bubble) ─────────
   function groupMessagesForDisplay(messages: MessageRecord[]) {
     const sorted = [...messages].sort(
       (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
@@ -1585,12 +1742,11 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
         const tickSvg = group.isRead
           ? `<span class="cd-msg-ticks cd-msg-ticks--blue">✓✓</span>`
           : `<span class="cd-msg-ticks cd-msg-ticks--gray">✓</span>`;
-        const badges = msgChannelsBadgeHtml(group.channels);
         if (group.direction === 'OUTBOUND') {
           return `${dateSep}<div class="cd-msg-row cd-msg-row--out">
   <div class="cd-msg-bubble cd-msg-bubble--out">
     <p class="cd-msg-bubble-text">${escHtml(group.body)}</p>
-    <div class="cd-msg-bubble-meta"><span>${timeLabel}</span>${badges}${tickSvg}</div>
+    <div class="cd-msg-bubble-meta"><span>${timeLabel}</span>${tickSvg}</div>
   </div>
   ${group.isRead ? '<span class="cd-msg-sent">✓✓ Sent</span>' : ''}
 </div>`;
@@ -1598,7 +1754,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
         return `${dateSep}<div class="cd-msg-row cd-msg-row--in">
   <div class="cd-msg-bubble cd-msg-bubble--in">
     <p class="cd-msg-bubble-text">${escHtml(group.body)}</p>
-    <div class="cd-msg-bubble-meta"><span>${timeLabel}</span>${badges}</div>
+    <div class="cd-msg-bubble-meta"><span>${timeLabel}</span></div>
   </div>
 </div>`;
       }).join('');
@@ -1672,14 +1828,16 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
     if (!meta) return;
     const bubbles = groupMessagesForDisplay(msgs).map((group) => {
       const tm = new Date(group.createdAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
-      const badges = msgChannelsBadgeHtml(group.channels);
       if (group.direction === 'OUTBOUND') {
-        return `<div class="msg-hub-bbl-row msg-hub-bbl-row--out"><div class="msg-hub-bbl-col"><div class="msg-hub-bbl msg-hub-bbl--out">${group.body}</div><div class="msg-hub-bbl-time msg-hub-bbl-time--out">${badges} · ${tm}</div></div><div class="msg-hub-bbl-av" style="background:#0F6E56">AD</div></div>`;
+        return `<div class="msg-hub-bbl-row msg-hub-bbl-row--out"><div class="msg-hub-bbl-col"><div class="msg-hub-bbl msg-hub-bbl--out">${group.body}</div><div class="msg-hub-bbl-time msg-hub-bbl-time--out">${tm}</div></div><div class="msg-hub-bbl-av" style="background:#0F6E56">AD</div></div>`;
       }
-      return `<div class="msg-hub-bbl-row msg-hub-bbl-row--in"><div class="msg-hub-bbl-av" style="background:#1D9E75">CL</div><div class="msg-hub-bbl-col"><div class="msg-hub-bbl msg-hub-bbl--in">${group.body}</div><div class="msg-hub-bbl-time msg-hub-bbl-time--in">${badges} · ${tm}</div></div></div>`;
+      return `<div class="msg-hub-bbl-row msg-hub-bbl-row--in"><div class="msg-hub-bbl-av" style="background:#1D9E75">CL</div><div class="msg-hub-bbl-col"><div class="msg-hub-bbl msg-hub-bbl--in">${group.body}</div><div class="msg-hub-bbl-time msg-hub-bbl-time--in">${tm}</div></div></div>`;
     }).join('');
     panel.style.display = 'flex';
     panel.style.flexDirection = 'column';
+    panel.style.height = '100%';
+    panel.style.minHeight = '0';
+    panel.style.overflow = 'hidden';
     panel.innerHTML = `<div class="msg-hub-thread-hd">
       <button type="button" class="msg-hub-thread-back" aria-label="Back to messages"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>
       <div class="msg-hub-thread-hd-av" style="background:#0F6E56">${meta.name.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()}</div>
@@ -1776,13 +1934,13 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
       const meta = metaByThread[k];
       const initials = meta.name.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase() || 'CL';
       const t = tlTime(last.createdAt);
-      const channelLabel = last.channels.map((c) => MSG_CHANNEL_LABELS[c]).join(' · ');
+      const typeLabel = meta.type === 'system' ? 'System' : 'Client';
       return `<tr class="msg-hub-row ko-msg-hub-row" data-thread-key="${k}">
         <td><div class="msg-contact"><div class="msg-contact-av" style="background:#0F6E56">${initials}</div><div><div class="msg-contact-name">${meta.name}</div><div class="msg-contact-adviser">Live API</div></div></div></td>
-        <td><div class="msg-subject-line"><span class="msg-subject-dot ${last.isRead ? 'msg-subject-dot--read' : 'msg-subject-dot--unread'}"></span>${last.subject ?? 'Message update'}</div><div class="msg-subject-preview">${msgChannelsBadgeHtml(last.channels)} ${last.body}</div></td>
+        <td><div class="msg-subject-line"><span class="msg-subject-dot ${last.isRead ? 'msg-subject-dot--read' : 'msg-subject-dot--unread'}"></span>${last.subject ?? 'Message update'}</div><div class="msg-subject-preview">${last.body}</div></td>
         <td><div class="msg-case-ref">${meta.caseRef}</div><div class="msg-case-type">${meta.caseSub}</div></td>
         <td><span class="msg-stage msg-stage--factfind">${meta.stage}</span></td>
-        <td><div class="msg-type-cell">${channelLabel}</div></td>
+        <td><div class="msg-type-cell">${typeLabel}</div></td>
         <td><div class="msg-time-val">${t}</div></td>
       </tr>`;
     }).join('');
@@ -2704,15 +2862,17 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
           <div ref={notifRef} className="relative z-30">
             <button
               type="button"
-              onClick={() => { setNotifOpen(o => !o); setNotifUnread(0); }}
+              onClick={() => {
+                setNotifOpen((o) => !o);
+              }}
               className="relative flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 bg-white shadow-sm transition-colors hover:bg-gray-50"
-              aria-label="Notifications"
+              aria-label={notifUnread > 0 ? `Notifications, ${notifUnread} unread` : 'Notifications'}
               aria-expanded={notifOpen}
             >
               <Bell className="h-5 w-5 text-gray-600" />
               {notifUnread > 0 && (
-                <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold leading-none text-white">
-                  {notifUnread}
+                <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-0.5 text-[10px] font-bold leading-none text-white">
+                  {notifUnread > 99 ? '99+' : notifUnread}
                 </span>
               )}
             </button>
@@ -2723,36 +2883,45 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
                   <span className="text-sm font-semibold text-gray-900">Messages</span>
                   <button
                     type="button"
-                    onClick={() => setNotifUnread(0)}
-                    className="text-xs text-brand-teal hover:underline"
+                    onClick={() => void handleMarkAllNotifsRead()}
+                    disabled={notifUnread === 0 || markingNotifsRead || markingAllNotifs}
+                    className="text-xs text-brand-teal hover:underline disabled:cursor-default disabled:opacity-40 disabled:no-underline"
                   >
                     Mark all as read
                   </button>
                 </div>
-                <ul className="divide-y divide-gray-50">
-                  {DEMO_NOTIFICATIONS.map((n, i) => (
-                    <li key={i}>
-                      <button
-                        type="button"
-                        onClick={() => { setActiveTab('messages'); setNotifOpen(false); }}
-                        className="flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-gray-50"
-                      >
-                        <span
-                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
-                          style={{ backgroundColor: n.color }}
-                        >
-                          {n.initials}
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="text-xs font-semibold text-gray-900">{n.name}</span>
-                            <span className="shrink-0 text-[10px] text-gray-400">{n.time}</span>
-                          </div>
-                          <p className="mt-0.5 truncate text-[11px] text-gray-500">{n.preview}</p>
-                        </div>
-                      </button>
+                <ul className="max-h-[320px] divide-y divide-gray-50 overflow-y-auto">
+                  {notificationItems.length === 0 ? (
+                    <li className="px-4 py-6 text-center text-xs text-gray-400">
+                      {isPersonalDashboard && !hasMessages
+                        ? 'Messaging is not on your plan'
+                        : 'No unread messages'}
                     </li>
-                  ))}
+                  ) : (
+                    notificationItems.map((n) => (
+                      <li key={n.id}>
+                        <button
+                          type="button"
+                          onClick={() => void handleNotifItemClick(n)}
+                          className="flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-gray-50"
+                        >
+                          <span
+                            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
+                            style={{ backgroundColor: n.color }}
+                          >
+                            {n.initials}
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-xs font-semibold text-gray-900">{n.name}</span>
+                              <span className="shrink-0 text-[10px] text-gray-400">{n.time}</span>
+                            </div>
+                            <p className="mt-0.5 truncate text-[11px] text-gray-500">{n.preview}</p>
+                          </div>
+                        </button>
+                      </li>
+                    ))
+                  )}
                 </ul>
                 <div className="border-t border-gray-100 px-4 py-3 text-center">
                   <button
@@ -3025,6 +3194,31 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
                             const threadKey = liveHubRow.getAttribute('data-thread-key');
                             if (!threadKey) return;
                             renderHubThreadPanel(idoc, threadKey);
+                            const threadMsgs = hubMessagesRef.current[threadKey] ?? [];
+                            const unreadIds = threadMsgs
+                              .filter(
+                                (m) =>
+                                  !m.isRead &&
+                                  (m.direction === 'INBOUND' || m.direction === 'SYSTEM'),
+                              )
+                              .map((m) => m.id);
+                            if (unreadIds.length) {
+                              applyMessagesReadToCache(queryClient, unreadIds);
+                              for (const msg of threadMsgs) {
+                                if (unreadIds.includes(msg.id)) msg.isRead = true;
+                              }
+                              try {
+                                const token = await getTokenRef.current();
+                                if (token) {
+                                  await Promise.allSettled(
+                                    unreadIds.map((id) => messagesApi.markRead(token, id)),
+                                  );
+                                }
+                              } finally {
+                                void queryClient.invalidateQueries({ queryKey: ['messages'] });
+                                await refreshMessagesHubFromApi(idoc);
+                              }
+                            }
                             return;
                           }
 

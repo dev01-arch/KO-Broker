@@ -434,12 +434,18 @@ function SendMessageModal({
 }
 
 function DeliveryLine({ label, status }: { label: string; status: string }) {
-  const ok = status === 'sent';
+  const labelText =
+    status === 'sent'
+      ? '✓ Sent'
+      : status === 'scheduled'
+        ? '⏱ Scheduled'
+        : '✗ Failed';
+  const ok = status === 'sent' || status === 'scheduled';
   return (
     <div className="flex items-center justify-between text-sm">
       <span className="text-ink-60">{label}</span>
       <span className={ok ? 'text-brand-teal-700 font-medium' : 'text-red font-medium'}>
-        {ok ? '✓ Sent' : '✗ Failed'}
+        {labelText}
       </span>
     </div>
   );
@@ -942,7 +948,7 @@ function StatCard({
   return (
     <div className="rounded-xl border border-ink-20 bg-white p-4 flex flex-col gap-1">
       {icon}
-      <span className="text-2xl font-bold font-heading text-ink">{value}</span>
+      <span className="text-2xl font-bold font-body text-ink">{value}</span>
       <span className="text-xs text-ink-60">{label}</span>
     </div>
   );

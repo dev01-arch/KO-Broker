@@ -3,6 +3,8 @@
  * All requests carry the Clerk session JWT in the Authorization header.
  */
 
+import { caseStageToComplianceAdvanceTarget } from '@ko/utils';
+
 /** Same-origin by default so local /api/* routes receive the Clerk session token. */
 const BASE_URL = (process.env.NEXT_PUBLIC_API_URL ?? '').replace(/\/$/, '');
 
@@ -579,8 +581,23 @@ export interface AdviserRecord {
   firstName: string | null;
   lastName: string | null;
   email: string;
+  role?: string;
   isActive: boolean;
   createdAt: string;
+  invitePending?: boolean;
+  inviteTokenExpiry?: string | null;
+  canViewAllClients?: boolean;
+  canViewAccountDetails?: boolean;
+  canViewAiSummaries?: boolean;
+  /** OrganisationMember id — use for client assignedMemberId when present. */
+  memberId?: string | null;
+}
+
+export interface UpdateAdviserInput {
+  isActive?: boolean;
+  canViewAllClients?: boolean;
+  canViewAccountDetails?: boolean;
+  canViewAiSummaries?: boolean;
 }
 
 export interface CreateAdviserInput {
@@ -591,7 +608,7 @@ export interface CreateAdviserInput {
 
 export interface MessageDeliveryMeta {
   inApp: 'sent' | 'skipped';
-  email: 'sent' | 'skipped' | 'failed';
+  email: 'sent' | 'skipped' | 'failed' | 'scheduled';
   sms: 'sent' | 'skipped' | 'failed';
   errors?: string[];
 }
@@ -870,9 +887,10 @@ export const aiApi = {
 
 export const complianceApi = {
   advanceStage(token: string, input: AdvanceStageInput) {
+    const targetStage = caseStageToComplianceAdvanceTarget(String(input.targetStage));
     return apiFetch<CaseSummary>('/api/compliance/advance', token, {
       method: 'POST',
-      body: JSON.stringify(input),
+      body: JSON.stringify({ caseId: input.caseId, targetStage }),
     });
   },
 };
@@ -932,10 +950,27 @@ export const settingsApi = {
     return apiFetch<AdviserRecord[]>('/api/settings/advisers', token);
   },
 
+  getAdviser(token: string, id: string) {
+    return apiFetch<AdviserRecord>(`/api/settings/advisers/${id}`, token);
+  },
+
   createAdviser(token: string, input: CreateAdviserInput) {
     return apiFetch<AdviserRecord>('/api/settings/advisers', token, {
       method: 'POST',
       body: JSON.stringify(input),
+    });
+  },
+
+  updateAdviser(token: string, id: string, input: UpdateAdviserInput) {
+    return apiFetch<AdviserRecord>(`/api/settings/advisers/${id}`, token, {
+      method: 'PATCH',
+      body: JSON.stringify(input),
+    });
+  },
+
+  resendAdviserInvite(token: string, id: string) {
+    return apiFetch<{ message: string }>(`/api/settings/advisers/${id}/resend-invite`, token, {
+      method: 'POST',
     });
   },
 };

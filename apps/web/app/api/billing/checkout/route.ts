@@ -1,12 +1,11 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
+import { createHandler } from '@/lib/api/handler';
 import { CheckoutSchema } from '@ko/types';
-import { requireApiAuth } from '@/lib/api/require-api-auth';
-import { apiError, apiFromZodError, apiSuccess } from '@/lib/api/responses';
-import { isPrismaConnectionError } from '@/lib/api/prisma-errors';
 import { prisma } from '@/lib/db';
 import {
   buildCheckoutLineItems,
+  isMissingStripeCustomerError,
   stripeConfigured,
   type CheckoutPlan,
 } from '@/lib/billing/stripe-checkout';
@@ -19,105 +18,144 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'mock-key', {
  * POST /api/billing/checkout
  *
  * Creates a Stripe Checkout Session for upgrading an organization's plan.
+ * Backend createHandler shape + frontend stripe-checkout helpers (stale customer retry, URLs).
  */
-export async function POST(req: NextRequest) {
-  try {
-    const authResult = await requireApiAuth();
-    if ('response' in authResult) return authResult.response;
+export const POST = createHandler({
+  method: 'POST',
+  schema: CheckoutSchema,
+  handler: async (req: NextRequest, { body, user, orgId }) => {
+    const { plan, successUrl, cancelUrl } = body;
 
-    const { user, orgId } = authResult;
-
-    let body: unknown;
-    try {
-      body = await req.json();
-    } catch {
-      return apiError('VALIDATION_ERROR', 'Invalid JSON body', 422);
-    }
-
-    const parsed = CheckoutSchema.safeParse(body);
-    if (!parsed.success) return apiFromZodError(parsed.error);
-
-    const { plan, successUrl, cancelUrl } = parsed.data;
-
+    // === FRONTEND ADDITION: require real Stripe config + line-item builder ===
     if (!stripeConfigured()) {
-      return apiError(
-        'SERVICE_UNAVAILABLE',
-        'Stripe is not configured. Add STRIPE_SECRET_KEY (sk_test_...) to your environment.',
-        503,
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: 'SERVICE_UNAVAILABLE',
+            message: 'Stripe is not configured. Add STRIPE_SECRET_KEY (sk_test_...) to your environment.',
+          },
+        },
+        { status: 503 }
       );
     }
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || req.nextUrl.origin;
 
     const org = await prisma.organisation.findUnique({
-      where: { id: orgId },
+      where: { id: orgId! },
     });
 
     if (!org) {
-      return apiError('NOT_FOUND', 'Organisation not found', 404);
+      return NextResponse.json(
+        { success: false, error: { code: 'NOT_FOUND', message: 'Organisation not found' } },
+        { status: 404 }
+      );
     }
 
     let customerId = org.stripeCustomerId;
 
+    const createCustomer = async () => {
+      const customer = await stripe.customers.create({
+        email: user?.email,
+        name: org.name,
+        metadata: { orgId: org.id },
+      });
+      await prisma.organisation.update({
+        where: { id: org.id },
+        data: { stripeCustomerId: customer.id },
+      });
+      return customer.id;
+    };
+
     if (!customerId) {
       try {
-        const customer = await stripe.customers.create({
-          email: user.email,
-          name: org.name,
-          metadata: { orgId: org.id },
-        });
-        customerId = customer.id;
-
-        await prisma.organisation.update({
-          where: { id: org.id },
-          data: { stripeCustomerId: customerId },
-        });
+        customerId = await createCustomer();
       } catch (err) {
         console.error('[Stripe Checkout] Failed to create customer:', err);
       }
     }
 
+    const sessionConfig: Stripe.Checkout.SessionCreateParams = {
+      payment_method_types: ['card'],
+      line_items: buildCheckoutLineItems(plan as CheckoutPlan),
+      mode: 'subscription',
+      success_url: successUrl || `${appUrl}/dashboard/settings?billing=success&section=billing`,
+      cancel_url: cancelUrl || `${appUrl}/dashboard/settings?billing=cancel&section=billing`,
+      metadata: { orgId: org.id, plan },
+      subscription_data: {
+        metadata: { orgId: org.id, plan },
+      },
+    };
+
+    if (customerId) {
+      sessionConfig.customer = customerId;
+    } else {
+      sessionConfig.customer_email = user?.email;
+    }
+
     try {
-      const sessionConfig: Stripe.Checkout.SessionCreateParams = {
-        payment_method_types: ['card'],
-        line_items: buildCheckoutLineItems(plan as CheckoutPlan),
-        mode: 'subscription',
-        success_url: successUrl || `${appUrl}/dashboard/settings?billing=success&section=billing`,
-        cancel_url: cancelUrl || `${appUrl}/dashboard/settings?billing=cancel&section=billing`,
-        metadata: {
-          orgId: org.id,
-          plan,
-        },
-        subscription_data: {
-          metadata: {
-            orgId: org.id,
+      const session = await stripe.checkout.sessions.create(sessionConfig);
+      return NextResponse.json(
+        {
+          success: true,
+          data: {
+            url: session.url,
+            checkoutUrl: session.url,
+            sessionId: session.id,
             plan,
           },
         },
-      };
+        { status: 200 }
+      );
+    } catch (err) {
+      if (customerId && isMissingStripeCustomerError(err)) {
+        console.warn(
+          `[Stripe Checkout] Stripe customer ${customerId} not found for org ${org.id}; recreating.`,
+        );
+        await prisma.organisation.update({
+          where: { id: org.id },
+          data: { stripeCustomerId: null },
+        });
 
-      if (customerId) {
-        sessionConfig.customer = customerId;
-      } else {
-        sessionConfig.customer_email = user.email;
+        try {
+          customerId = await createCustomer();
+          sessionConfig.customer = customerId;
+          delete sessionConfig.customer_email;
+          const retrySession = await stripe.checkout.sessions.create(sessionConfig);
+          return NextResponse.json(
+            {
+              success: true,
+              data: {
+                url: retrySession.url,
+                checkoutUrl: retrySession.url,
+                sessionId: retrySession.id,
+                plan,
+              },
+            },
+            { status: 200 }
+          );
+        } catch (retryErr) {
+          console.error('[Stripe Checkout] Retry after stale customer failed:', retryErr);
+          return NextResponse.json(
+            {
+              success: false,
+              error: { code: 'INTERNAL_ERROR', message: 'Failed to initiate checkout session' },
+            },
+            { status: 500 }
+          );
+        }
       }
 
-      const session = await stripe.checkout.sessions.create(sessionConfig);
-
-      return apiSuccess({
-        url: session.url!,
-        checkoutUrl: session.url!,
-        sessionId: session.id,
-        plan,
-      });
-    } catch (err) {
       console.error('[Stripe Checkout] Failed to create session:', err);
-      return apiError('INTERNAL_ERROR', 'Failed to initiate checkout session', 500);
+      return NextResponse.json(
+        {
+          success: false,
+          error: { code: 'INTERNAL_ERROR', message: 'Failed to initiate checkout session' },
+        },
+        { status: 500 }
+      );
     }
-  } catch (error) {
-    console.error('[POST /api/billing/checkout]', error);
-    if (isPrismaConnectionError(error))
-      return apiError('SERVICE_UNAVAILABLE', 'Database is unavailable', 503);
-    return apiError('INTERNAL_ERROR', 'An unexpected error occurred', 500);
-  }
-}
+    // === END FRONTEND ADDITION ===
+  },
+});

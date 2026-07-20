@@ -1,155 +1,131 @@
-import { NextRequest } from 'next/server';
-import { EmploymentStatusSchema, CreateClientSchema, ClientTypeSchema, ClientStatusSchema, ClientCategoryFilterSchema } from '@ko/types';
-import { requireApiAuth } from '@/lib/api/require-api-auth';
+/**
+ * GET  /api/clients  — paginated client list (org-scoped)
+ * POST /api/clients  — create a new client
+ */
+
+import { NextRequest, NextResponse } from 'next/server';
+import { createHandler } from '@/lib/api/handler';
+import { logAuditEvent } from '@/lib/compliance/audit';
+import { getCurrentUser, maskClientFinancials } from '@/lib/auth';
+import {
+  ClientCategoryFilterSchema,
+  ClientStatusSchema,
+  ClientTypeSchema,
+  CreateClientSchema,
+  EmploymentStatusSchema,
+} from '@ko/types';
 import { createClientForOrg, listClientsForOrg } from '@/lib/api/clients-data';
 import { serializeClientSummary } from '@/lib/api/clients';
-import { apiError, apiFromZodError, apiSuccess } from '@/lib/api/responses';
-import { isPrismaConnectionError } from '@/lib/api/prisma-errors';
 
-export async function GET(req: NextRequest) {
-  try {
-    return await listClients(req);
-  } catch (error) {
-    console.error('[GET /api/clients]', error);
-    if (isPrismaConnectionError(error)) {
-      return apiError('SERVICE_UNAVAILABLE', 'Database is unavailable', 503);
-    }
-    return apiError('INTERNAL_ERROR', 'An unexpected error occurred', 500);
-  }
-}
+// ── GET /api/clients ──────────────────────────────────────────────────────────
 
-async function listClients(req: NextRequest) {
-  const authResult = await requireApiAuth();
-  if ('response' in authResult) return authResult.response;
+export const GET = createHandler({
+  method: 'GET',
+  handler: async (req: NextRequest, { orgId }) => {
+    const currentUser = await getCurrentUser();
+    const hideAccountDetails =
+      currentUser?.role === 'ADVISER' && !currentUser.canViewAccountDetails;
 
-  const { orgId } = authResult;
-  const { searchParams } = req.nextUrl;
+    const { searchParams } = new URL(req.url);
+    const page = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10));
+    const perPage = Math.min(100, Math.max(1, parseInt(searchParams.get('perPage') ?? '25', 10)));
+    const search = searchParams.get('search') ?? undefined;
+    const employmentStatusRaw = searchParams.get('employmentStatus') ?? undefined;
+    // === FRONTEND ADDITION: company / referral / member filters ===
+    const clientTypeRaw = searchParams.get('clientType') ?? undefined;
+    const clientCategoryRaw = searchParams.get('clientCategory') ?? undefined;
+    const statusRaw = searchParams.get('status') ?? undefined;
+    const assignedMemberId = searchParams.get('assignedMemberId') ?? undefined;
+    const isReferredRaw = searchParams.get('isReferred');
+    // === END FRONTEND ADDITION ===
 
-  const page = Math.max(1, Number(searchParams.get('page') ?? '1') || 1);
-  const perPage = Math.min(100, Math.max(1, Number(searchParams.get('perPage') ?? '10') || 10));
-  const search = searchParams.get('search')?.trim();
-  const employmentStatusRaw = searchParams.get('employmentStatus');
-  const clientTypeRaw = searchParams.get('clientType');
-  const clientCategoryRaw = searchParams.get('clientCategory');
-  const statusRaw = searchParams.get('status');
-  const assignedMemberId = searchParams.get('assignedMemberId')?.trim() || undefined;
-  const isReferredRaw = searchParams.get('isReferred');
+    const employmentStatus = employmentStatusRaw
+      ? EmploymentStatusSchema.parse(employmentStatusRaw)
+      : undefined;
+    const clientType = clientTypeRaw ? ClientTypeSchema.parse(clientTypeRaw) : undefined;
+    const clientCategory = clientCategoryRaw
+      ? ClientCategoryFilterSchema.parse(clientCategoryRaw)
+      : undefined;
+    const status = statusRaw ? ClientStatusSchema.parse(statusRaw) : undefined;
+    const isReferred =
+      isReferredRaw === 'true' ? true : isReferredRaw === 'false' ? false : undefined;
 
-  let employmentStatus;
-  if (employmentStatusRaw) {
-    const parsed = EmploymentStatusSchema.safeParse(employmentStatusRaw);
-    if (!parsed.success) {
-      return apiFromZodError(parsed.error);
-    }
-    employmentStatus = parsed.data;
-  }
-
-  let clientType;
-  if (clientTypeRaw) {
-    const parsed = ClientTypeSchema.safeParse(clientTypeRaw);
-    if (!parsed.success) {
-      return apiFromZodError(parsed.error);
-    }
-    clientType = parsed.data;
-  }
-
-  let clientCategory;
-  if (clientCategoryRaw) {
-    const parsed = ClientCategoryFilterSchema.safeParse(clientCategoryRaw);
-    if (!parsed.success) {
-      return apiFromZodError(parsed.error);
-    }
-    clientCategory = parsed.data;
-  }
-
-  let status;
-  if (statusRaw) {
-    const parsed = ClientStatusSchema.safeParse(statusRaw);
-    if (!parsed.success) {
-      return apiFromZodError(parsed.error);
-    }
-    status = parsed.data;
-  }
-
-  let isReferred: boolean | undefined;
-  if (isReferredRaw === 'true') isReferred = true;
-  if (isReferredRaw === 'false') isReferred = false;
-
-  const { total, clients } = await listClientsForOrg(orgId, {
-    page,
-    perPage,
-    search,
-    employmentStatus,
-    clientType,
-    clientCategory,
-    status,
-    assignedMemberId,
-    isReferred,
-  });
-
-  return apiSuccess(clients.map(serializeClientSummary), {
-    meta: { total, page, perPage },
-  });
-}
-
-export async function POST(req: NextRequest) {
-  try {
-    return await createClient(req);
-  } catch (error) {
-    console.error('[POST /api/clients]', error);
-    if (isPrismaConnectionError(error)) {
-      return apiError('SERVICE_UNAVAILABLE', 'Database is unavailable', 503);
-    }
-    return apiError('INTERNAL_ERROR', 'An unexpected error occurred', 500);
-  }
-}
-
-async function createClient(req: NextRequest) {
-  const authResult = await requireApiAuth();
-  if ('response' in authResult) return authResult.response;
-
-  const { orgId } = authResult;
-
-  let body: unknown;
-  try {
-    body = await req.json();
-  } catch {
-    return apiError('VALIDATION_ERROR', 'Invalid JSON body', 422);
-  }
-
-  const parsed = CreateClientSchema.safeParse(body);
-  if (!parsed.success) {
-    return apiFromZodError(parsed.error);
-  }
-
-  const input = parsed.data;
-  const result = await createClientForOrg(orgId, {
-    clientType: input.clientType,
-    title: input.title,
-    firstName: input.firstName,
-    lastName: input.lastName,
-    companyName: input.companyName,
-    companyNumber: input.companyNumber,
-    email: input.email,
-    phone: input.phone,
-    dateOfBirth: input.dateOfBirth,
-    employmentStatus: input.employmentStatus,
-    annualIncome: input.annualIncome,
-    isReferred: input.isReferred,
-    referredToCompany: input.referredToCompany,
-    assignedMemberId: input.assignedMemberId,
-    insurerName: input.insurerName,
-  });
-
-  if ('error' in result) {
-    const fields = result.fields ?? {};
-    const fieldErrors = Object.fromEntries(
-      Object.entries(fields).map(([key, value]) => [key, [value]]),
-    ) as Record<string, string[]>;
-    return apiError('VALIDATION_ERROR', 'Request validation failed', 422, {
-      fields: fieldErrors,
+    // === FRONTEND ADDITION: listClientsForOrg (company clients, members, dev-store) ===
+    const { total, clients } = await listClientsForOrg(orgId!, {
+      page,
+      perPage,
+      search,
+      employmentStatus,
+      clientType,
+      clientCategory,
+      status,
+      assignedMemberId,
+      isReferred,
     });
-  }
 
-  return apiSuccess(result.client, { status: 201 });
-}
+    let finalClients = clients.map(serializeClientSummary);
+    if (hideAccountDetails) {
+      finalClients = finalClients.map((c) => maskClientFinancials(c));
+    }
+    // === END FRONTEND ADDITION ===
+
+    return NextResponse.json(
+      { success: true, data: finalClients, meta: { total, page, perPage } },
+      { status: 200 }
+    );
+  },
+});
+
+// ── POST /api/clients ─────────────────────────────────────────────────────────
+
+export const POST = createHandler({
+  method: 'POST',
+  schema: CreateClientSchema,
+  handler: async (_req: NextRequest, { body, user, orgId }) => {
+    // === FRONTEND ADDITION: createClientForOrg (company + assignedMember + welcome email) ===
+    const result = await createClientForOrg(orgId!, body);
+    if ('error' in result) {
+      if (result.error === 'VALIDATION') {
+        return NextResponse.json(
+          {
+            success: false,
+            error: {
+              code: 'VALIDATION_ERROR',
+              message: 'Request validation failed',
+              fields: result.fields,
+            },
+          },
+          { status: 422 }
+        );
+      }
+      return NextResponse.json(
+        { success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to create client' } },
+        { status: 500 }
+      );
+    }
+
+    await logAuditEvent({
+      orgId: orgId!,
+      userId: user?.id,
+      entityType: 'Client',
+      entityId: result.client.id,
+      action: 'CLIENT_CREATED',
+      diff: {
+        after: {
+          referenceNumber: result.client.referenceNumber,
+          email: result.client.email,
+        },
+      },
+    });
+
+    return NextResponse.json(
+      {
+        success: true,
+        data: result.client,
+        meta: { welcomeEmail: result.welcomeEmail },
+      },
+      { status: 201 }
+    );
+    // === END FRONTEND ADDITION ===
+  },
+});

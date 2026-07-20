@@ -1,63 +1,51 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { createHandler } from '@/lib/api/handler';
 import { z } from 'zod';
-import { requireApiAuth } from '@/lib/api/require-api-auth';
 import { inviteClientToPortal } from '@/lib/api/portal-data';
-import { orgHasFeature } from '@/lib/api/plan-access';
-import { applyCorsHeaders } from '@/lib/api/cors';
-import {
-  apiError,
-  apiFromZodError,
-  apiNotFound,
-  apiPlanLimitExceeded,
-  apiSuccess,
-} from '@/lib/api/responses';
-import { isPrismaConnectionError } from '@/lib/api/prisma-errors';
 
 const InviteSchema = z.object({
-  caseId: z.string().min(1, 'caseId is required'),
+  caseId: z.string().min(1, 'Case ID is required'),
 });
 
-export async function POST(req: NextRequest) {
-  try {
-    const authResult = await requireApiAuth();
-    if ('response' in authResult) return applyCorsHeaders(req, authResult.response);
-    const { orgId, user } = authResult;
-
-    if (!(await orgHasFeature(orgId, 'client_portal'))) {
-      return applyCorsHeaders(req, apiPlanLimitExceeded('Client portal requires a Professional or Enterprise plan'));
-    }
-
-    let body: unknown;
-    try {
-      body = await req.json();
-    } catch {
-      return applyCorsHeaders(req, apiError('VALIDATION_ERROR', 'Invalid JSON body', 422));
-    }
-
-    const parsed = InviteSchema.safeParse(body);
-    if (!parsed.success) return applyCorsHeaders(req, apiFromZodError(parsed.error));
-
-    const result = await inviteClientToPortal(orgId, parsed.data.caseId, user.id);
+/**
+ * POST /api/portal/invite
+ * Backend createHandler shape; delivery via inviteClientToPortal (email status + plan gate).
+ */
+export const POST = createHandler({
+  method: 'POST',
+  requiredFeature: 'client_portal',
+  schema: InviteSchema,
+  handler: async (_req: NextRequest, { body, user, orgId }) => {
+    // === FRONTEND ADDITION: inviteClientToPortal (compatible email API + notifications meta) ===
+    const result = await inviteClientToPortal(orgId!, body.caseId, user!.id);
     if ('error' in result) {
-      return applyCorsHeaders(req, apiNotFound('Case not found'));
+      const status =
+        result.error === 'NOT_FOUND' ? 404 : result.error === 'FORBIDDEN' ? 403 : 500;
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: result.error,
+            message:
+              result.error === 'NOT_FOUND'
+                ? 'Case not found'
+                : result.error === 'FORBIDDEN'
+                  ? 'Client portal is not available on your plan'
+                  : 'Failed to send invite',
+          },
+        },
+        { status }
+      );
     }
 
-    return applyCorsHeaders(
-      req,
-      apiSuccess(
-        {
-          message: result.notifications.email === 'sent'
-            ? 'Onboarding invitation sent successfully.'
-            : `Portal invite created but email could not be sent. ${result.emailError ?? 'Check server logs and Resend domain settings.'}`,
-        },
-        { status: 201 },
-      ),
+    return NextResponse.json(
+      {
+        success: true,
+        message: 'Onboarding invitation sent successfully.',
+        data: result,
+      },
+      { status: 201 }
     );
-  } catch (error) {
-    console.error('[POST /api/portal/invite]', error);
-    if (isPrismaConnectionError(error)) {
-      return applyCorsHeaders(req, apiError('SERVICE_UNAVAILABLE', 'Database is unavailable', 503));
-    }
-    return applyCorsHeaders(req, apiError('INTERNAL_ERROR', 'An unexpected error occurred', 500));
-  }
-}
+    // === END FRONTEND ADDITION ===
+  },
+});

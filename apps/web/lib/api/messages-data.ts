@@ -3,12 +3,95 @@ import { prisma } from '@/lib/db';
 import { devStore } from '@/lib/api/dev-store';
 import { isPrismaConnectionError } from '@/lib/api/prisma-errors';
 import { getOrgIntegrations, getOrgMessagingSettings } from '@/lib/api/settings-data';
-import { sendEmail } from '@/lib/notifications/email';
+import { clientAllowsMessageEmails } from '@/lib/api/client-notification-prefs';
+import {
+  cancelPendingDigestsIfCaughtUp,
+  scheduleMessageEmailDigest,
+} from '@/lib/notifications/message-email-digest';
 import { sendSMS } from '@/lib/notifications/sms';
 import type { MessageChannel, MessageDirection, MessageSource } from '@ko/types';
 
 function useDevStore(error: unknown) {
   return process.env.NODE_ENV === 'development' && isPrismaConnectionError(error);
+}
+
+/** Deep-link target for “view message” CTAs (full content stays in-app). */
+function messageInboxUrl(): string {
+  const portal = process.env.NEXT_PUBLIC_CLIENT_PORTAL_URL?.trim().replace(/\/$/, '');
+  if (portal) return portal;
+  return (process.env.NEXT_PUBLIC_APP_URL ?? 'https://ko-broker.vercel.app').replace(/\/$/, '');
+}
+
+/**
+ * LinkedIn-style notification email (preview only, delayed + batched).
+ * Schedules a digest: first message preview is locked; later messages do not re-email.
+ */
+async function deliverMessageNotificationEmail(opts: {
+  orgId: string;
+  settings: Awaited<ReturnType<typeof getOrgMessagingSettings>>;
+  client: ClientContact | null;
+  body: string;
+  subject?: string;
+  messageId: string;
+  caseId?: string;
+  delivery: MessageDeliveryMeta;
+  /** EMAIL channel: missing recipient is an error. IN_APP notify: skip quietly if no client. */
+  requireRecipient: boolean;
+}): Promise<void> {
+  const { settings, client, delivery, requireRecipient } = opts;
+
+  if (settings.email?.enabled === false) {
+    delivery.email = 'skipped';
+    if (requireRecipient) {
+      delivery.errors?.push('Email channel is disabled in Settings');
+    }
+    return;
+  }
+
+  if (!client?.email) {
+    if (requireRecipient || client) {
+      delivery.email = 'failed';
+      delivery.errors?.push(
+        client
+          ? 'Client email address is missing'
+          : 'Client email address is missing — add a Client ID to send the notification email',
+      );
+    }
+    return;
+  }
+
+  // Personal opt-out (AND with org messaging.email.enabled above).
+  try {
+    const allowsEmail = await clientAllowsMessageEmails(client.id, opts.orgId);
+    if (!allowsEmail) {
+      delivery.email = 'skipped';
+      return;
+    }
+  } catch (error) {
+    console.error('[messages] client notification prefs check failed:', error);
+    // Fail soft — still try to schedule so in-app send delivery meta stays useful.
+  }
+
+  const scheduled = await scheduleMessageEmailDigest({
+    orgId: opts.orgId,
+    recipientEmail: client.email,
+    recipientName: client.firstName,
+    recipientKind: 'CLIENT',
+    clientId: client.id,
+    caseId: opts.caseId,
+    firstMessageId: opts.messageId,
+    previewBody: opts.body,
+    subject: opts.subject,
+    ctaUrl: messageInboxUrl(),
+  });
+
+  if (!scheduled.ok) {
+    delivery.email = 'failed';
+    delivery.errors?.push(scheduled.error);
+    return;
+  }
+
+  delivery.email = 'scheduled';
 }
 
 type ClientContact = {
@@ -21,7 +104,7 @@ type ClientContact = {
 
 export type MessageDeliveryMeta = {
   inApp: 'sent' | 'skipped';
-  email: 'sent' | 'skipped' | 'failed';
+  email: 'sent' | 'skipped' | 'failed' | 'scheduled';
   sms: 'sent' | 'skipped' | 'failed';
   errors?: string[];
 };
@@ -190,18 +273,23 @@ export async function broadcastMessageForOrg(
     if (channel === 'IN_APP') delivery.inApp = 'sent';
   }
 
-  const emailSubject =
-    input.subject?.trim() ||
-    (client ? `Message for ${client.firstName} ${client.lastName}` : 'Update from your mortgage adviser');
-
-  if (channels.includes('EMAIL')) {
-    if (!client?.email) {
-      delivery.email = 'failed';
-      delivery.errors?.push('Client email address is missing');
-    } else {
-      const result = await sendEmail({ to: client.email, subject: emailSubject, body: input.body });
-      delivery.email = result.ok ? 'sent' : 'failed';
-      if (!result.ok) delivery.errors?.push(result.error);
+  if (channels.includes('EMAIL') || channels.includes('IN_APP')) {
+    const primaryForNotify =
+      messages.find((m) => m.channel === 'IN_APP') ??
+      messages.find((m) => m.channel === 'EMAIL') ??
+      messages[0];
+    if (primaryForNotify) {
+      await deliverMessageNotificationEmail({
+        orgId,
+        settings,
+        client,
+        body: input.body,
+        subject: input.subject,
+        messageId: primaryForNotify.id,
+        caseId: input.caseId,
+        delivery,
+        requireRecipient: channels.includes('EMAIL') && !channels.includes('IN_APP'),
+      });
     }
   }
 
@@ -231,7 +319,15 @@ export async function markMessageReadForOrg(orgId: string, id: string, isRead = 
   try {
     const existing = await prisma.message.findFirst({ where: { id, orgId } });
     if (!existing) return null;
-    return await prisma.message.update({ where: { id }, data: { isRead } });
+    const updated = await prisma.message.update({ where: { id }, data: { isRead } });
+    if (isRead) {
+      await cancelPendingDigestsIfCaughtUp({
+        orgId,
+        clientId: existing.clientId,
+        caseId: existing.caseId,
+      });
+    }
+    return updated;
   } catch (error) {
     if (useDevStore(error)) return devStore.markMessageRead(orgId, id, isRead);
     throw error;
@@ -274,24 +370,42 @@ export async function sendMessageForOrg(
   });
 
   if (input.channel === 'IN_APP') {
-    delivery.inApp = 'sent';
+    if (settings.inApp?.enabled === false) {
+      delivery.inApp = 'skipped';
+      delivery.errors?.push('In-app channel is disabled in Settings');
+    } else {
+      delivery.inApp = 'sent';
+      // Side-notify by delayed digest email (LinkedIn-style: first preview only).
+      await deliverMessageNotificationEmail({
+        orgId,
+        settings,
+        client,
+        body: input.body,
+        subject: input.subject,
+        messageId: message.id,
+        caseId: input.caseId,
+        delivery,
+        requireRecipient: false,
+      });
+    }
   }
-
-  const emailSubject =
-    input.subject?.trim() ||
-    (client ? `Message for ${client.firstName} ${client.lastName}` : 'Update from your mortgage adviser');
 
   if (input.channel === 'EMAIL') {
     if (settings.email?.enabled === false) {
       delivery.email = 'skipped';
-      delivery.errors?.push('Email channel is disabled in Settings');
-    } else if (!client?.email) {
-      delivery.email = 'failed';
-      delivery.errors?.push('Client email address is missing');
+      delivery.errors?.push('Email notifications are disabled in Settings');
     } else {
-      const result = await sendEmail({ to: client.email, subject: emailSubject, body: input.body });
-      delivery.email = result.ok ? 'sent' : 'failed';
-      if (!result.ok) delivery.errors?.push(result.error);
+      await deliverMessageNotificationEmail({
+        orgId,
+        settings,
+        client,
+        body: input.body,
+        subject: input.subject,
+        messageId: message.id,
+        caseId: input.caseId,
+        delivery,
+        requireRecipient: true,
+      });
     }
   }
 

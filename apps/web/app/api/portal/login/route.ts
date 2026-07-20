@@ -1,38 +1,77 @@
-import { NextRequest } from 'next/server';
-import { z } from 'zod';
+import { NextRequest, NextResponse } from 'next/server';
+import { createHandler } from '@/lib/api/handler';
+import { LoginClientPortalSchema } from '@ko/types';
 import { loginPortalClient } from '@/lib/api/portal-data';
-import { applyCorsHeaders } from '@/lib/api/cors';
 import { portalSessionCookieOptions } from '@/lib/api/portal-session';
-import { apiError, apiFromZodError, apiSuccess, apiUnauthorized } from '@/lib/api/responses';
 
-const LoginSchema = z.object({
-  email: z.string().email('Valid email is required'),
-  password: z.string().min(1, 'Password is required'),
-});
+export const POST = createHandler({
+  method: 'POST',
+  requireAuth: false,
+  schema: LoginClientPortalSchema,
+  handler: async (_req: NextRequest, { body }) => {
+    const result = await loginPortalClient(body.email, body.password);
 
-export async function POST(req: NextRequest) {
-  try {
-    let body: unknown;
-    try {
-      body = await req.json();
-    } catch {
-      return applyCorsHeaders(req, apiError('VALIDATION_ERROR', 'Invalid JSON body', 422));
-    }
-
-    const parsed = LoginSchema.safeParse(body);
-    if (!parsed.success) return applyCorsHeaders(req, apiFromZodError(parsed.error));
-
-    const result = await loginPortalClient(parsed.data.email, parsed.data.password);
     if ('error' in result) {
-      return applyCorsHeaders(req, apiUnauthorized());
+      if (result.error === 'FORBIDDEN') {
+        return NextResponse.json(
+          {
+            success: false,
+            error: { code: 'FORBIDDEN', message: 'No case linked to this portal account' },
+          },
+          { status: 403 },
+        );
+      }
+
+      if (result.error === 'SETUP_REQUIRED') {
+        return NextResponse.json(
+          {
+            success: false,
+            error: {
+              code: 'PORTAL_SETUP_REQUIRED',
+              message:
+                'Your portal password is not set up yet. Please open the invite link from your adviser to create or reset your password.',
+            },
+          },
+          { status: 403 },
+        );
+      }
+
+      if (result.error === 'SERVICE_UNAVAILABLE') {
+        return NextResponse.json(
+          {
+            success: false,
+            error: {
+              code: 'SERVICE_UNAVAILABLE',
+              message: 'Portal is temporarily unavailable. Please try again.',
+            },
+          },
+          { status: 503 },
+        );
+      }
+
+      return NextResponse.json(
+        { success: false, error: { code: 'UNAUTHORIZED', message: 'Invalid email or password' } },
+        { status: 401 },
+      );
     }
 
-    const cookie = portalSessionCookieOptions(result.sessionToken);
-    const res = apiSuccess({ success: true, clientId: result.session.clientId });
-    res.cookies.set(cookie);
-    return applyCorsHeaders(req, res);
-  } catch (error) {
-    console.error('[POST /api/portal/login]', error);
-    return applyCorsHeaders(req, apiError('INTERNAL_ERROR', 'An unexpected error occurred', 500));
-  }
-}
+    const { client, sessionToken } = result;
+    const response = NextResponse.json(
+      {
+        success: true,
+        data: {
+          id: client.id,
+          referenceNumber: client.referenceNumber,
+          firstName: client.firstName,
+          lastName: client.lastName,
+          email: client.email,
+          clientId: client.id,
+        },
+      },
+      { status: 200 },
+    );
+
+    response.cookies.set(portalSessionCookieOptions(sessionToken));
+    return response;
+  },
+});

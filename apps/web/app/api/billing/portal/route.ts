@@ -4,7 +4,7 @@ import { requireApiAuth } from '@/lib/api/require-api-auth';
 import { apiError, apiSuccess } from '@/lib/api/responses';
 import { isPrismaConnectionError } from '@/lib/api/prisma-errors';
 import { prisma } from '@/lib/db';
-import { stripeConfigured } from '@/lib/billing/stripe-checkout';
+import { isMissingStripeCustomerError, stripeConfigured } from '@/lib/billing/stripe-checkout';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'mock-key', {
   apiVersion: '2026-06-24.dahlia',
@@ -57,6 +57,22 @@ export async function POST(req: NextRequest) {
 
       return apiSuccess({ url: session.url });
     } catch (err) {
+      if (isMissingStripeCustomerError(err)) {
+        // Stale customer id (e.g. left over from a different Stripe account/mode).
+        console.warn(
+          `[Stripe Portal] Stripe customer ${org.stripeCustomerId} not found for org ${orgId}; clearing stale id.`,
+        );
+        await prisma.organisation.update({
+          where: { id: orgId },
+          data: { stripeCustomerId: null },
+        });
+        return apiError(
+          'NOT_FOUND',
+          'No billing account found. Complete a checkout first to create a Stripe customer.',
+          404,
+        );
+      }
+
       console.error('[Stripe Portal] Failed to create session:', err);
       return apiError(
         'SERVICE_UNAVAILABLE',

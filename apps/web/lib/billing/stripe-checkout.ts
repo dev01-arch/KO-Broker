@@ -89,3 +89,18 @@ export function stripeConfigured(): boolean {
   const key = process.env.STRIPE_SECRET_KEY;
   return Boolean(key && key.startsWith('sk_'));
 }
+
+/**
+ * True when a Stripe API call failed because the referenced customer id
+ * doesn't exist for the current STRIPE_SECRET_KEY (e.g. the customer was
+ * created under a different Stripe account/mode, or the account switched
+ * from test to live keys). Callers should treat this as "no billing
+ * account" and clear the stale id rather than surfacing a 500.
+ */
+export function isMissingStripeCustomerError(error: unknown): boolean {
+  return (
+    error instanceof Stripe.errors.StripeInvalidRequestError &&
+    error.code === 'resource_missing' &&
+    error.param === 'customer'
+  );
+}

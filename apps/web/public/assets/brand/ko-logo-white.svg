@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 40" fill="none" role="img" aria-label="KO Platform">
+  <path d="M20 6L4 19.5V36h10v-11h12v11h10V19.5L20 6Z" fill="#1D9E75"/>
+  <path d="M15.5 36v-8.5h9V36" stroke="#5DCAA5" stroke-width="1.5" fill="none"/>
+  <text x="48" y="27" font-family="Syne, Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#FFFFFF" letter-spacing="-0.4">KO Platform</text>
+</svg>

@@ -1,7 +1,9 @@
 import { prisma } from '@/lib/db';
+import { Prisma } from '@ko/db';
 import type { OrgIntegrations, OrgMessagingSettings, UpdateIntegrationsInput, UpdateMessagingSettingsInput } from '@ko/types';
 import { devStore } from '@/lib/api/dev-store';
 import { isPrismaConnectionError } from '@/lib/api/prisma-errors';
+import { cancelAllPendingDigestsForOrg } from '@/lib/notifications/message-email-digest';
 
 function useDevStore(error: unknown) {
   return process.env.NODE_ENV === 'development' && isPrismaConnectionError(error);
@@ -191,8 +193,11 @@ export async function getOrgMessagingSettings(orgId: string): Promise<OrgMessagi
       where: { id: orgId },
       select: { settings: true },
     });
-    const settings = (org?.settings as Record<string, unknown>) ?? {};
-    return normalizeMessaging(settings.messaging ?? settings);
+    const settings =
+      org?.settings && typeof org.settings === 'object' && !Array.isArray(org.settings)
+        ? (org.settings as Record<string, unknown>)
+        : {};
+    return normalizeMessaging(settings.messaging ?? {});
   } catch (error) {
     if (useDevStore(error)) {
       const devSettings = devStore.getOrgSettings(orgId);
@@ -211,8 +216,11 @@ export async function updateOrgMessagingSettings(
       where: { id: orgId },
       select: { settings: true },
     });
-    const existingSettings = (org?.settings as Record<string, unknown>) ?? {};
-    const current = normalizeMessaging(existingSettings.messaging ?? existingSettings);
+    const existingSettings =
+      org?.settings && typeof org.settings === 'object' && !Array.isArray(org.settings)
+        ? ({ ...(org.settings as Record<string, unknown>) } as Record<string, unknown>)
+        : {};
+    const current = normalizeMessaging(existingSettings.messaging ?? {});
     const merged = mergeMessaging(current, input);
 
     await prisma.organisation.update({
@@ -221,9 +229,14 @@ export async function updateOrgMessagingSettings(
         settings: {
           ...existingSettings,
           messaging: merged,
-        },
+        } as Prisma.InputJsonValue,
       },
     });
+
+    // Turning off email notifications cancels any LinkedIn-style digests waiting to send.
+    if (merged.email?.enabled === false) {
+      await cancelAllPendingDigestsForOrg(orgId);
+    }
 
     return merged;
   } catch (error) {

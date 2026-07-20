@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   AlertTriangle,
   CheckCheck,
@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { useMessages, useSendMessage, useMarkMessageRead } from '@/hooks/use-messages';
 import { usePlanFeature } from '@/hooks/use-org';
+import { useMessagingSettings } from '@/hooks/use-settings';
 import { ApiErrorState } from '@/components/dashboard/api-error-state';
 import { PlanGate } from '@/components/dashboard/plan-gate';
 import type { MessageRecord, MessageChannel } from '@/lib/api/client';
@@ -49,12 +50,18 @@ const LIST_QUERY = { page: 1, perPage: 50 } as const;
 type DeliveryResult = { inApp?: string; email?: string; sms?: string; errors?: string[] };
 
 function DeliveryLine({ label, status }: { label: string; status: string }) {
-  const ok = status === 'sent';
+  const labelText =
+    status === 'sent'
+      ? '✓ Sent'
+      : status === 'scheduled'
+        ? '⏱ Scheduled'
+        : '✗ Failed';
+  const ok = status === 'sent' || status === 'scheduled';
   return (
     <div className="flex items-center justify-between text-sm">
       <span className="text-ink-60">{label}</span>
       <span className={ok ? 'font-medium text-brand-teal-700' : 'font-medium text-red'}>
-        {ok ? '✓ Sent' : '✗ Failed'}
+        {labelText}
       </span>
     </div>
   );
@@ -66,6 +73,7 @@ function ComposeModal({
   isPending,
   error,
   delivery,
+  availableChannels,
 }: {
   onClose: () => void;
   onSend: (data: {
@@ -77,11 +85,20 @@ function ComposeModal({
   isPending: boolean;
   error?: string | null;
   delivery?: DeliveryResult | null;
+  availableChannels: MessageChannel[];
 }) {
+  const channels =
+    availableChannels.length > 0 ? availableChannels : (['IN_APP'] as MessageChannel[]);
   const [body, setBody] = useState('');
   const [subject, setSubject] = useState('');
-  const [channel, setChannel] = useState<MessageChannel>('IN_APP');
+  const [channel, setChannel] = useState<MessageChannel>(channels[0] ?? 'IN_APP');
   const [clientId, setClientId] = useState('');
+
+  useEffect(() => {
+    if (!channels.includes(channel)) {
+      setChannel(channels[0] ?? 'IN_APP');
+    }
+  }, [channels, channel]);
 
   if (delivery) {
     return (
@@ -138,7 +155,9 @@ function ComposeModal({
           <div>
             <label className="block text-xs font-medium text-ink-60 mb-1.5 flex items-center gap-1">
               <User className="h-3 w-3" /> Client ID
-              <span className="text-ink-40 font-normal">(optional — required for Email / SMS delivery)</span>
+              <span className="text-ink-40 font-normal">
+                (needed for email notifications / SMS — In-app alone skips email)
+              </span>
             </label>
             <input
               value={clientId}
@@ -152,7 +171,7 @@ function ComposeModal({
           <div>
             <label className="block text-xs font-medium text-ink-60 mb-1.5">Channel</label>
             <div className="flex gap-2">
-              {(['IN_APP', 'EMAIL', 'SMS'] as MessageChannel[]).map((ch) => (
+              {channels.map((ch) => (
                 <button
                   key={ch}
                   type="button"
@@ -169,10 +188,17 @@ function ComposeModal({
                 </button>
               ))}
             </div>
-            {channel !== 'IN_APP' && !clientId.trim() && (
+            {channels.length < 3 && (
+              <p className="mt-1.5 text-xs text-ink-60">
+                Some channels are off in Settings → Messaging.
+              </p>
+            )}
+            {!clientId.trim() && (
               <p className="mt-1.5 text-xs text-amber flex items-center gap-1">
                 <AlertTriangle className="h-3 w-3" />
-                A Client ID is required to deliver via {CHANNEL_LABELS[channel]}.
+                {channel === 'IN_APP'
+                  ? 'Add a Client ID so we can email them that a message is waiting.'
+                  : `A Client ID is required to deliver via ${CHANNEL_LABELS[channel]}.`}
               </p>
             )}
           </div>
@@ -258,7 +284,6 @@ function MessageRow({
     <div
       className={`flex items-start gap-4 px-6 py-4 border-b border-ink-20 hover:bg-ink-08 transition-colors ${!message.isRead ? 'bg-brand-teal-50/40' : ''}`}
     >
-      <span className="mt-0.5 shrink-0 text-ink-60">{CHANNEL_ICON[message.channel]}</span>
       <div className="min-w-0 flex-1">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
@@ -298,10 +323,6 @@ function MessageRow({
           </div>
         </div>
         <div className="mt-1.5 flex items-center gap-2">
-          <span className="inline-flex items-center gap-1 rounded-full bg-ink-08 px-2 py-0.5 text-[10px] font-medium text-ink-60">
-            {CHANNEL_ICON[message.channel]}
-            {CHANNEL_LABELS[message.channel]}
-          </span>
           <span
             className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
               message.direction === 'INBOUND'
@@ -338,6 +359,16 @@ export default function MessagesPage() {
   const [composeError, setComposeError] = useState<string | null>(null);
   const [composeDelivery, setComposeDelivery] = useState<DeliveryResult | null>(null);
   const [filter, setFilter] = useState<'all' | 'unread'>('all');
+
+  const { data: messagingSettings } = useMessagingSettings();
+  const availableChannels = useMemo((): MessageChannel[] => {
+    const messaging = messagingSettings?.data;
+    const channels: MessageChannel[] = [];
+    if (messaging?.inApp?.enabled !== false) channels.push('IN_APP');
+    if (messaging?.email?.enabled !== false) channels.push('EMAIL');
+    if (messaging?.sms?.enabled !== false) channels.push('SMS');
+    return channels.length ? channels : ['IN_APP'];
+  }, [messagingSettings?.data]);
 
   const { data, isLoading, isError, error, refetch } = useMessages(
     { ...LIST_QUERY, unreadOnly: filter === 'unread' },
@@ -400,6 +431,7 @@ export default function MessagesPage() {
           isPending={isSending}
           error={composeError}
           delivery={composeDelivery}
+          availableChannels={availableChannels}
         />
       )}
 
@@ -447,7 +479,7 @@ export default function MessagesPage() {
       </div>
 
       <div className="p-7">
-        <div className="rounded-xl border border-ink-20 bg-white overflow-hidden">
+        <div className="flex max-h-[min(640px,calc(100vh-160px))] min-h-[320px] flex-col overflow-hidden rounded-xl border border-ink-20 bg-white">
           {isLoading ? (
             <div className="flex items-center justify-center py-20 text-ink-60">
               <Loader2 className="h-5 w-5 animate-spin mr-2" />
@@ -474,7 +506,7 @@ export default function MessagesPage() {
               </button>
             </div>
           ) : (
-            <div>
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
               {messages.map((msg) => (
                 <MessageRow
                   key={msg.id}

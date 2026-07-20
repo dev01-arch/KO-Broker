@@ -640,7 +640,7 @@ export function AddClientModal({ open, onClose }: AddClientModalProps) {
                         {advisersLoading ? 'Loading advisers…' : 'Select adviser'}
                       </option>
                       {activeAdvisers.map((adviser) => (
-                        <option key={adviser.id} value={adviser.id}>
+                        <option key={adviser.id} value={adviser.memberId ?? adviser.id}>
                           {[adviser.firstName, adviser.lastName].filter(Boolean).join(' ') ||
                             adviser.email}
                         </option>

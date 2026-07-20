@@ -56,3 +56,28 @@ export function slugify(text: string): string {
     .replace(/[\s_]+/g, '-')
     .replace(/^-+|-+$/g, '');
 }
+
+/** Compliance advance API targets (backend POST /api/compliance/advance). */
+export type ComplianceAdvanceTarget =
+  | 'FACT_FIND'
+  | 'RESEARCH'
+  | 'ESIS'
+  | 'SUITABILITY_REPORT'
+  | 'COMPLETION';
+
+const CASE_STAGE_TO_COMPLIANCE_TARGET: Record<string, ComplianceAdvanceTarget | undefined> = {
+  FACT_FIND: 'FACT_FIND',
+  RESEARCH: 'RESEARCH',
+  DIP: 'ESIS',
+  OFFER: 'SUITABILITY_REPORT',
+  COMPLETION: 'COMPLETION',
+};
+
+/** Map dashboard CaseStage advance button → backend compliance targetStage. */
+export function caseStageToComplianceAdvanceTarget(caseStage: string): ComplianceAdvanceTarget {
+  const mapped = CASE_STAGE_TO_COMPLIANCE_TARGET[caseStage];
+  if (!mapped) {
+    throw new Error(`Case stage '${caseStage}' cannot be used as a compliance advance target`);
+  }
+  return mapped;
+}

@@ -141,6 +141,17 @@ model User {
   role      Role     @default(ADVISER)
   isActive  Boolean  @default(true)
   orgId     String?
+
+  // Adviser invite (broker-side) — from backend API layer
+  inviteToken       String?  @unique
+  inviteTokenExpiry DateTime?
+  invitePending     Boolean  @default(false)
+
+  // Per-adviser visibility switches (ADMIN always bypasses) — from backend API layer
+  canViewAllClients     Boolean @default(false)
+  canViewAccountDetails Boolean @default(false)
+  canViewAiSummaries    Boolean @default(false)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -201,6 +212,8 @@ model Client {
   portalEnabled    Boolean          @default(false)
   portalAccessToken String?         @unique
   portalPasswordHash String?
+  /// Personal portal prefs, e.g. { emailMessages: boolean } — default ON when missing
+  notificationPrefs Json?
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
 
@@ -335,6 +348,33 @@ model Message {
   client Client? @relation(fields: [clientId], references: [id])
 
   @@map("messages")
+}
+
+/// LinkedIn-style delayed message notification email (one pending digest per recipient).
+/// First message body is locked as the preview; later messages in the window do not change it.
+model MessageEmailDigest {
+  id             String    @id @default(cuid())
+  orgId          String
+  recipientEmail String
+  recipientName  String?
+  /// CLIENT = adviser→client notify; ADVISER = client→adviser notify
+  recipientKind  String
+  clientId       String?
+  caseId         String?
+  firstMessageId String
+  previewBody    String
+  subject        String?
+  ctaUrl         String
+  scheduledFor   DateTime
+  /// PENDING | SENT | CANCELLED | SKIPPED
+  status         String    @default("PENDING")
+  sentAt         DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([status, scheduledFor])
+  @@index([orgId, recipientEmail, recipientKind, status])
+  @@map("message_email_digests")
 }
 
 model Document {

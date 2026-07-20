@@ -116,10 +116,18 @@ export const SendMessageSchema = z.object({
 });
 export type SendMessageInput = z.infer<typeof SendMessageSchema>;
 
+/** Backend alias — same shape as SendMessageSchema */
+export const CreateMessageSchema = SendMessageSchema;
+export type CreateMessageInput = SendMessageInput;
+
 export const MarkMessageReadSchema = z.object({
   isRead: z.boolean(),
 });
 export type MarkMessageReadInput = z.infer<typeof MarkMessageReadSchema>;
+
+/** Backend alias */
+export const PatchMessageSchema = MarkMessageReadSchema;
+export type PatchMessageInput = MarkMessageReadInput;
 
 export const GenerateReportSchema = z.object({
   caseId: z.string().min(1, 'Case ID is required'),
@@ -165,12 +173,88 @@ export const AdvanceStageSchema = z
   });
 export type AdvanceStageInput = z.infer<typeof AdvanceStageSchema>;
 
+/** Backend compliance advance schema (subset; notes supported via AdvanceStageSchema) */
+export const AdvanceComplianceStageSchema = z.object({
+  caseId: z.string().min(1, 'Case ID is required'),
+  targetStage: z.enum(['FACT_FIND', 'RESEARCH', 'ESIS', 'SUITABILITY_REPORT', 'COMPLETION']),
+});
+export type AdvanceComplianceStageInput = z.infer<typeof AdvanceComplianceStageSchema>;
+
 export const CheckoutSchema = z.object({
   plan: z.enum(['PROFESSIONAL', 'ENTERPRISE']),
   successUrl: z.string().url().optional(),
   cancelUrl: z.string().url().optional(),
 });
 export type CheckoutInput = z.infer<typeof CheckoutSchema>;
+
+// ── Client Portal Schemas (backend) ──
+export const VerifyPortalTokenSchema = z.object({
+  token: z.string().min(1, 'Token is required'),
+});
+export type VerifyPortalTokenInput = z.infer<typeof VerifyPortalTokenSchema>;
+
+export const SetupClientPortalSchema = z.object({
+  token: z.string().min(1, 'Token is required'),
+  password: z.string().min(8, 'Password must be at least 8 characters long'),
+});
+export type SetupClientPortalInput = z.infer<typeof SetupClientPortalSchema>;
+
+export const LoginClientPortalSchema = z.object({
+  email: z.string().email('Valid email is required'),
+  password: z.string().min(1, 'Password is required'),
+});
+export type LoginClientPortalInput = z.infer<typeof LoginClientPortalSchema>;
+
+// ── Adviser Access Schemas (backend) ──
+export const InviteAdviserSchema = z.object({
+  firstName: z.string().min(1, 'First name is required'),
+  lastName: z.string().min(1, 'Last name is required'),
+  email: z.string().email('Valid email is required'),
+  canViewAllClients: z.boolean().default(false),
+  canViewAccountDetails: z.boolean().default(false),
+  canViewAiSummaries: z.boolean().default(false),
+});
+export type InviteAdviserInput = z.infer<typeof InviteAdviserSchema>;
+
+export const UpdateAdviserVisibilitySchema = z.object({
+  isActive: z.boolean().optional(),
+  canViewAllClients: z.boolean().optional(),
+  canViewAccountDetails: z.boolean().optional(),
+  canViewAiSummaries: z.boolean().optional(),
+});
+export type UpdateAdviserVisibilityInput = z.infer<typeof UpdateAdviserVisibilitySchema>;
+
+export const AcceptAdviserInviteSchema = z.object({
+  token: z.string().min(1, 'Invite token is required'),
+});
+export type AcceptAdviserInviteInput = z.infer<typeof AcceptAdviserInviteSchema>;
+
+/** Backend bulk products sync schema */
+export const SaveProductsSchema = z.object({
+  products: z
+    .array(
+      z.object({
+        lenderName: z.string().min(1, 'Lender name is required'),
+        productName: z.string().min(1, 'Product name is required'),
+        rate: z.number().nonnegative().nullable().optional(),
+        fee: z.number().nonnegative().nullable().optional(),
+        isSelected: z.boolean().default(false),
+      }),
+    )
+    .min(1, 'At least one product must be recorded'),
+});
+export type SaveProductsInput = z.infer<typeof SaveProductsSchema>;
+
+export const CreateDocumentSchema = z.object({
+  name: z.string().min(1, 'Document name is required'),
+  documentType: DocumentTypeSchema.default('OTHER'),
+  storageUrl: z.string().url('A valid storage URL is required'),
+  mimeType: z.string().optional(),
+  sizeBytes: z.number().int().positive().optional(),
+  caseId: z.string().optional(),
+  clientId: z.string().optional(),
+});
+export type CreateDocumentInput = z.infer<typeof CreateDocumentSchema>;
 
 export const EquifaxIntegrationSchema = z.object({
   apiKey: z.string().optional(),
@@ -290,6 +374,28 @@ export const CreateClientSchema = z
     }
   });
 export type CreateClientInput = z.infer<typeof CreateClientSchema>;
+
+export const UpdateClientSchema = z.object({
+  title: z.string().optional(),
+  firstName: z.string().min(1).optional(),
+  lastName: z.string().min(1).optional(),
+  companyName: z.string().optional(),
+  companyNumber: z.string().optional(),
+  email: z.string().email().optional(),
+  phone: z.string().optional(),
+  dateOfBirth: z.string().optional(),
+  employmentStatus: EmploymentStatusSchema.optional(),
+  annualIncome: z.number().positive().optional(),
+  isVulnerable: z.boolean().optional(),
+  vulnerabilityNotes: z.string().optional(),
+  portalEnabled: z.boolean().optional(),
+  assignedMemberId: z.string().nullable().optional(),
+  status: ClientStatusSchema.optional(),
+  isReferred: z.boolean().optional(),
+  referredToCompany: z.string().optional(),
+  insurerName: z.string().optional(),
+});
+export type UpdateClientInput = z.infer<typeof UpdateClientSchema>;
 
 export const CreateCaseSchema = z.object({
   clientId: z.string().min(1, 'Client is required'),

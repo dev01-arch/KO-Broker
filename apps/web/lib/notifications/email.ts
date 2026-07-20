@@ -17,6 +17,8 @@ export type SendEmailInput = {
   replyTo?: string;
   html?: string;
   stage?: number;
+  /** Shown as an "Unsubscribe" link in the footer when provided. */
+  unsubscribeUrl?: string;
   attachments?: EmailAttachment[];
 };
 
@@ -30,7 +32,7 @@ function resolveFromAddress(from?: string): string | undefined {
 
 function buildHtmlPayload(input: SendEmailInput): string {
   const fragment = input.html ?? plainBodyToHtml(input.body);
-  return renderBaseTemplate(input.subject, fragment, input.stage);
+  return renderBaseTemplate(input.subject, fragment, input.stage, input.unsubscribeUrl);
 }
 
 export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult> {
@@ -266,4 +268,31 @@ export async function sendRecommendationNotification(
     attachments,
     stage: 5,
   });
+}
+
+/**
+ * Sends a broker-side adviser invite email via Resend.
+ * Does NOT create a DB Message record (internal transactional email).
+ * (From backend API layer — keep signature stable for merge.)
+ */
+export async function sendAdviserInvite(params: {
+  to: string;
+  firstName: string;
+  orgName: string;
+  invitedBy: string;
+  inviteUrl: string;
+}): Promise<boolean> {
+  const { to, firstName, orgName, invitedBy, inviteUrl } = params;
+
+  const subject = `You've been invited to join ${orgName} on KO Broker`;
+  const text = `Hi ${firstName},\n\n${invitedBy} has invited you to join ${orgName} on KO Broker.\n\nAccept your invitation here: ${inviteUrl}\n\nThis link expires in 48 hours.`;
+
+  const result = await sendEmail({
+    to,
+    subject,
+    body: text,
+    html: `<p>Hi ${firstName},</p><p><strong>${invitedBy}</strong> has invited you to join <strong>${orgName}</strong> on KO Broker.</p><p><a href="${inviteUrl}">Accept Invitation</a></p><p>This link expires in 48 hours.</p>`,
+  });
+
+  return result.ok;
 }

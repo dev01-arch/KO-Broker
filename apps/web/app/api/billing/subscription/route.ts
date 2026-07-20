@@ -2,7 +2,7 @@ import { requireApiAuth } from '@/lib/api/require-api-auth';
 import { apiError, apiSuccess } from '@/lib/api/responses';
 import { isPrismaConnectionError } from '@/lib/api/prisma-errors';
 import { prisma } from '@/lib/db';
-import { stripeConfigured } from '@/lib/billing/stripe-checkout';
+import { isMissingStripeCustomerError, stripeConfigured } from '@/lib/billing/stripe-checkout';
 import { getBillingSubscriptionForCustomer } from '@/lib/billing/stripe-subscription';
 
 /**
@@ -40,11 +40,33 @@ export async function GET() {
       });
     }
 
-    const subscription = await getBillingSubscriptionForCustomer(org.stripeCustomerId);
-    return apiSuccess({
-      hasBillingAccount: true,
-      ...subscription,
-    });
+    try {
+      const subscription = await getBillingSubscriptionForCustomer(org.stripeCustomerId);
+      return apiSuccess({
+        hasBillingAccount: true,
+        ...subscription,
+      });
+    } catch (stripeError) {
+      if (isMissingStripeCustomerError(stripeError)) {
+        // Stale customer id (e.g. left over from a different Stripe account/mode).
+        // Clear it so future checkout attempts create a fresh customer.
+        console.warn(
+          `[GET /api/billing/subscription] Stripe customer ${org.stripeCustomerId} not found for org ${orgId}; clearing stale id.`,
+        );
+        await prisma.organisation.update({
+          where: { id: orgId },
+          data: { stripeCustomerId: null },
+        });
+        return apiSuccess({
+          hasBillingAccount: false,
+          hasSubscription: false,
+          status: null,
+          cancelAtPeriodEnd: false,
+          currentPeriodEnd: null,
+        });
+      }
+      throw stripeError;
+    }
   } catch (error) {
     console.error('[GET /api/billing/subscription]', error);
     if (isPrismaConnectionError(error))

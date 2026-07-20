@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useClerk, useUser } from '@clerk/nextjs';
 import {
+  ArrowLeft,
   AlertTriangle,
   Building2,
   CheckCircle2,
@@ -25,13 +26,15 @@ import {
   useMessagingSettings,
   useAdvisers,
   useCreateAdviser,
+  useUpdateAdviser,
+  useResendAdviserInvite,
   useUpdateIntegrations,
   useUpdateMessagingSettings,
   type IntegrationsDraft,
   type MessagingDraft,
 } from '@/hooks/use-settings';
 import { formatApiError } from '@/lib/api/client';
-import { useIsAdmin } from '@/hooks/use-org';
+import { useIsAdmin, useOrgRole } from '@/hooks/use-org';
 
 /** Hidden from the UI — code retained for future admin tooling. */
 const SHOW_ARCHIVED_SECTIONS = false;
@@ -134,6 +137,9 @@ export function IntegrationsSettingsPanel({
   const { signOut } = useClerk();
   const { user, isLoaded: userLoaded } = useUser();
   const isAdmin = useIsAdmin();
+  const orgRole = useOrgRole();
+  /** While role is loading, allow interaction; API enforces ADMIN. */
+  const canEditMessaging = orgRole === undefined || isAdmin;
   const { data: integrationsData, isLoading: integrationsLoading, error: integrationsError } =
     useIntegrations();
   const { data: messagingData, isLoading: messagingLoading, error: messagingError } =
@@ -153,6 +159,14 @@ export function IntegrationsSettingsPanel({
   const [error, setError] = useState<string | null>(null);
   const [signingOut, setSigningOut] = useState(false);
   const [adviserDraft, setAdviserDraft] = useState({ firstName: '', lastName: '', email: '' });
+  const [activeAdviserId, setActiveAdviserId] = useState<string | null>(null);
+
+  const { mutateAsync: updateAdviser, isPending: updatingAdviser } = useUpdateAdviser(
+    activeAdviserId ?? '',
+  );
+  const { mutateAsync: resendAdviserInvite, isPending: resendingInvite } = useResendAdviserInvite(
+    activeAdviserId ?? '',
+  );
 
   useEffect(() => {
     if (billingNotice) {
@@ -185,6 +199,9 @@ export function IntegrationsSettingsPanel({
   const isLoading = integrationsLoading || messagingLoading;
   const saving = savingIntegrations || savingMessaging;
   const advisers = advisersData?.data ?? [];
+  const activeAdviser = activeAdviserId
+    ? advisers.find((adviser) => adviser.id === activeAdviserId) ?? null
+    : null;
   const activeMeta = SETTINGS_SECTIONS.find((section) => section.id === activeSection)!;
 
   async function handleIntegrationToggle(integration: 'equifax' | 'twilio', enabled: boolean) {
@@ -216,7 +233,10 @@ export function IntegrationsSettingsPanel({
     setError(null);
     setSavingKey(channel);
     try {
-      await saveMessaging({ [channel]: { enabled } });
+      const result = await saveMessaging({ [channel]: { enabled } });
+      if (result?.data) {
+        setMessagingDraft(emptyMessagingDraft(result.data));
+      }
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 2500);
     } catch (err) {
@@ -224,7 +244,7 @@ export function IntegrationsSettingsPanel({
         ...prev,
         [channel]: { enabled: !enabled },
       }));
-      setError(formatApiError(err, { fallback: 'Failed to save settings. Please try again.' }));
+      setError(formatApiError(err, { fallback: 'Failed to save messaging settings. Please try again.' }));
     } finally {
       setSavingKey(null);
     }
@@ -254,6 +274,37 @@ export function IntegrationsSettingsPanel({
       setTimeout(() => setSaveSuccess(false), 2500);
     } catch (err) {
       setError(formatApiError(err, { fallback: 'Failed to add adviser. Please try again.' }));
+    }
+  }
+
+  async function handleUpdateActiveAdviser(input: {
+    isActive?: boolean;
+    canViewAllClients?: boolean;
+    canViewAccountDetails?: boolean;
+    canViewAiSummaries?: boolean;
+  }) {
+    if (!activeAdviserId) return;
+    setError(null);
+    setSaveSuccess(false);
+    try {
+      await updateAdviser(input);
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 2500);
+    } catch (err) {
+      setError(formatApiError(err, { fallback: 'Failed to update adviser.' }));
+    }
+  }
+
+  async function handleResendActiveInvite() {
+    if (!activeAdviserId) return;
+    setError(null);
+    setSaveSuccess(false);
+    try {
+      await resendAdviserInvite();
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 2500);
+    } catch (err) {
+      setError(formatApiError(err, { fallback: 'Failed to resend invite.' }));
     }
   }
 
@@ -337,30 +388,139 @@ export function IntegrationsSettingsPanel({
             {creatingAdviser ? 'Adding adviser…' : 'Add adviser'}
           </button>
         </div>
-        <div className="rounded-lg border border-ink-20">
-          <div className="grid grid-cols-[1fr_1fr_1.5fr_auto] gap-3 border-b border-ink-20 bg-ink-08 px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-ink-60">
-            <span>First name</span>
-            <span>Last name</span>
-            <span>Email</span>
-            <span>Status</span>
-          </div>
-          {advisersLoading ? (
-            <div className="px-4 py-4 text-sm text-ink-60">Loading members…</div>
-          ) : advisers.length === 0 ? (
-            <div className="px-4 py-4 text-sm text-ink-60">No members added yet.</div>
-          ) : (
-            advisers.map((adviser) => (
-              <div key={adviser.id} className="grid grid-cols-[1fr_1fr_1.5fr_auto] gap-3 border-b border-ink-20 px-4 py-3 text-sm text-ink last:border-b-0">
-                <span>{adviser.firstName ?? '—'}</span>
-                <span>{adviser.lastName ?? '—'}</span>
-                <span className="text-ink-60">{adviser.email}</span>
-                <span className={adviser.isActive ? 'text-green-700' : 'text-ink-60'}>
-                  {adviser.isActive ? 'Active' : 'Inactive'}
+        {activeAdviser ? (
+          <div className="rounded-lg border border-ink-20 bg-white p-6">
+            <div className="flex items-start justify-between gap-3 mb-4">
+              <button
+                type="button"
+                onClick={() => setActiveAdviserId(null)}
+                className="inline-flex items-center gap-2 text-sm font-medium text-brand-teal-700 hover:underline"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Back to organization
+              </button>
+            </div>
+
+            <div className="rounded-xl border border-ink-20 bg-white p-4">
+              <h2 className="font-heading text-xl font-bold text-ink">
+                {[activeAdviser.firstName, activeAdviser.lastName].filter(Boolean).join(' ') || activeAdviser.email}
+              </h2>
+              <p className="mt-1 text-sm text-ink-60">{activeAdviser.email}</p>
+              <div className="mt-3 flex flex-wrap gap-2 text-xs">
+                <span
+                  className={`rounded-full px-2.5 py-0.5 font-medium ${
+                    activeAdviser.isActive ? 'bg-green/10 text-green' : 'bg-ink-08 text-ink-60'
+                  }`}
+                >
+                  {activeAdviser.isActive ? 'Active' : 'Inactive'}
                 </span>
+                {activeAdviser.invitePending && (
+                  <span className="rounded-full bg-amber/10 px-2.5 py-0.5 font-medium text-amber">
+                    Invite pending
+                  </span>
+                )}
               </div>
-            ))
-          )}
-        </div>
+            </div>
+
+            <section className="mt-4 space-y-3 rounded-xl border border-ink-20 bg-white p-6">
+              <h3 className="font-heading text-sm font-bold text-ink">Access permissions</h3>
+              <p className="text-sm text-ink-60">Control what this adviser can see across the organisation.</p>
+
+              <EnabledToggle
+                label="View all clients"
+                description="When off, advisers only see clients on cases assigned to them."
+                enabled={activeAdviser.canViewAllClients ?? false}
+                disabled={!isAdmin || updatingAdviser}
+                onChange={(enabled) => void handleUpdateActiveAdviser({ canViewAllClients: enabled })}
+              />
+              <EnabledToggle
+                label="View account details"
+                description="Allow access to billing and sensitive account information."
+                enabled={activeAdviser.canViewAccountDetails ?? false}
+                disabled={!isAdmin || updatingAdviser}
+                onChange={(enabled) => void handleUpdateActiveAdviser({ canViewAccountDetails: enabled })}
+              />
+              <EnabledToggle
+                label="View AI summaries"
+                description="Allow access to AI-generated case and client summaries."
+                enabled={activeAdviser.canViewAiSummaries ?? false}
+                disabled={!isAdmin || updatingAdviser}
+                onChange={(enabled) => void handleUpdateActiveAdviser({ canViewAiSummaries: enabled })}
+              />
+              <EnabledToggle
+                label="Active account"
+                description="Deactivate to prevent adviser login."
+                enabled={activeAdviser.isActive}
+                disabled={!isAdmin || updatingAdviser}
+                onChange={(enabled) => void handleUpdateActiveAdviser({ isActive: enabled })}
+              />
+
+              {activeAdviser.invitePending && (
+                <button
+                  type="button"
+                  disabled={resendingInvite}
+                  onClick={() => void handleResendActiveInvite()}
+                  className="inline-flex items-center gap-2 rounded-lg border border-brand-teal-300 bg-brand-teal-50 px-3 py-2 text-xs font-medium text-brand-teal-700 hover:bg-brand-teal-100 disabled:opacity-50"
+                >
+                  {resendingInvite ? 'Resending…' : 'Resend invite'}
+                </button>
+              )}
+            </section>
+          </div>
+        ) : (
+          <div className="rounded-lg border border-ink-20">
+            <div className="grid grid-cols-[1fr_1fr_1.5fr_auto] gap-3 border-b border-ink-20 bg-ink-08 px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-ink-60">
+              <span>First name</span>
+              <span>Last name</span>
+              <span>Email</span>
+              <span>Status</span>
+            </div>
+            {advisersLoading ? (
+              <div className="px-4 py-4 text-sm text-ink-60">Loading members…</div>
+            ) : advisers.length === 0 ? (
+              <div className="px-4 py-4 text-sm text-ink-60">No members added yet.</div>
+            ) : (
+              advisers.map((adviser) => (
+                <div
+                  key={adviser.id}
+                  className="grid grid-cols-[1fr_1fr_1.5fr_auto] gap-3 border-b border-ink-20 px-4 py-3 text-sm text-ink last:border-b-0"
+                >
+                  <span>
+                    {isAdmin ? (
+                      <button
+                        type="button"
+                        onClick={() => setActiveAdviserId(adviser.id)}
+                        className="font-medium text-brand-teal-700 hover:underline"
+                      >
+                        {adviser.firstName ?? '—'}
+                      </button>
+                    ) : (
+                      adviser.firstName ?? '—'
+                    )}
+                  </span>
+                  <span>
+                    {isAdmin ? (
+                      <button
+                        type="button"
+                        onClick={() => setActiveAdviserId(adviser.id)}
+                        className="font-medium text-brand-teal-700 hover:underline"
+                      >
+                        {adviser.lastName ?? '—'}
+                      </button>
+                    ) : (
+                      adviser.lastName ?? '—'
+                    )}
+                  </span>
+                  <span className="text-ink-60">{adviser.email}</span>
+                  <span className={adviser.isActive ? 'text-green-700' : 'text-ink-60'}>
+                    {adviser.isActive ? 'Active' : 'Inactive'}
+                    {adviser.invitePending ? ' · Pending' : ''}
+                  </span>
+                </div>
+              ))
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -368,29 +528,33 @@ export function IntegrationsSettingsPanel({
   const messagingSection = (
     <div className="space-y-4">
       <p className="text-sm text-ink-60">
-        Configure which delivery channels are available when advisers send messages.
+        Control how message notifications are delivered. Turning email off also cancels any
+        pending LinkedIn-style notification digests.
       </p>
       <EnabledToggle
         label="In-app messages"
-        description="Show messages in the dashboard thread and client portal."
+        description="Allow messages in the dashboard thread and client portal."
         enabled={messagingDraft.inApp.enabled}
-        disabled={!isAdmin || (saving && savingKey === 'inApp')}
+        disabled={!canEditMessaging || (saving && savingKey === 'inApp')}
         onChange={(enabled) => void handleMessagingToggle('inApp', enabled)}
       />
       <EnabledToggle
-        label="Email"
-        description="Send a copy to the client's email address (via Resend)."
+        label="Email notifications"
+        description="Send delayed notification emails when a message is waiting (preview only, via Resend)."
         enabled={messagingDraft.email.enabled}
-        disabled={!isAdmin || (saving && savingKey === 'email')}
+        disabled={!canEditMessaging || (saving && savingKey === 'email')}
         onChange={(enabled) => void handleMessagingToggle('email', enabled)}
       />
       <EnabledToggle
         label="SMS"
         description="Send a text to the client's mobile number (via Twilio)."
         enabled={messagingDraft.sms.enabled}
-        disabled={!isAdmin || (saving && savingKey === 'sms')}
+        disabled={!canEditMessaging || (saving && savingKey === 'sms')}
         onChange={(enabled) => void handleMessagingToggle('sms', enabled)}
       />
+      {!canEditMessaging && orgRole !== undefined && (
+        <p className="text-xs text-ink-60">Only organisation admins can change messaging settings.</p>
+      )}
     </div>
   );
 

@@ -4,7 +4,11 @@ import { devStore } from '@/lib/api/dev-store';
 import { isPrismaConnectionError } from '@/lib/api/prisma-errors';
 import { upsertFactFindWithCompliance } from '@/lib/api/fact-find-data';
 import { serializeFactFind } from '@/lib/api/cases';
-import { createMessageForOrg } from '@/lib/api/messages-data';
+import {
+  createMessageForOrg,
+  type MessageDeliveryMeta,
+} from '@/lib/api/messages-data';
+import { getOrgMessagingSettings } from '@/lib/api/settings-data';
 import { logAuditEvent } from '@/lib/compliance/audit';
 import {
   hashPortalPassword,
@@ -13,7 +17,9 @@ import {
   type PortalSessionPayload,
 } from '@/lib/api/portal-session';
 import { sendEmail } from '@/lib/notifications/email';
+import { scheduleMessageEmailDigest } from '@/lib/notifications/message-email-digest';
 import { sendSMS } from '@/lib/notifications/sms';
+import { verifyPassword } from '@/lib/auth/portalAuth';
 
 function useDevStore(error: unknown) {
   return process.env.NODE_ENV === 'development' && isPrismaConnectionError(error);
@@ -355,6 +361,8 @@ export async function verifyPortalToken(token: string) {
       ? await resolvePortalAdviser(client.orgId, caseRecord.id, client.id, caseRecord.adviser)
       : null;
 
+    const accountConfigured = Boolean(client.portalPasswordHash);
+
     return {
       client: {
         id: client.id,
@@ -371,6 +379,9 @@ export async function verifyPortalToken(token: string) {
           }
         : null,
       adviser: serializePortalAdviser(adviser),
+      portalEnabled: client.portalEnabled,
+      accountConfigured,
+      requiresLogin: accountConfigured,
     };
   } catch (error) {
     if (!useDevStore(error)) throw error;
@@ -389,43 +400,69 @@ export async function setupPortalAccount(token: string, password: string) {
 
     if (!client) return { error: 'NOT_FOUND' as const };
 
+    if (client.portalPasswordHash) {
+      return { error: 'ALREADY_CONFIGURED' as const };
+    }
+
+    if (!client.cases[0]) {
+      return { error: 'FORBIDDEN' as const };
+    }
+
     const passwordHash = hashPortalPassword(password);
     await prisma.client.update({
       where: { id: client.id },
       data: {
         portalPasswordHash: passwordHash,
-        portalAccessToken: null,
+        // Keep portalAccessToken so invite links still resolve after setup (login redirect).
       },
     });
 
     const session: PortalSessionPayload = {
       clientId: client.id,
       orgId: client.orgId,
-      caseId: client.cases[0]?.id ?? '',
+      caseId: client.cases[0].id,
       email: client.email,
     };
 
-    return { sessionToken: signPortalSession(session), session };
+    return { sessionToken: signPortalSession(session), session, client };
   } catch (error) {
+    if (isPrismaConnectionError(error)) {
+      return { error: 'SERVICE_UNAVAILABLE' as const };
+    }
     if (!useDevStore(error)) throw error;
     return { error: 'NOT_FOUND' as const };
   }
 }
 
 export async function loginPortalClient(email: string, password: string) {
+  const normalizedEmail = email.trim();
   try {
     const client = await prisma.client.findFirst({
-      where: { email: { equals: email, mode: 'insensitive' }, portalEnabled: true },
+      where: {
+        email: { equals: normalizedEmail, mode: 'insensitive' },
+        portalEnabled: true,
+      },
       include: {
         cases: { orderBy: { updatedAt: 'desc' }, take: 1, select: { id: true } },
       },
     });
 
-    if (!client?.portalPasswordHash || !client.cases[0]) {
+    if (!client) {
       return { error: 'UNAUTHORIZED' as const };
     }
 
-    if (!verifyPortalPassword(password, client.portalPasswordHash)) {
+    if (!client.portalPasswordHash) {
+      return { error: 'SETUP_REQUIRED' as const };
+    }
+
+    if (!client.cases[0]) {
+      return { error: 'FORBIDDEN' as const };
+    }
+
+    const isValid =
+      verifyPortalPassword(password, client.portalPasswordHash) ||
+      verifyPassword(password, client.portalPasswordHash);
+    if (!isValid) {
       return { error: 'UNAUTHORIZED' as const };
     }
 
@@ -436,8 +473,11 @@ export async function loginPortalClient(email: string, password: string) {
       email: client.email,
     };
 
-    return { sessionToken: signPortalSession(session), session };
+    return { sessionToken: signPortalSession(session), session, client };
   } catch (error) {
+    if (isPrismaConnectionError(error)) {
+      return { error: 'SERVICE_UNAVAILABLE' as const };
+    }
     if (!useDevStore(error)) throw error;
     return { error: 'UNAUTHORIZED' as const };
   }
@@ -482,9 +522,111 @@ export async function listPortalMessages(session: PortalSessionPayload) {
   }
 }
 
-export async function sendPortalMessage(session: PortalSessionPayload, body: string) {
+/** Dashboard inbox CTA for adviser notification emails (full body stays in-app). */
+function adviserMessagesInboxUrl(caseId?: string, clientId?: string): string {
+  const app = (process.env.NEXT_PUBLIC_APP_URL ?? 'https://ko-broker.vercel.app').replace(
+    /\/$/,
+    '',
+  );
+  const url = new URL(`${app}/dashboard/messages`);
+  if (caseId) url.searchParams.set('caseId', caseId);
+  if (clientId) url.searchParams.set('clientId', clientId);
+  return url.toString();
+}
+
+function serializePortalMessageRow(message: {
+  id: string;
+  direction: string;
+  body: string;
+  createdAt?: Date | string;
+}) {
+  return {
+    id: message.id,
+    direction: message.direction,
+    body: message.body,
+    createdAt:
+      message.createdAt instanceof Date
+        ? message.createdAt.toISOString()
+        : (message.createdAt ?? new Date().toISOString()),
+  };
+}
+
+/**
+ * LinkedIn-style side-notify for client → adviser replies (delayed digest).
+ * Never blocks the in-app send; schedule failures are soft (delivery.email = failed|skipped).
+ */
+async function deliverAdviserMessageNotificationEmail(opts: {
+  orgId: string;
+  adviser: PortalAdviserRecord | null;
+  clientFirstName?: string | null;
+  body: string;
+  caseId: string;
+  clientId: string;
+  messageId: string;
+  delivery: MessageDeliveryMeta;
+}): Promise<void> {
+  const { adviser, delivery } = opts;
+
+  let settings: Awaited<ReturnType<typeof getOrgMessagingSettings>>;
   try {
-    const { message } = await createMessageForOrg(session.orgId, {
+    settings = await getOrgMessagingSettings(opts.orgId);
+  } catch {
+    delivery.email = 'skipped';
+    delivery.errors?.push('Could not load messaging settings');
+    return;
+  }
+
+  if (settings.email?.enabled === false) {
+    delivery.email = 'skipped';
+    return;
+  }
+
+  if (!adviser?.email) {
+    delivery.email = 'skipped';
+    return;
+  }
+
+  const scheduled = await scheduleMessageEmailDigest({
+    orgId: opts.orgId,
+    recipientEmail: adviser.email,
+    recipientName: adviser.firstName ?? undefined,
+    recipientKind: 'ADVISER',
+    clientId: opts.clientId,
+    caseId: opts.caseId,
+    firstMessageId: opts.messageId,
+    previewBody: opts.body,
+    subject: opts.clientFirstName?.trim()
+      ? `New message from ${opts.clientFirstName.trim()}`
+      : 'You have a new message on KO Broker',
+    ctaUrl: adviserMessagesInboxUrl(opts.caseId, opts.clientId),
+  });
+
+  if (!scheduled.ok) {
+    delivery.email = 'failed';
+    delivery.errors?.push(scheduled.error);
+    return;
+  }
+
+  delivery.email = 'scheduled';
+}
+
+export async function sendPortalMessage(session: PortalSessionPayload, body: string) {
+  const delivery: MessageDeliveryMeta = {
+    inApp: 'skipped',
+    email: 'skipped',
+    sms: 'skipped',
+    errors: [],
+  };
+
+  let message: {
+    id: string;
+    direction: string;
+    body: string;
+    createdAt?: Date | string;
+  };
+
+  try {
+    const created = await createMessageForOrg(session.orgId, {
       body,
       channel: 'IN_APP',
       direction: 'INBOUND',
@@ -492,30 +634,63 @@ export async function sendPortalMessage(session: PortalSessionPayload, body: str
       caseId: session.caseId,
       clientId: session.clientId,
     });
-
-    return {
-      id: message.id,
-      direction: message.direction,
-      body: message.body,
-    };
+    message = created.message;
   } catch (error) {
-    if (useDevStore(error)) {
-      const message = devStore.createMessage(session.orgId, {
-        body,
-        channel: 'IN_APP',
-        direction: 'INBOUND',
-        sourceType: 'CLIENT_REPLY',
-        caseId: session.caseId,
-        clientId: session.clientId,
-      });
-      return {
-        id: message.id,
-        direction: message.direction,
-        body: message.body,
-      };
-    }
-    throw error;
+    if (!useDevStore(error)) throw error;
+    message = devStore.createMessage(session.orgId, {
+      body,
+      channel: 'IN_APP',
+      direction: 'INBOUND',
+      sourceType: 'CLIENT_REPLY',
+      caseId: session.caseId,
+      clientId: session.clientId,
+    });
   }
+
+  delivery.inApp = 'sent';
+
+  // Soft-fail only: never block the in-app reply if adviser email cannot be sent.
+  try {
+    const caseRecord = await prisma.case.findFirst({
+      where: {
+        id: session.caseId,
+        orgId: session.orgId,
+        clientId: session.clientId,
+      },
+      include: {
+        client: { select: { firstName: true } },
+        adviser: { select: PORTAL_ADVISER_SELECT },
+      },
+    });
+
+    const adviser = caseRecord
+      ? await resolvePortalAdviser(
+          session.orgId,
+          session.caseId,
+          session.clientId,
+          caseRecord.adviser,
+        )
+      : await resolvePortalAdviser(session.orgId, session.caseId, session.clientId);
+
+    await deliverAdviserMessageNotificationEmail({
+      orgId: session.orgId,
+      adviser,
+      clientFirstName: caseRecord?.client.firstName,
+      body,
+      caseId: session.caseId,
+      clientId: session.clientId,
+      messageId: message.id,
+      delivery,
+    });
+  } catch {
+    delivery.email = 'failed';
+    delivery.errors?.push('Adviser notification email could not be scheduled');
+  }
+
+  return {
+    message: serializePortalMessageRow(message),
+    delivery,
+  };
 }
 
 export async function getPortalSessionProfile(session: PortalSessionPayload) {

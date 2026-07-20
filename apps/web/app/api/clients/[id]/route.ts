@@ -1,127 +1,113 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { EmploymentStatusSchema } from '@ko/types';
-import { requireApiAuth } from '@/lib/api/require-api-auth';
-import { deleteClientForOrg, getClientForOrg, updateClientForOrg } from '@/lib/api/clients-data';
-import { apiError, apiFromZodError, apiNotFound, apiSuccess } from '@/lib/api/responses';
-import { isPrismaConnectionError } from '@/lib/api/prisma-errors';
+import { createParamHandler } from '@/lib/api/handler';
+import { prisma } from '@/lib/db';
+import { logAuditEvent, computeDiff } from '@/lib/compliance/audit';
+import { requireVisibility, getCurrentUser, maskClientFinancials, maskCaseFinancials } from '@/lib/auth';
+import { UpdateClientSchema } from '@ko/types';
 
-const UpdateClientSchema = z.object({
-  firstName: z.string().min(1).optional(),
-  lastName: z.string().min(1).optional(),
-  email: z.string().email().optional(),
-  phone: z.string().optional(),
-  employmentStatus: EmploymentStatusSchema.optional(),
-  annualIncome: z.number().positive().optional(),
-  isVulnerable: z.boolean().optional(),
-  vulnerabilityNotes: z.string().optional(),
-  portalEnabled: z.boolean().optional(),
+// ── GET /api/clients/[id] ─────────────────────────────────────────────────────
+
+export const GET = createParamHandler<unknown, { id: string }>({
+    method: 'GET',
+    handler: async (_req: NextRequest, { orgId, params }) => {
+        const { id } = params;
+
+        // ADVISER with canViewAllClients=false: only show clients from their assigned cases
+        const currentUser = await getCurrentUser();
+        const isAdviserWithRestriction =
+            currentUser?.role === 'ADVISER' && !currentUser.canViewAllClients;
+        const hideAccountDetails =
+            currentUser?.role === 'ADVISER' && !currentUser.canViewAccountDetails;
+
+        const client = await prisma.client.findFirst({
+            where: {
+                id,
+                orgId,
+                ...(isAdviserWithRestriction && currentUser
+                    ? { cases: { some: { assignedAdviserId: currentUser.id } } }
+                    : {}),
+            },
+            include: {
+                cases: {
+                    orderBy: { createdAt: 'desc' },
+                    include: {
+                        adviser: { select: { id: true, firstName: true, lastName: true } },
+                    },
+                },
+                // === FRONTEND ADDITION: assigned member for dashboard UI ===
+                assignedMember: {
+                    select: { id: true, firstName: true, lastName: true, email: true },
+                },
+                // === END FRONTEND ADDITION ===
+                _count: { select: { messages: true, documents: true } },
+            },
+        });
+
+        if (!client) {
+            return NextResponse.json(
+                { success: false, error: { code: 'NOT_FOUND', message: 'Client not found' } },
+                { status: 404 }
+            );
+        }
+
+        let responseData = client;
+        if (hideAccountDetails) {
+            responseData = maskClientFinancials(client);
+            responseData.cases = client.cases.map((c) => maskCaseFinancials(c));
+        }
+
+        return NextResponse.json({ success: true, data: responseData }, { status: 200 });
+    },
 });
 
-type RouteContext = { params: Promise<{ id: string }> };
+// ── PATCH /api/clients/[id] ───────────────────────────────────────────────────
 
-export async function GET(_req: NextRequest, context: RouteContext) {
-  try {
-    const authResult = await requireApiAuth();
-    if ('response' in authResult) return authResult.response;
+export const PATCH = createParamHandler<z.infer<typeof UpdateClientSchema>, { id: string }>({
+    method: 'PATCH',
+    schema: UpdateClientSchema,
+    handler: async (_req: NextRequest, { body, user, orgId, params }) => {
+        const { id } = params;
 
-    const { orgId } = authResult;
-    const { id } = await context.params;
+        // Advisers must have canViewAllClients to edit client records
+        // === FRONTEND ADDITION: ADMIN always allowed; skip hard fail for org admins ===
+        const currentUser = await getCurrentUser();
+        if (currentUser?.role !== 'ADMIN') {
+            await requireVisibility('canViewAllClients');
+        }
+        // === END FRONTEND ADDITION ===
 
-    const client = await getClientForOrg(orgId, id);
-    if (!client) {
-      return apiNotFound('Client not found');
-    }
+        const existing = await prisma.client.findFirst({ where: { id, orgId } });
+        if (!existing) {
+            return NextResponse.json(
+                { success: false, error: { code: 'NOT_FOUND', message: 'Client not found' } },
+                { status: 404 }
+            );
+        }
 
-    return apiSuccess({
-      id: client.id,
-      referenceNumber: client.referenceNumber,
-      clientType: client.clientType,
-      companyName: 'companyName' in client ? client.companyName ?? undefined : undefined,
-      companyNumber: 'companyNumber' in client ? client.companyNumber ?? undefined : undefined,
-      title: 'title' in client && client.title ? client.title : undefined,
-      firstName: client.firstName,
-      lastName: client.lastName,
-      email: client.email,
-      phone: 'phone' in client ? client.phone ?? undefined : undefined,
-      dateOfBirth:
-        'dateOfBirth' in client && client.dateOfBirth
-          ? typeof client.dateOfBirth === 'string'
-            ? client.dateOfBirth.slice(0, 10)
-            : client.dateOfBirth.toISOString().slice(0, 10)
-          : undefined,
-      employmentStatus: client.employmentStatus,
-      annualIncome: client.annualIncome ?? undefined,
-      isVulnerable: client.isVulnerable,
-      vulnerabilityNotes:
-        'vulnerabilityNotes' in client ? client.vulnerabilityNotes ?? undefined : undefined,
-      portalEnabled: client.portalEnabled,
-      cases: 'cases' in client ? client.cases : [],
-      _count: client._count,
-    });
-  } catch (error) {
-    console.error('[GET /api/clients/:id]', error);
-    if (isPrismaConnectionError(error)) {
-      return apiError('SERVICE_UNAVAILABLE', 'Database is unavailable', 503);
-    }
-    return apiError('INTERNAL_ERROR', 'An unexpected error occurred', 500);
-  }
-}
+        const updated = await prisma.client.update({
+            where: { id },
+            data: {
+                ...body,
+                dateOfBirth: body.dateOfBirth ? new Date(body.dateOfBirth) : undefined,
+                updatedAt: new Date(),
+            },
+        });
 
-export async function PATCH(req: NextRequest, context: RouteContext) {
-  try {
-    const authResult = await requireApiAuth();
-    if ('response' in authResult) return authResult.response;
+        const diff = computeDiff(
+            existing as unknown as Record<string, unknown>,
+            updated as unknown as Record<string, unknown>
+        );
 
-    const { orgId } = authResult;
-    const { id } = await context.params;
+        await logAuditEvent({
+            orgId: orgId!,
+            userId: user?.id,
+            entityType: 'Client',
+            entityId: id,
+            action: 'CLIENT_UPDATED',
+            diff,
+        });
 
-    let body: unknown;
-    try {
-      body = await req.json();
-    } catch {
-      return apiError('VALIDATION_ERROR', 'Invalid JSON body', 422);
-    }
-
-    const parsed = UpdateClientSchema.safeParse(body);
-    if (!parsed.success) {
-      return apiFromZodError(parsed.error);
-    }
-
-    const client = await updateClientForOrg(orgId, id, parsed.data);
-    if (!client) {
-      return apiNotFound('Client not found');
-    }
-
-    return apiSuccess(client);
-  } catch (error) {
-    console.error('[PATCH /api/clients/:id]', error);
-    if (isPrismaConnectionError(error)) {
-      return apiError('SERVICE_UNAVAILABLE', 'Database is unavailable', 503);
-    }
-    return apiError('INTERNAL_ERROR', 'An unexpected error occurred', 500);
-  }
-}
-
-export async function DELETE(_req: NextRequest, context: RouteContext) {
-  try {
-    const authResult = await requireApiAuth();
-    if ('response' in authResult) return authResult.response;
-
-    const { orgId } = authResult;
-    const { id } = await context.params;
-
-    const result = await deleteClientForOrg(orgId, id);
-    if ('error' in result) {
-      return apiNotFound('Client not found');
-    }
-
-    return apiSuccess({ deleted: true });
-  } catch (error) {
-    console.error('[DELETE /api/clients/:id]', error);
-    if (isPrismaConnectionError(error)) {
-      return apiError('SERVICE_UNAVAILABLE', 'Database is unavailable', 503);
-    }
-    return apiError('INTERNAL_ERROR', 'An unexpected error occurred', 500);
-  }
-}
+        return NextResponse.json({ success: true, data: updated }, { status: 200 });
+    },
+});

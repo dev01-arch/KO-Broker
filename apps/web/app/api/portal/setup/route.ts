@@ -1,42 +1,89 @@
-import { NextRequest } from 'next/server';
-import { z } from 'zod';
+import { NextRequest, NextResponse } from 'next/server';
+import { createHandler } from '@/lib/api/handler';
+import { SetupClientPortalSchema } from '@ko/types';
 import { setupPortalAccount } from '@/lib/api/portal-data';
-import { applyCorsHeaders } from '@/lib/api/cors';
 import { portalSessionCookieOptions } from '@/lib/api/portal-session';
-import { apiError, apiFromZodError, apiNotFound, apiSuccess } from '@/lib/api/responses';
+import { applyCorsHeaders } from '@/lib/api/cors';
 
-const SetupSchema = z.object({
-  token: z.string().min(1, 'token is required'),
-  password: z.string().min(8, 'Password must be at least 8 characters'),
-});
+export const POST = createHandler({
+  method: 'POST',
+  requireAuth: false,
+  schema: SetupClientPortalSchema,
+  handler: async (req: NextRequest, { body }) => {
+    const result = await setupPortalAccount(body.token, body.password);
 
-export async function POST(req: NextRequest) {
-  try {
-    let body: unknown;
-    try {
-      body = await req.json();
-    } catch {
-      return applyCorsHeaders(req, apiError('VALIDATION_ERROR', 'Invalid JSON body', 422));
-    }
-
-    const parsed = SetupSchema.safeParse(body);
-    if (!parsed.success) return applyCorsHeaders(req, apiFromZodError(parsed.error));
-
-    const result = await setupPortalAccount(parsed.data.token, parsed.data.password);
     if ('error' in result) {
-      return applyCorsHeaders(req, apiNotFound('Invalid or expired invite token'));
+      if (result.error === 'ALREADY_CONFIGURED') {
+        return applyCorsHeaders(
+          req,
+          NextResponse.json(
+            {
+              success: false,
+              error: {
+                code: 'ACCOUNT_ALREADY_CONFIGURED',
+                message: 'This portal account is already set up. Please sign in instead.',
+              },
+            },
+            { status: 409 },
+          ),
+        );
+      }
+
+      if (result.error === 'FORBIDDEN') {
+        return applyCorsHeaders(
+          req,
+          NextResponse.json(
+            {
+              success: false,
+              error: { code: 'FORBIDDEN', message: 'No case linked to this portal account' },
+            },
+            { status: 403 },
+          ),
+        );
+      }
+
+      if (result.error === 'SERVICE_UNAVAILABLE') {
+        return applyCorsHeaders(
+          req,
+          NextResponse.json(
+            {
+              success: false,
+              error: {
+                code: 'SERVICE_UNAVAILABLE',
+                message: 'Portal is temporarily unavailable. Please try again.',
+              },
+            },
+            { status: 503 },
+          ),
+        );
+      }
+
+      return applyCorsHeaders(
+        req,
+        NextResponse.json(
+          {
+            success: false,
+            error: { code: 'NOT_FOUND', message: 'Invalid or expired setup token' },
+          },
+          { status: 404 },
+        ),
+      );
     }
 
-    const cookie = portalSessionCookieOptions(result.sessionToken);
-    const res = apiSuccess({
-      success: true,
-      clientId: result.session.clientId,
-      sessionToken: result.sessionToken,
-    });
-    res.cookies.set(cookie);
-    return applyCorsHeaders(req, res);
-  } catch (error) {
-    console.error('[POST /api/portal/setup]', error);
-    return applyCorsHeaders(req, apiError('INTERNAL_ERROR', 'An unexpected error occurred', 500));
-  }
-}
+    const { client, sessionToken } = result;
+    const response = NextResponse.json(
+      {
+        success: true,
+        data: {
+          success: true,
+          clientId: client.id,
+          message: 'Account configured successfully.',
+        },
+      },
+      { status: 200 },
+    );
+
+    response.cookies.set(portalSessionCookieOptions(sessionToken));
+    return applyCorsHeaders(req, response);
+  },
+});

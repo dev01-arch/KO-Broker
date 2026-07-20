@@ -1,101 +1,144 @@
-import { NextRequest } from 'next/server';
-import { CaseStageSchema, CaseTypeSchema, CreateCaseSchema } from '@ko/types';
-import { requireApiAuth } from '@/lib/api/require-api-auth';
-import { createCaseForOrg, listCasesForOrg } from '@/lib/api/cases-data';
-import { serializeCaseSummary } from '@/lib/api/cases';
-import { apiError, apiFromZodError, apiNotFound, apiSuccess } from '@/lib/api/responses';
-import { isPrismaConnectionError } from '@/lib/api/prisma-errors';
+/**
+ * GET  /api/cases  — paginated case list (org-scoped, with filters)
+ * POST /api/cases  — create a new case
+ */
 
-export async function GET(req: NextRequest) {
-  try {
-    return await listCases(req);
-  } catch (error) {
-    console.error('[GET /api/cases]', error);
-    if (isPrismaConnectionError(error)) {
-      return apiError('SERVICE_UNAVAILABLE', 'Database is unavailable', 503);
-    }
-    return apiError('INTERNAL_ERROR', 'An unexpected error occurred', 500);
-  }
-}
+import { NextRequest, NextResponse } from 'next/server';
+import { createHandler } from '@/lib/api/handler';
+import { prisma } from '@/lib/db';
+import { logAuditEvent } from '@/lib/compliance/audit';
+import { CreateCaseSchema } from '@ko/types';
+import { generateReference, calculateLTV } from '@ko/utils';
+import { getCurrentUser, maskCaseFinancials } from '@/lib/auth';
 
-async function listCases(req: NextRequest) {
-  const authResult = await requireApiAuth();
-  if ('response' in authResult) return authResult.response;
+// ── GET /api/cases ────────────────────────────────────────────────────────────
 
-  const { orgId } = authResult;
-  const { searchParams } = req.nextUrl;
+export const GET = createHandler({
+    method: 'GET',
+    handler: async (req: NextRequest, { orgId }) => {
+        const currentUser = await getCurrentUser();
+        const isAdviserWithRestriction =
+            currentUser?.role === 'ADVISER' && !currentUser.canViewAllClients;
+        const hideAccountDetails =
+            currentUser?.role === 'ADVISER' && !currentUser.canViewAccountDetails;
 
-  const page = Math.max(1, Number(searchParams.get('page') ?? '1') || 1);
-  const perPage = Math.min(100, Math.max(1, Number(searchParams.get('perPage') ?? '25') || 25));
-  const search = searchParams.get('search')?.trim();
-  const clientId = searchParams.get('clientId')?.trim();
-  const adviserId = searchParams.get('adviserId')?.trim();
+        const { searchParams } = new URL(req.url);
+        const page = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10));
+        const perPage = Math.min(100, Math.max(1, parseInt(searchParams.get('perPage') ?? '25', 10)));
+        const stage = searchParams.get('stage') ?? undefined;
+        const type = searchParams.get('type') ?? undefined;
+        const adviserId = searchParams.get('adviserId') ?? undefined;
+        const search = searchParams.get('search') ?? '';
 
-  let stage;
-  const stageRaw = searchParams.get('stage');
-  if (stageRaw) {
-    const parsed = CaseStageSchema.safeParse(stageRaw);
-    if (!parsed.success) return apiFromZodError(parsed.error);
-    stage = parsed.data;
-  }
+        const where = {
+            orgId,
+            ...(stage ? { stage: stage as never } : {}),
+            ...(type ? { type: type as never } : {}),
+            // Scope to assigned adviser if restricted
+            ...(isAdviserWithRestriction && currentUser
+                ? { assignedAdviserId: currentUser.id }
+                : adviserId
+                ? { assignedAdviserId: adviserId }
+                : {}),
+            ...(search
+                ? {
+                    OR: [
+                        { referenceNumber: { contains: search, mode: 'insensitive' as const } },
+                        { client: { firstName: { contains: search, mode: 'insensitive' as const } } },
+                        { client: { lastName: { contains: search, mode: 'insensitive' as const } } },
+                    ],
+                }
+                : {}),
+        };
 
-  let type;
-  const typeRaw = searchParams.get('type');
-  if (typeRaw) {
-    const parsed = CaseTypeSchema.safeParse(typeRaw);
-    if (!parsed.success) return apiFromZodError(parsed.error);
-    type = parsed.data;
-  }
+        const [cases, total] = await Promise.all([
+            prisma.case.findMany({
+                where,
+                skip: (page - 1) * perPage,
+                take: perPage,
+                orderBy: { updatedAt: 'desc' },
+                include: {
+                    client: { select: { id: true, firstName: true, lastName: true, referenceNumber: true, isVulnerable: true } },
+                    adviser: { select: { id: true, firstName: true, lastName: true } },
+                    _count: { select: { messages: true, documents: true } },
+                },
+            }),
+            prisma.case.count({ where }),
+        ]);
 
-  const { total, cases } = await listCasesForOrg(orgId, {
-    page,
-    perPage,
-    search,
-    stage,
-    type,
-    clientId,
-    adviserId,
-  });
+        let finalCases = cases;
+        if (hideAccountDetails) {
+            finalCases = cases.map((c) => maskCaseFinancials(c));
+        }
 
-  return apiSuccess(cases.map(serializeCaseSummary), {
-    meta: { total, page, perPage },
-  });
-}
+        return NextResponse.json(
+            { success: true, data: finalCases, meta: { total, page, perPage } },
+            { status: 200 }
+        );
+    },
+});
 
-export async function POST(req: NextRequest) {
-  try {
-    return await createCase(req);
-  } catch (error) {
-    console.error('[POST /api/cases]', error);
-    if (isPrismaConnectionError(error)) {
-      return apiError('SERVICE_UNAVAILABLE', 'Database is unavailable', 503);
-    }
-    return apiError('INTERNAL_ERROR', 'An unexpected error occurred', 500);
-  }
-}
+// ── POST /api/cases ───────────────────────────────────────────────────────────
 
-async function createCase(req: NextRequest) {
-  const authResult = await requireApiAuth();
-  if ('response' in authResult) return authResult.response;
+export const POST = createHandler({
+    method: 'POST',
+    schema: CreateCaseSchema,
+    handler: async (_req: NextRequest, { body, user, orgId }) => {
+        // Verify client belongs to same org
+        const client = await prisma.client.findFirst({
+            where: { id: body.clientId, orgId },
+        });
+        if (!client) {
+            return NextResponse.json(
+                { success: false, error: { code: 'NOT_FOUND', message: 'Client not found' } },
+                { status: 404 }
+            );
+        }
 
-  const { orgId } = authResult;
+        // Generate reference number
+        const count = await prisma.case.count({ where: { orgId } });
+        const referenceNumber = generateReference('KOF', count + 1);
 
-  let body: unknown;
-  try {
-    body = await req.json();
-  } catch {
-    return apiError('VALIDATION_ERROR', 'Invalid JSON body', 422);
-  }
+        // Calculate LTV if both values provided
+        const ltv =
+            body.loanAmount && body.propertyValue
+                ? calculateLTV(body.loanAmount, body.propertyValue)
+                : null;
 
-  const parsed = CreateCaseSchema.safeParse(body);
-  if (!parsed.success) {
-    return apiFromZodError(parsed.error);
-  }
+        const newCase = await prisma.case.create({
+            data: {
+                orgId: orgId!,
+                clientId: body.clientId,
+                referenceNumber,
+                type: body.type,
+                stage: 'ENQUIRY',
+                propertyValue: body.propertyValue,
+                loanAmount: body.loanAmount,
+                ltv,
+                termYears: body.termYears,
+                assignedAdviserId: user?.id,
+            },
+            include: {
+                client: { select: { id: true, firstName: true, lastName: true } },
+            },
+        });
 
-  const result = await createCaseForOrg(orgId, parsed.data);
-  if ('error' in result) {
-    return apiNotFound('Client not found');
-  }
+        await logAuditEvent({
+            orgId: orgId!,
+            userId: user?.id,
+            entityType: 'Case',
+            entityId: newCase.id,
+            action: 'CASE_CREATED',
+            diff: {
+                after: {
+                    referenceNumber: newCase.referenceNumber,
+                    type: newCase.type,
+                    stage: newCase.stage,
+                    clientId: newCase.clientId,
+                },
+            },
+        });
 
-  return apiSuccess(serializeCaseSummary(result.case), { status: 201 });
-}
+        return NextResponse.json({ success: true, data: newCase }, { status: 201 });
+    },
+});

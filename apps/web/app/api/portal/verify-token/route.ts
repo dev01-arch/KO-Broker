@@ -1,33 +1,32 @@
-import { NextRequest } from 'next/server';
-import { z } from 'zod';
+import { NextRequest, NextResponse } from 'next/server';
+import { createHandler } from '@/lib/api/handler';
+import { VerifyPortalTokenSchema } from '@ko/types';
 import { verifyPortalToken } from '@/lib/api/portal-data';
 import { applyCorsHeaders } from '@/lib/api/cors';
-import { apiError, apiFromZodError, apiNotFound, apiSuccess } from '@/lib/api/responses';
 
-const VerifyTokenSchema = z.object({
-  token: z.string().min(1, 'token is required'),
-});
+export const POST = createHandler({
+  method: 'POST',
+  requireAuth: false,
+  schema: VerifyPortalTokenSchema,
+  handler: async (req: NextRequest, { body }) => {
+    const result = await verifyPortalToken(body.token);
 
-export async function POST(req: NextRequest) {
-  try {
-    let body: unknown;
-    try {
-      body = await req.json();
-    } catch {
-      return applyCorsHeaders(req, apiError('VALIDATION_ERROR', 'Invalid JSON body', 422));
-    }
-
-    const parsed = VerifyTokenSchema.safeParse(body);
-    if (!parsed.success) return applyCorsHeaders(req, apiFromZodError(parsed.error));
-
-    const result = await verifyPortalToken(parsed.data.token);
     if ('error' in result) {
-      return applyCorsHeaders(req, apiNotFound('Invalid or expired invite token'));
+      return applyCorsHeaders(
+        req,
+        NextResponse.json(
+          {
+            success: false,
+            error: { code: 'NOT_FOUND', message: 'Invalid or expired invite token' },
+          },
+          { status: 404 },
+        ),
+      );
     }
 
-    return applyCorsHeaders(req, apiSuccess(result));
-  } catch (error) {
-    console.error('[POST /api/portal/verify-token]', error);
-    return applyCorsHeaders(req, apiError('INTERNAL_ERROR', 'An unexpected error occurred', 500));
-  }
-}
+    return applyCorsHeaders(
+      req,
+      NextResponse.json({ success: true, data: result }, { status: 200 }),
+    );
+  },
+});

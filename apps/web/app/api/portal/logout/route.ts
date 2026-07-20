@@ -1,20 +1,17 @@
-import { NextRequest } from 'next/server';
-import { requirePortalAuth } from '@/lib/api/require-portal-auth';
-import { applyCorsHeaders } from '@/lib/api/cors';
+import { NextResponse } from 'next/server';
+import { createHandler } from '@/lib/api/handler';
 import { clearPortalSessionCookieOptions } from '@/lib/api/portal-session';
-import { apiError, apiSuccess } from '@/lib/api/responses';
 
-export async function POST(req: NextRequest) {
-  try {
-    const authResult = await requirePortalAuth();
-    if ('response' in authResult) return applyCorsHeaders(req, authResult.response);
+export const POST = createHandler({
+  method: 'POST',
+  requireAuth: false,
+  handler: async () => {
+    const response = NextResponse.json({ success: true }, { status: 200 });
 
-    const cookie = clearPortalSessionCookieOptions();
-    const res = apiSuccess({ success: true });
-    res.cookies.set(cookie);
-    return applyCorsHeaders(req, res);
-  } catch (error) {
-    console.error('[POST /api/portal/logout]', error);
-    return applyCorsHeaders(req, apiError('INTERNAL_ERROR', 'An unexpected error occurred', 500));
-  }
-}
+    // === FRONTEND ADDITION: env-aware cookie clear (works on local HTTP) ===
+    response.cookies.set(clearPortalSessionCookieOptions());
+    // === END FRONTEND ADDITION ===
+
+    return response;
+  },
+});

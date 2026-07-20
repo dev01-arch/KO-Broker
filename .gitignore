@@ -41,3 +41,6 @@ packages/db/prisma/*.db-journal
 
 # docker
 postgres-data/
+
+# local backend merge reference copies
+.backend-merge-backup/

@@ -115,6 +115,15 @@ h1, h2, h3, h4, h5, h6 {
   line-height: 1.05;
 }
 
+/* Numeric displays (stats, prices, counters) always use DM Sans, even inside
+   Syne-styled heading blocks — Syne's stylised digits are a poor fit for data. */
+.marketing-site .heading-numeric {
+  font-family: var(--font-body);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
 /* Calculator borders — match kanban overview case cards (border-ink-08) */
 .mortgage-calculators {
   --color-border: rgba(13, 31, 26, 0.06);

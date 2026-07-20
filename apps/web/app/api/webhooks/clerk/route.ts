@@ -1,4 +1,3 @@
-import { NextRequest } from 'next/server';
 import { Webhook } from 'svix';
 import { headers } from 'next/headers';
 import { WebhookEvent } from '@clerk/nextjs/server';
@@ -30,31 +29,33 @@ export async function POST(req: Request) {
   const WEBHOOK_SECRET = process.env.CLERK_WEBHOOK_SECRET;
 
   if (!WEBHOOK_SECRET) {
-    return NextResponse.json(
-      {
-        success: false,
-        error: {
-          code: 'NOT_CONFIGURED',
-          message: 'CLERK_WEBHOOK_SECRET is not configured',
-        },
-      },
-      { status: 503 },
-    );
+    throw new Error('Please add CLERK_WEBHOOK_SECRET from Clerk Dashboard to .env or .env.local');
   }
 
+  // Get the headers
   const headerPayload = await headers();
   const svix_id = headerPayload.get('svix-id');
   const svix_timestamp = headerPayload.get('svix-timestamp');
   const svix_signature = headerPayload.get('svix-signature');
 
+  // If there are no headers, error out
   if (!svix_id || !svix_timestamp || !svix_signature) {
-    return new Response('Missing svix headers', { status: 400 });
+    return new Response('Error occured -- no svix headers', {
+      status: 400,
+    });
   }
 
+  // Get the body as raw text
+  // IMPORTANT: We must use req.text() instead of req.json() to preserve the exact raw string.
+  // Using JSON.stringify(await req.json()) breaks the cryptographic signature!
   const body = await req.text();
+
+  // Create a new Svix instance with your secret.
   const wh = new Webhook(WEBHOOK_SECRET);
 
   let evt: WebhookEvent;
+
+  // Verify the payload with the headers
   try {
     evt = wh.verify(body, {
       'svix-id': svix_id,
@@ -62,10 +63,9 @@ export async function POST(req: Request) {
       'svix-signature': svix_signature,
     }) as WebhookEvent;
   } catch (err) {
-    return new Response(
-      `Verification failed: ${err instanceof Error ? err.message : 'Unknown error'}`,
-      { status: 400 },
-    );
+    return new Response(`Error occured: ${err instanceof Error ? err.message : 'Unknown verification error'}`, {
+      status: 400,
+    });
   }
 
   const eventType = evt.type as string;
@@ -75,38 +75,61 @@ export async function POST(req: Request) {
     const email = email_addresses[0]?.email_address;
 
     if (!email) {
-      return new Response('No email address in payload', { status: 400 });
+      return new Response('Error occured -- no email address', {
+        status: 400,
+      });
     }
 
-    await prisma.user.upsert({
-      where: { clerkId: id },
-      update: {
+    // Check if there is an existing pending invite user with this email
+    const existingPendingUser = await prisma.user.findFirst({
+      where: {
         email,
-        firstName: first_name,
-        lastName: last_name,
-      },
-      create: {
-        clerkId: id,
-        email,
-        firstName: first_name,
-        lastName: last_name,
-        role: 'ADVISER',
+        invitePending: true,
       },
     });
+
+    if (existingPendingUser) {
+      // Link the Clerk ID directly, but don't clear the invite token/status yet.
+      // The browser-side accept-invite route will clear these when it processes the token.
+      await prisma.user.update({
+        where: { id: existingPendingUser.id },
+        data: {
+          clerkId: id,
+          firstName: first_name,
+          lastName: last_name,
+        },
+      });
+    } else {
+      await prisma.user.upsert({
+        where: { clerkId: id },
+        update: {
+          email,
+          firstName: first_name,
+          lastName: last_name,
+        },
+        create: {
+          clerkId: id,
+          email,
+          firstName: first_name,
+          lastName: last_name,
+          role: 'ADVISER',
+        },
+      });
+    }
   }
 
   if (eventType === 'organization.created') {
     const { id, name, slug } = evt.data as unknown as OrganizationCreatedData;
 
     await prisma.organisation.upsert({
-      where: { id },
+      where: { id: id },
       update: {
         name,
-        slug: slug || id,
+        slug: slug || id
       },
       create: {
-        id,
-        name,
+        id: id,
+        name: name,
         slug: slug || id,
         plan: 'STARTER',
       },
@@ -114,11 +137,11 @@ export async function POST(req: Request) {
   }
 
   if (eventType === 'organizationMembership.created') {
-    const { organization, public_user_data } =
-      evt.data as unknown as OrganizationMembershipCreatedData;
+    const { organization, public_user_data } = evt.data as unknown as OrganizationMembershipCreatedData;
     const clerkUserId = public_user_data.user_id;
     const clerkOrgId = organization.id;
 
+    // Link user to organisation
     const org = await prisma.organisation.findUnique({
       where: { id: clerkOrgId },
     });

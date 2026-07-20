@@ -281,7 +281,7 @@ export default function ClientsPage() {
                 >
                   <option value="">All advisers</option>
                   {activeAdvisers.map((adviser) => (
-                    <option key={adviser.id} value={adviser.id}>
+                    <option key={adviser.id} value={adviser.memberId ?? adviser.id}>
                       {[adviser.firstName, adviser.lastName].filter(Boolean).join(' ') || adviser.email}
                     </option>
                   ))}
