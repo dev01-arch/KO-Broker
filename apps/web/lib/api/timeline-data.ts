@@ -3,7 +3,7 @@ import { devStore } from '@/lib/api/dev-store';
 import { isPrismaConnectionError } from '@/lib/api/prisma-errors';
 import type { Prisma } from '@ko/db';
 
-function useDevStore(error: unknown) {
+function shouldUseDevStore(error: unknown) {
   return process.env.NODE_ENV === 'development' && isPrismaConnectionError(error);
 }
 
@@ -31,7 +31,7 @@ export async function listTimelineForCase(
     ]);
     return { total, entries };
   } catch (error) {
-    if (useDevStore(error)) {
+    if (shouldUseDevStore(error)) {
       const result = devStore.listTimeline(orgId, caseId, params);
       return { total: result.total, entries: result.entries };
     }
@@ -59,7 +59,7 @@ export async function addTimelineEntry(entry: {
       },
     });
   } catch (error) {
-    if (useDevStore(error)) return devStore.addAuditLog(entry);
+    if (shouldUseDevStore(error)) return devStore.addAuditLog(entry);
     throw error;
   }
 }

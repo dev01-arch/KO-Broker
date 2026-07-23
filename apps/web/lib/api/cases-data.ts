@@ -6,7 +6,7 @@ import { calculateLTV, generateReference } from '@ko/utils';
 import type { CaseStage, CaseType, UpsertFactFindInput } from '@ko/types';
 import { caseAssignedToAdviserWhere } from '@/lib/auth/adviser-scope';
 
-function useDevStore(error: unknown) {
+function shouldUseDevStore(error: unknown) {
   return process.env.NODE_ENV === 'development' && isPrismaConnectionError(error);
 }
 
@@ -100,7 +100,7 @@ export async function listCasesForOrg(
 
     return { total, cases };
   } catch (error) {
-    if (!useDevStore(error)) throw error;
+    if (!shouldUseDevStore(error)) throw error;
     return devStore.listCases(orgId, params);
   }
 }
@@ -122,7 +122,7 @@ export async function createCaseForOrg(
         select: { id: true },
       });
     } catch (error) {
-      if (!useDevStore(error)) throw error;
+      if (!shouldUseDevStore(error)) throw error;
       return devStore.getClient(orgId, input.clientId) ?? null;
     }
   })();
@@ -163,7 +163,7 @@ export async function createCaseForOrg(
       return { case: created };
     } catch (error) {
       if (isPrismaUniqueConflict(error, 'referenceNumber') && attempt < 2) continue;
-      if (!useDevStore(error)) throw error;
+      if (!shouldUseDevStore(error)) throw error;
       const result = devStore.createCase(orgId, input);
       if ('error' in result) return result;
       return { case: result.case };
@@ -204,7 +204,7 @@ export async function getCaseForOrg(orgId: string, id: string) {
       },
     });
   } catch (error) {
-    if (!useDevStore(error)) throw error;
+    if (!shouldUseDevStore(error)) throw error;
     return devStore.getCase(orgId, id);
   }
 }
@@ -261,7 +261,7 @@ export async function updateCaseForOrg(
 
     return { case: updated };
   } catch (error) {
-    if (!useDevStore(error)) throw error;
+    if (!shouldUseDevStore(error)) throw error;
     return devStore.updateCase(orgId, id, input);
   }
 }

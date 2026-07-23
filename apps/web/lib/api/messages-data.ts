@@ -12,7 +12,7 @@ import { sendSMS } from '@/lib/notifications/sms';
 import type { MessageChannel, MessageDirection, MessageSource } from '@ko/types';
 import { messageAssignedToAdviserWhere } from '@/lib/auth/adviser-scope';
 
-function useDevStore(error: unknown) {
+function shouldUseDevStore(error: unknown) {
   return process.env.NODE_ENV === 'development' && isPrismaConnectionError(error);
 }
 
@@ -151,7 +151,7 @@ export async function listMessagesForOrg(
     ]);
     return { total, messages };
   } catch (error) {
-    if (useDevStore(error)) return devStore.listMessages(orgId, params);
+    if (shouldUseDevStore(error)) return devStore.listMessages(orgId, params);
     throw error;
   }
 }
@@ -181,7 +181,7 @@ async function resolveClientContact(
     }
     return null;
   } catch (error) {
-    if (useDevStore(error)) {
+    if (shouldUseDevStore(error)) {
       if (clientId) {
         const client = devStore.getClient(orgId, clientId);
         if (!client) return null;
@@ -234,7 +234,7 @@ export async function createMessageForOrg(
     });
     return { message };
   } catch (error) {
-    if (useDevStore(error)) return { message: devStore.createMessage(orgId, input) };
+    if (shouldUseDevStore(error)) return { message: devStore.createMessage(orgId, input) };
     throw error;
   }
 }
@@ -339,7 +339,7 @@ export async function markMessageReadForOrg(orgId: string, id: string, isRead = 
     }
     return updated;
   } catch (error) {
-    if (useDevStore(error)) return devStore.markMessageRead(orgId, id, isRead);
+    if (shouldUseDevStore(error)) return devStore.markMessageRead(orgId, id, isRead);
     throw error;
   }
 }

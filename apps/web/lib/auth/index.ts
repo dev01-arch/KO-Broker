@@ -290,7 +290,7 @@ export async function requireVisibility(sw: VisibilitySwitch): Promise<User> {
 /**
  * Mask client-specific financial information if the user is not allowed to see it.
  */
-export function maskClientFinancials<T extends Record<string, any> | null | undefined>(client: T): T {
+export function maskClientFinancials<T extends Record<string, unknown> | null | undefined>(client: T): T {
   if (!client) return client;
   return {
     ...client,
@@ -301,8 +301,24 @@ export function maskClientFinancials<T extends Record<string, any> | null | unde
 /**
  * Mask case-specific financial information if the user is not allowed to see it.
  */
-export function maskCaseFinancials<T extends Record<string, any> | null | undefined>(caseRecord: T): T {
+export function maskCaseFinancials<T extends Record<string, unknown> | null | undefined>(caseRecord: T): T {
   if (!caseRecord) return caseRecord;
+  const factFind =
+    caseRecord.factFind && typeof caseRecord.factFind === 'object'
+      ? {
+          ...(caseRecord.factFind as Record<string, unknown>),
+          incomeDetails: null,
+          expenditureDetails: null,
+          existingMortgages: null,
+        }
+      : null;
+  const productsConsidered = Array.isArray(caseRecord.productsConsidered)
+    ? caseRecord.productsConsidered.map((p) => ({
+        ...(p as Record<string, unknown>),
+        rate: null,
+        fee: null,
+      }))
+    : [];
   return {
     ...caseRecord,
     propertyValue: null,
@@ -310,19 +326,7 @@ export function maskCaseFinancials<T extends Record<string, any> | null | undefi
     ltv: null,
     selectedRate: null,
     selectedFee: null,
-    factFind: caseRecord.factFind
-      ? {
-          ...caseRecord.factFind,
-          incomeDetails: null,
-          expenditureDetails: null,
-          existingMortgages: null,
-        }
-      : null,
-    productsConsidered:
-      caseRecord.productsConsidered?.map((p: any) => ({
-        ...p,
-        rate: null,
-        fee: null,
-      })) ?? [],
+    factFind,
+    productsConsidered,
   };
 }

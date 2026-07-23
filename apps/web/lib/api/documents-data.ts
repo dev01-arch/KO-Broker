@@ -3,7 +3,7 @@ import { devStore } from '@/lib/api/dev-store';
 import { isPrismaConnectionError } from '@/lib/api/prisma-errors';
 import type { DocumentType } from '@ko/types';
 
-function useDevStore(error: unknown) {
+function shouldUseDevStore(error: unknown) {
   return process.env.NODE_ENV === 'development' && isPrismaConnectionError(error);
 }
 
@@ -29,7 +29,7 @@ export async function listDocumentsForOrg(
     ]);
     return { total, documents };
   } catch (error) {
-    if (useDevStore(error)) return devStore.listDocuments(orgId, params);
+    if (shouldUseDevStore(error)) return devStore.listDocuments(orgId, params);
     throw error;
   }
 }
@@ -53,7 +53,7 @@ export async function createDocumentForOrg(
     });
     return { document: doc };
   } catch (error) {
-    if (useDevStore(error)) return { document: devStore.createDocument(orgId, input) };
+    if (shouldUseDevStore(error)) return { document: devStore.createDocument(orgId, input) };
     throw error;
   }
 }
@@ -62,7 +62,7 @@ export async function getDocumentForOrg(orgId: string, id: string) {
   try {
     return await prisma.document.findFirst({ where: { id, orgId } });
   } catch (error) {
-    if (useDevStore(error)) return devStore.getDocument(orgId, id);
+    if (shouldUseDevStore(error)) return devStore.getDocument(orgId, id);
     throw error;
   }
 }
@@ -74,7 +74,7 @@ export async function deleteDocumentForOrg(orgId: string, id: string) {
     await prisma.document.delete({ where: { id } });
     return true;
   } catch (error) {
-    if (useDevStore(error)) return devStore.deleteDocument(orgId, id);
+    if (shouldUseDevStore(error)) return devStore.deleteDocument(orgId, id);
     throw error;
   }
 }

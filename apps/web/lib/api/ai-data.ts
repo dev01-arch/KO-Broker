@@ -23,7 +23,7 @@ import {
 import type { ReportTemplate } from '@ko/types';
 import type { Prisma } from '@ko/db';
 
-function useDevStore(error: unknown) {
+function shouldUseDevStore(error: unknown) {
   return process.env.NODE_ENV === 'development' && isPrismaConnectionError(error);
 }
 
@@ -102,7 +102,7 @@ export async function listAiReportsForOrg(
     ]);
     return { total, reports };
   } catch (error) {
-    if (useDevStore(error)) {
+    if (shouldUseDevStore(error)) {
       const result = devStore.listAiReports(orgId, params);
       return { total: result.total, reports: result.reports };
     }
@@ -217,7 +217,7 @@ export async function createAiReportForOrg(
 
     return { report };
   } catch (error) {
-    if (useDevStore(error)) return devStore.createAiReport(orgId, input);
+    if (shouldUseDevStore(error)) return devStore.createAiReport(orgId, input);
     throw error;
   }
 }
@@ -231,7 +231,7 @@ export async function getAiReportForOrg(orgId: string, id: string) {
       },
     });
   } catch (error) {
-    if (useDevStore(error)) return devStore.getAiReport(orgId, id);
+    if (shouldUseDevStore(error)) return devStore.getAiReport(orgId, id);
     throw error;
   }
 }
@@ -330,7 +330,7 @@ export async function regenerateReportSection(
 
     return { report: updatedReport };
   } catch (error) {
-    if (useDevStore(error)) {
+    if (shouldUseDevStore(error)) {
       const content = options?.adviserContext
         ? `Regenerated content for section "${sectionId}" (${options.adviserContext}) — powered by OpenRouter.`
         : `Regenerated content for section "${sectionId}" — powered by OpenRouter.`;
@@ -446,7 +446,7 @@ export async function approveAiReportForOrg(orgId: string, id: string, approvedB
 
     return { report: finalisedReport };
   } catch (error) {
-    if (useDevStore(error)) {
+    if (shouldUseDevStore(error)) {
       const devReport = devStore.approveAiReport(orgId, id, approvedBy);
       if (!devReport) return { error: 'NOT_FOUND' as const };
       return { report: devReport };

@@ -125,7 +125,7 @@ export function BillingSettingsSection({
     setUpgradingPlan(plan);
     try {
       const url = await checkout(plan);
-      window.location.href = url;
+      window.location.assign(url);
     } catch {
       setUpgradingPlan(null);
     }

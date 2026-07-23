@@ -7,7 +7,7 @@ import type {
   UpdateProductConsideredInput,
 } from '@ko/types';
 
-function useDevStore(error: unknown) {
+function shouldUseDevStore(error: unknown) {
   return process.env.NODE_ENV === 'development' && isPrismaConnectionError(error);
 }
 
@@ -56,7 +56,7 @@ export async function listProductsForCase(orgId: string, caseId: string) {
     });
     return { products };
   } catch (error) {
-    if (!useDevStore(error)) throw error;
+    if (!shouldUseDevStore(error)) throw error;
     return devStore.listProducts(orgId, caseId);
   }
 }
@@ -125,7 +125,7 @@ export async function createProductForCase(
 
     return { product };
   } catch (error) {
-    if (!useDevStore(error)) throw error;
+    if (!shouldUseDevStore(error)) throw error;
     return devStore.createProduct(orgId, caseId, input);
   }
 }
@@ -222,7 +222,7 @@ export async function updateProductForCase(
 
     return { product };
   } catch (error) {
-    if (!useDevStore(error)) throw error;
+    if (!shouldUseDevStore(error)) throw error;
     return devStore.updateProduct(orgId, caseId, productId, input);
   }
 }
@@ -276,7 +276,7 @@ export async function deleteProductForCase(
 
     return { ok: true as const };
   } catch (error) {
-    if (!useDevStore(error)) throw error;
+    if (!shouldUseDevStore(error)) throw error;
     return devStore.deleteProduct(orgId, caseId, productId);
   }
 }

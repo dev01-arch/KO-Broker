@@ -5,7 +5,7 @@ import { devStore } from '@/lib/api/dev-store';
 import { isPrismaConnectionError } from '@/lib/api/prisma-errors';
 import { cancelAllPendingDigestsForOrg } from '@/lib/notifications/message-email-digest';
 
-function useDevStore(error: unknown) {
+function shouldUseDevStore(error: unknown) {
   return process.env.NODE_ENV === 'development' && isPrismaConnectionError(error);
 }
 
@@ -118,7 +118,7 @@ export async function getOrgIntegrations(orgId: string): Promise<OrgIntegrations
     const settings = (org?.settings as Record<string, unknown>) ?? {};
     return normalizeIntegrations(settings.integrations ?? settings);
   } catch (error) {
-    if (useDevStore(error)) {
+    if (shouldUseDevStore(error)) {
       return normalizeIntegrations(devStore.getOrgSettings(orgId));
     }
     throw error;
@@ -164,7 +164,7 @@ export async function updateOrgIntegrations(
 
     return merged;
   } catch (error) {
-    if (useDevStore(error)) {
+    if (shouldUseDevStore(error)) {
       const current = normalizeIntegrations(devStore.getOrgSettings(orgId));
       const merged: OrgIntegrations = {
         equifax: mergeEquifax(
@@ -199,7 +199,7 @@ export async function getOrgMessagingSettings(orgId: string): Promise<OrgMessagi
         : {};
     return normalizeMessaging(settings.messaging ?? {});
   } catch (error) {
-    if (useDevStore(error)) {
+    if (shouldUseDevStore(error)) {
       const devSettings = devStore.getOrgSettings(orgId);
       return normalizeMessaging(devSettings.messaging ?? {});
     }
@@ -240,7 +240,7 @@ export async function updateOrgMessagingSettings(
 
     return merged;
   } catch (error) {
-    if (useDevStore(error)) {
+    if (shouldUseDevStore(error)) {
       const current = normalizeMessaging(devStore.getOrgSettings(orgId).messaging ?? {});
       const merged = mergeMessaging(current, input);
       devStore.updateOrgSettings(orgId, { messaging: merged });
@@ -276,7 +276,7 @@ export async function getOrgProfile(
       canViewAiSummaries: user.role === 'ADMIN' ? true : Boolean(user.canViewAiSummaries),
     };
   } catch (error) {
-    if (useDevStore(error)) {
+    if (shouldUseDevStore(error)) {
       const org = devStore.getOrg(orgId);
       return {
         orgId,
@@ -308,7 +308,7 @@ export async function listAdvisersForOrg(orgId: string) {
       },
     });
   } catch (error) {
-    if (useDevStore(error)) {
+    if (shouldUseDevStore(error)) {
       return devStore.listAdvisers(orgId);
     }
     throw error;
@@ -353,7 +353,7 @@ export async function listInvitedAdvisersForOrg(orgId: string) {
       memberId: organisationMember?.id ?? null,
     }));
   } catch (error) {
-    if (useDevStore(error)) {
+    if (shouldUseDevStore(error)) {
       return devStore.listAdvisers(orgId).map((member) => ({
         id: member.id,
         email: member.email,
@@ -397,7 +397,7 @@ export async function createAdviserForOrg(
       },
     });
   } catch (error) {
-    if (useDevStore(error)) {
+    if (shouldUseDevStore(error)) {
       return devStore.createAdviser(orgId, input);
     }
     throw error;

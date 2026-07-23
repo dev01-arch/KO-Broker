@@ -6,7 +6,7 @@ import { generateReference } from '@ko/utils';
 import type { ClientType, ClientStatus, ClientCategoryFilter, EmploymentStatus } from '@ko/types';
 import { clientAssignedToAdviserWhere } from '@/lib/auth/adviser-scope';
 
-function useDevStore(error: unknown) {
+function shouldUseDevStore(error: unknown) {
   return process.env.NODE_ENV === 'development' && isPrismaConnectionError(error);
 }
 
@@ -44,7 +44,7 @@ export async function findUserByClerkId(clerkId: string) {
       },
     });
   } catch (error) {
-    if (!useDevStore(error)) throw error;
+    if (!shouldUseDevStore(error)) throw error;
     return devStore.findUserByClerkId(clerkId);
   }
 }
@@ -85,7 +85,7 @@ export async function createUserWithOrg(input: {
       },
     });
   } catch (error) {
-    if (!useDevStore(error)) throw error;
+    if (!shouldUseDevStore(error)) throw error;
     return devStore.ensureUser(input);
   }
 }
@@ -117,7 +117,7 @@ export async function linkExistingUserToNewOrg(
       },
     });
   } catch (error) {
-    if (!useDevStore(error)) throw error;
+    if (!shouldUseDevStore(error)) throw error;
     throw error;
   }
 }
@@ -217,7 +217,7 @@ export async function listClientsForOrg(
 
     return { total, clients };
   } catch (error) {
-    if (!useDevStore(error)) throw error;
+    if (!shouldUseDevStore(error)) throw error;
     const result = devStore.listClients(orgId, params);
     return { total: result.total, clients: result.clients };
   }
@@ -276,7 +276,7 @@ export async function createClientForOrg(
       }
       assignedMember = member;
     } catch (error) {
-      if (!useDevStore(error)) throw error;
+      if (!shouldUseDevStore(error)) throw error;
       const member = devStore.getMember(orgId, input.assignedMemberId);
       if (!member?.isActive) {
         return {
@@ -340,7 +340,7 @@ export async function createClientForOrg(
       return { client: created, welcomeEmail, adviserEmail };
     } catch (error) {
       if (isPrismaUniqueConflict(error, 'referenceNumber') && attempt < 4) continue;
-      if (!useDevStore(error)) throw error;
+      if (!shouldUseDevStore(error)) throw error;
       const client = devStore.createClient(orgId, input);
       const welcomeEmail: EmailDeliveryStatus = { sent: false, error: 'Email skipped in offline dev mode' };
       const adviserEmail: EmailDeliveryStatus | undefined = assignedMember
@@ -383,7 +383,7 @@ export async function getClientForOrg(orgId: string, id: string) {
       },
     });
   } catch (error) {
-    if (!useDevStore(error)) throw error;
+    if (!shouldUseDevStore(error)) throw error;
     return devStore.getClient(orgId, id);
   }
 }
@@ -410,7 +410,7 @@ export async function updateClientForOrg(
       },
     });
   } catch (error) {
-    if (!useDevStore(error)) throw error;
+    if (!shouldUseDevStore(error)) throw error;
     return devStore.updateClient(orgId, id, input);
   }
 }
@@ -448,7 +448,7 @@ export async function deleteClientForOrg(orgId: string, id: string) {
 
     return { deleted: true as const };
   } catch (error) {
-    if (!useDevStore(error)) throw error;
+    if (!shouldUseDevStore(error)) throw error;
     return devStore.deleteClient(orgId, id);
   }
 }

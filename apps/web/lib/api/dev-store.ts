@@ -1186,7 +1186,7 @@ export const devStore = {
 
   listTimeline(orgId: string, entityId: string, params: { page: number; perPage: number }) {
     const store = loadStore();
-    let logs = store.auditLogs.filter(
+    const logs = store.auditLogs.filter(
       (l) => l.orgId === orgId && l.entityId === entityId,
     );
     logs.sort((a, b) => b.createdAt.localeCompare(a.createdAt));

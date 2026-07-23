@@ -17,6 +17,7 @@
     "@prisma/client": "^6.6.0"
   },
   "devDependencies": {
+    "@types/node": "^20",
     "prisma": "^6.6.0",
     "tsx": "^4.19.0",
     "typescript": "^5"

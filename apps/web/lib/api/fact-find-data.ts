@@ -5,7 +5,7 @@ import { computeDiff, logAuditEvent } from '@/lib/compliance/audit';
 import { calculateVulnerabilityScore, checkIsVulnerable } from '@/lib/compliance/vulnerability';
 import type { UpsertFactFindInput } from '@ko/types';
 
-function useDevStore(error: unknown) {
+function shouldUseDevStore(error: unknown) {
   return process.env.NODE_ENV === 'development' && isPrismaConnectionError(error);
 }
 
@@ -144,7 +144,7 @@ export async function upsertFactFindWithCompliance(
 
     return { factFind, client: { id: caseRecord.clientId, isVulnerable: newIsVulnerable } };
   } catch (error) {
-    if (!useDevStore(error)) throw error;
+    if (!shouldUseDevStore(error)) throw error;
     const fallback = devStore.upsertFactFind(orgId, caseId, input);
     if ('error' in fallback) return { error: 'NOT_FOUND' as const };
     return {
@@ -285,7 +285,7 @@ export async function completePortalFactFind(session: {
 
     return { factFind: updatedFactFind, alreadyComplete: false };
   } catch (error) {
-    if (!useDevStore(error)) throw error;
+    if (!shouldUseDevStore(error)) throw error;
     const result = devStore.upsertFactFind(session.orgId, session.caseId, { markComplete: true });
     if ('error' in result) return result;
     return { factFind: result.factFind, alreadyComplete: false };

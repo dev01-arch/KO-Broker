@@ -21,7 +21,7 @@ import { scheduleMessageEmailDigest } from '@/lib/notifications/message-email-di
 import { sendSMS } from '@/lib/notifications/sms';
 import { verifyPassword } from '@/lib/auth/portalAuth';
 
-function useDevStore(error: unknown) {
+function shouldUseDevStore(error: unknown) {
   return process.env.NODE_ENV === 'development' && isPrismaConnectionError(error);
 }
 
@@ -320,7 +320,7 @@ export async function inviteClientToPortal(orgId: string, caseId: string, inviti
       emailError: emailResult.ok ? undefined : emailResult.error,
     };
   } catch (error) {
-    if (!useDevStore(error)) throw error;
+    if (!shouldUseDevStore(error)) throw error;
     const caseRecord = devStore.getCase(orgId, caseId);
     if (!caseRecord) return { error: 'NOT_FOUND' as const };
     const client = devStore.getClient(orgId, caseRecord.clientId);
@@ -384,7 +384,7 @@ export async function verifyPortalToken(token: string) {
       requiresLogin: accountConfigured,
     };
   } catch (error) {
-    if (!useDevStore(error)) throw error;
+    if (!shouldUseDevStore(error)) throw error;
     return { error: 'NOT_FOUND' as const };
   }
 }
@@ -429,7 +429,7 @@ export async function setupPortalAccount(token: string, password: string) {
     if (isPrismaConnectionError(error)) {
       return { error: 'SERVICE_UNAVAILABLE' as const };
     }
-    if (!useDevStore(error)) throw error;
+    if (!shouldUseDevStore(error)) throw error;
     return { error: 'NOT_FOUND' as const };
   }
 }
@@ -478,7 +478,7 @@ export async function loginPortalClient(email: string, password: string) {
     if (isPrismaConnectionError(error)) {
       return { error: 'SERVICE_UNAVAILABLE' as const };
     }
-    if (!useDevStore(error)) throw error;
+    if (!shouldUseDevStore(error)) throw error;
     return { error: 'UNAUTHORIZED' as const };
   }
 }
@@ -508,7 +508,7 @@ export async function listPortalMessages(session: PortalSessionPayload) {
       createdAt: m.createdAt.toISOString(),
     }));
   } catch (error) {
-    if (useDevStore(error)) {
+    if (shouldUseDevStore(error)) {
       return devStore
         .listMessages(session.orgId, { page: 1, perPage: 100, clientId: session.clientId, caseId: session.caseId })
         .messages.map((m) => ({
@@ -636,7 +636,7 @@ export async function sendPortalMessage(session: PortalSessionPayload, body: str
     });
     message = created.message;
   } catch (error) {
-    if (!useDevStore(error)) throw error;
+    if (!shouldUseDevStore(error)) throw error;
     message = devStore.createMessage(session.orgId, {
       body,
       channel: 'IN_APP',
@@ -726,7 +726,7 @@ export async function getPortalSessionProfile(session: PortalSessionPayload) {
       progressSteps: [],
     };
   } catch (error) {
-    if (!useDevStore(error)) throw error;
+    if (!shouldUseDevStore(error)) throw error;
     return { error: 'NOT_FOUND' as const };
   }
 }
@@ -741,7 +741,7 @@ export async function getPortalFactFind(session: PortalSessionPayload) {
     if (!caseRecord.factFind) return null;
     return serializeFactFind(caseRecord.factFind);
   } catch (error) {
-    if (!useDevStore(error)) throw error;
+    if (!shouldUseDevStore(error)) throw error;
     const caseRecord = devStore.getCase(session.orgId, session.caseId);
     if (!caseRecord || caseRecord.client.id !== session.clientId) return { error: 'NOT_FOUND' as const };
     return caseRecord.factFind ? serializeFactFind(caseRecord.factFind) : null;
@@ -779,7 +779,7 @@ export async function updatePortalFactFind(
     }
     return serializeFactFind(result.factFind);
   } catch (error) {
-    if (!useDevStore(error)) throw error;
+    if (!shouldUseDevStore(error)) throw error;
     const caseRecord = devStore.getCase(session.orgId, session.caseId);
     if (!caseRecord || caseRecord.client.id !== session.clientId) return { error: 'NOT_FOUND' as const };
     const result = devStore.upsertFactFind(session.orgId, session.caseId, input);

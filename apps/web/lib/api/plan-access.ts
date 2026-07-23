@@ -3,7 +3,7 @@ import { prisma } from '@/lib/db';
 import { devStore } from '@/lib/api/dev-store';
 import { isPrismaConnectionError } from '@/lib/api/prisma-errors';
 
-function useDevStore(error: unknown) {
+function shouldUseDevStore(error: unknown) {
   return process.env.NODE_ENV === 'development' && isPrismaConnectionError(error);
 }
 
@@ -19,7 +19,7 @@ export async function getOrgPlan(orgId: string): Promise<Plan> {
     });
     return (org?.plan ?? 'STARTER') as Plan;
   } catch (error) {
-    if (useDevStore(error)) {
+    if (shouldUseDevStore(error)) {
       return devStore.getOrg(orgId)?.plan ?? 'STARTER';
     }
     throw error;

@@ -26,7 +26,7 @@ import {
 } from '@/lib/notifications/sms';
 import type { CaseStage } from '@ko/types';
 
-function useDevStore(error: unknown) {
+function shouldUseDevStore(error: unknown) {
   return process.env.NODE_ENV === 'development' && isPrismaConnectionError(error);
 }
 
@@ -165,7 +165,7 @@ export async function advanceCaseStage(
 
     return { case: updatedCase };
   } catch (error) {
-    if (useDevStore(error)) {
+    if (shouldUseDevStore(error)) {
       const stored = devStore.updateCase(orgId, caseId, { stage: toStage });
       if ('error' in stored) return stored;
       devStore.addAuditLog({
