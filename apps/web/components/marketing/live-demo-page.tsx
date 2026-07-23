@@ -13,7 +13,7 @@ import { advisersQueryKey, useAdvisers } from '@/hooks/use-settings';
 import { useDashboardBootstrap, LIVE_CLIENTS_QUERY, LIVE_CASES_QUERY } from '@/hooks/use-dashboard-bootstrap';
 import { usePortalInvite } from '@/hooks/use-portal-invite';
 import { casesQueryKey, useCases, useCreateCase } from '@/hooks/use-cases';
-import { usePlanFeature } from '@/hooks/use-org';
+import { useAdviserVisibility, useIsAdmin, usePlanFeature } from '@/hooks/use-org';
 import { useUploadDocument } from '@/hooks/use-documents';
 import { useMarkMessageRead, useMessages, applyMessagesReadToCache } from '@/hooks/use-messages';
 import { clearAuthenticated, getSessionUsername } from '@/lib/auth/demo-session';
@@ -260,6 +260,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
   const isClerkUser = Boolean(user);
   const [frameHeight, setFrameHeight] = useState<number>(1200);
   const [iframeLoaded, setIframeLoaded] = useState(false);
+  const [factFindOpen, setFactFindOpen] = useState(false);
   // Cache-buster: initialised to 0 on both server and client (no hydration mismatch).
   // Updated to Date.now() after first mount so the browser always fetches fresh iframe HTML.
   const [iframeV, setIframeV] = useState<number>(0);
@@ -375,7 +376,10 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
   const { mutateAsync: createCase } = useCreateCase();
   const hasMessages = usePlanFeature('messages');
   const hasAiReports = usePlanFeature('ai_reports');
+  const isAdmin = useIsAdmin();
+  const { canViewAiSummaries } = useAdviserVisibility();
   const canFetchUnreadNotifs = isPersonalDashboard && hasMessages;
+  const clerkEmail = user?.primaryEmailAddress?.emailAddress?.toLowerCase() ?? '';
   const { data: unreadMessagesResponse } = useMessages(
     { unreadOnly: true, page: 1, perPage: 50 },
     { enabled: canFetchUnreadNotifs },
@@ -383,7 +387,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
   const { mutateAsync: markMessageRead, isPending: markingNotifsRead } = useMarkMessageRead();
 
   hasMessagesRef.current = hasMessages;
-  hasAiReportsRef.current = hasAiReports;
+  hasAiReportsRef.current = hasAiReports && canViewAiSummaries;
   unreadMessagesCountRef.current = !hasMessages
     ? 0
     : (unreadMessagesResponse?.meta?.total ?? unreadMessagesResponse?.data?.length ?? 0);
@@ -537,11 +541,28 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
   const postAdvisersSync = useCallback((advisers?: AdviserRecord[]) => {
     const iframeWindow = iframeRef.current?.contentWindow;
     if (!iframeWindow) return;
+    const source = advisers ?? advisersDataRef.current;
+    // Non-admins only see themselves in Add Client / adviser filters.
+    const scoped = isAdmin
+      ? source
+      : source.filter((a) => a.email.toLowerCase() === clerkEmail);
+    const self = scoped[0];
+    const selfMemberId = self?.memberId ?? self?.id ?? '';
     iframeWindow.postMessage(
-      { type: 'ko:advisers-sync', advisers: advisers ?? advisersDataRef.current },
+      {
+        type: 'ko:advisers-sync',
+        advisers: scoped.map((a) => ({
+          ...a,
+          // Prefer OrganisationMember id for assignedMemberId payloads.
+          id: a.memberId ?? a.id,
+          memberId: a.memberId ?? a.id,
+        })),
+        lockToSelf: !isAdmin,
+        selfMemberId,
+      },
       window.location.origin,
     );
-  }, []);
+  }, [clerkEmail, isAdmin]);
 
   const syncLiveDataToIframe = useCallback(() => {
     postClientsSync();
@@ -750,6 +771,18 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
       emptyVals.forEach((el, index) => {
         el.textContent = index === 2 ? '£0' : '0';
       });
+      // Strip prototype demo AI rows immediately so advisers never see mock clients.
+      const tbody = idoc.getElementById('ai-rpt-table-body');
+      if (tbody) {
+        tbody.innerHTML =
+          '<tr class="ai-rpt-empty-row"><td colspan="6">Loading reports…</td></tr>';
+      }
+      const subtitle = idoc.getElementById('ai-rpt-subtitle');
+      const statTotal = idoc.getElementById('ai-rpt-stat-total');
+      const statFlags = idoc.getElementById('ai-rpt-stat-flags');
+      if (subtitle) subtitle.textContent = '0 of 0 clients';
+      if (statTotal) statTotal.textContent = '0';
+      if (statFlags) statFlags.textContent = '0';
     },
     [displayName, isPersonalDashboard],
   );
@@ -806,9 +839,22 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
   useEffect(() => {
     if (showEmbeddedPanel || !iframeLoaded) return;
 
+    const sizeFactFindFrame = () => {
+      const iframe = iframeRef.current;
+      if (!iframe) return;
+      window.scrollTo(0, 0);
+      const top = Math.max(0, Math.round(iframe.getBoundingClientRect().top));
+      const next = Math.max(window.innerHeight - top, 480);
+      setFrameHeight((prev) => (next !== prev ? next : prev));
+    };
+
     const syncHeight = () => {
       const iframe = iframeRef.current;
       if (!iframe) return;
+      if (factFindOpen) {
+        sizeFactFindFrame();
+        return;
+      }
       try {
         const doc = iframe.contentWindow?.document;
         if (!doc) return;
@@ -828,7 +874,20 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
       window.clearInterval(timer);
       window.removeEventListener('resize', syncHeight);
     };
-  }, [activeTab, iframeLoaded, showEmbeddedPanel]);
+  }, [activeTab, iframeLoaded, showEmbeddedPanel, factFindOpen]);
+
+  useEffect(() => {
+    if (!factFindOpen) return;
+    const prevHtmlOverflow = document.documentElement.style.overflow;
+    const prevBodyOverflow = document.body.style.overflow;
+    document.documentElement.style.overflow = 'hidden';
+    document.body.style.overflow = 'hidden';
+    window.scrollTo(0, 0);
+    return () => {
+      document.documentElement.style.overflow = prevHtmlOverflow;
+      document.body.style.overflow = prevBodyOverflow;
+    };
+  }, [factFindOpen]);
 
   // Personal dashboard: always greet the signed-in user (not mock Alex).
   useEffect(() => {
@@ -880,6 +939,11 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
 
   useEffect(() => {
     if (!iframeLoaded || !isPersonalDashboard) return;
+    postAdvisersSync();
+  }, [iframeLoaded, isPersonalDashboard, advisersData, bootstrapData, isAdmin, clerkEmail, postAdvisersSync]);
+
+  useEffect(() => {
+    if (!iframeLoaded || !isPersonalDashboard) return;
     postOverviewStats();
   }, [
     iframeLoaded,
@@ -903,7 +967,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
     }
     if (activeTab === 'ai') {
       const idoc = iframeRef.current?.contentDocument;
-      if (idoc && hasAiReports) void refreshAiHubFromApi(idoc);
+      if (idoc) void refreshAiHubFromApi(idoc);
     }
     iframeRef.current?.contentWindow?.postMessage(
       { type: 'ko:switch-tab', tab: activeTab },
@@ -942,6 +1006,22 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
           return;
         }
         router.push(data.path);
+        return;
+      }
+
+      if (data?.type === 'ko:fact-find-open') {
+        setFactFindOpen(true);
+        window.scrollTo(0, 0);
+        const iframeEl = iframeRef.current;
+        if (iframeEl) {
+          const top = Math.max(0, Math.round(iframeEl.getBoundingClientRect().top));
+          setFrameHeight(Math.max(window.innerHeight - top, 480));
+        }
+        return;
+      }
+
+      if (data?.type === 'ko:fact-find-close') {
+        setFactFindOpen(false);
         return;
       }
 
@@ -1991,40 +2071,59 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
     }
   }
 
-  async function refreshAiHubFromApi(idoc: Document) {
-    if (!isPersonalDashboard) return;
-    if (!hasAiReportsRef.current) return;
-    const token = await getTokenRef.current();
-    if (!token) return;
-    const res = await aiApi.listReports(token, { page: 1, perPage: 100 });
+  function clearAiHubDemo(idoc: Document, message?: string) {
     const tbody = idoc.getElementById('ai-rpt-table-body');
     const subtitle = idoc.getElementById('ai-rpt-subtitle');
     const statTotal = idoc.getElementById('ai-rpt-stat-total');
     const statFlags = idoc.getElementById('ai-rpt-stat-flags');
-    if (!tbody) return;
+    const clientTotal = clientsDataRef.current.length;
+    if (tbody) {
+      tbody.innerHTML = `<tr class="ai-rpt-empty-row"><td colspan="6">${
+        message ??
+        (hasAiReportsRef.current
+          ? 'No AI reports yet — generate a report from a case to see it here.'
+          : 'AI reports are not available on your plan or visibility settings.')
+      }</td></tr>`;
+    }
+    if (subtitle) subtitle.textContent = `${clientTotal} of ${clientTotal} clients`;
+    if (statTotal) statTotal.textContent = '0';
+    if (statFlags) statFlags.textContent = '0';
+  }
 
-    const esc = (s: string) =>
-      s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  async function refreshAiHubFromApi(idoc: Document) {
+    if (!isPersonalDashboard) return;
+    if (!hasAiReportsRef.current) {
+      clearAiHubDemo(idoc);
+      return;
+    }
+    try {
+      const token = await getTokenRef.current();
+      if (!token) return;
+      const res = await aiApi.listReports(token, { page: 1, perPage: 100 });
+      const tbody = idoc.getElementById('ai-rpt-table-body');
+      const subtitle = idoc.getElementById('ai-rpt-subtitle');
+      const statTotal = idoc.getElementById('ai-rpt-stat-total');
+      const statFlags = idoc.getElementById('ai-rpt-stat-flags');
+      if (!tbody) return;
 
-    const templateLabels: Record<string, string> = {
-      BTL: 'Buy-to-let',
-      FTB: 'First-time buyer',
-      REMORTGAGE: 'Remortgage',
-      HOME_MOVER: 'Home mover',
-      PRODUCT_TRANSFER: 'Product transfer',
-      DIVORCE: 'Divorce/separation',
-      SELF_EMPLOYED: 'Self-employed',
-      VULNERABLE_OVERLAY: 'Vulnerable overlay',
-    };
+      const esc = (s: string) =>
+        s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+      const templateLabels: Record<string, string> = {
+        BTL: 'Buy-to-let',
+        FTB: 'First-time buyer',
+        REMORTGAGE: 'Remortgage',
+        HOME_MOVER: 'Home mover',
+        PRODUCT_TRANSFER: 'Product transfer',
+        DIVORCE: 'Divorce/separation',
+        SELF_EMPLOYED: 'Self-employed',
+        VULNERABLE_OVERLAY: 'Vulnerable overlay',
+      };
 
     const clientTotal = clientsDataRef.current.length;
 
     if (!res.data.length) {
-      tbody.innerHTML =
-        '<tr class="ai-rpt-empty-row"><td colspan="6">No AI reports yet — generate a report from a case to see it here.</td></tr>';
-      if (subtitle) subtitle.textContent = `${clientTotal} of ${clientTotal} clients`;
-      if (statTotal) statTotal.textContent = '0';
-      if (statFlags) statFlags.textContent = '0';
+      clearAiHubDemo(idoc);
       return;
     }
 
@@ -2084,6 +2183,14 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
 
     const iwin = idoc.defaultView as Window & { applyAiReportsFilters?: () => void };
     iwin?.applyAiReportsFilters?.();
+    } catch (err) {
+      // Adviser without canViewAiSummaries (or other access errors) — clear prototype demo rows.
+      if (isApiErrorCode(err, API_ERROR_CODES.FORBIDDEN) || isApiErrorCode(err, API_ERROR_CODES.PLAN_LIMIT_EXCEEDED)) {
+        clearAiHubDemo(idoc);
+        return;
+      }
+      console.warn('[refreshAiHubFromApi]', err);
+    }
   }
 
   // ── Inject "Advance Stage" button into the compliance tab ────────────────────
@@ -2735,7 +2842,11 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
   const iframeLoading = !iframeSrc || !iframeLoaded;
 
   return (
-    <div className="flex min-h-dvh w-full flex-col bg-brand-bg lg:flex-row">
+    <div
+      className={`flex w-full flex-col bg-brand-bg lg:flex-row ${
+        factFindOpen ? 'h-dvh max-h-dvh overflow-hidden' : 'min-h-dvh'
+      }`}
+    >
       {uploadModal && (
         <IframeUploadModal
           caseId={uploadModal.caseId || null}
@@ -2854,8 +2965,12 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
           </nav>
         </aside>
 
-        <section className="min-w-0 flex-1">
-          <div className="mx-auto w-full max-w-7xl px-0 pt-0 pb-24 lg:px-6 lg:pt-6 lg:pb-10">
+        <section className={`min-w-0 flex-1 ${factFindOpen ? 'min-h-0 overflow-hidden' : ''}`}>
+          <div
+            className={`mx-auto w-full max-w-7xl px-0 pt-0 lg:px-6 lg:pt-6 ${
+              factFindOpen ? 'pb-0 lg:pb-0 h-full min-h-0' : 'pb-24 lg:pb-10'
+            }`}
+          >
           {/* Notification bell + profile header row */}
           <div className="relative mb-2 flex justify-end px-4 pt-4 lg:px-0 lg:pt-0">
           <div className="flex items-center gap-2">
@@ -3039,7 +3154,9 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
                   ref={iframeRef}
                   src={iframeSrc}
                   title="KO Platform Live Demo Prototype"
-                  className={`block w-full border-0 transition-opacity duration-200 ${iframeLoaded ? 'opacity-100' : 'opacity-0'}`}
+                  className={`block w-full border-0 transition-opacity duration-200 ${iframeLoaded ? 'opacity-100' : 'opacity-0'} ${
+                    factFindOpen ? 'rounded-none lg:rounded-xl' : ''
+                  }`}
                   style={{ height: `${frameHeight}px` }}
                   scrolling="no"
                   loading="eager"
@@ -3067,7 +3184,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
                           if (iwin) hookAiReportHandlers(iwin);
                           if (hasMessagesRef.current) void refreshMessagesHubFromApi(idoc);
                           else renderMessagesHubPlanLocked(idoc);
-                          if (hasAiReportsRef.current) void refreshAiHubFromApi(idoc);
+                          void refreshAiHubFromApi(idoc);
                         }
                       }
                     }, 50);

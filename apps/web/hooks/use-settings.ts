@@ -110,39 +110,44 @@ export function useCreateAdviser() {
   });
 }
 
-export function useAdviser(id: string, options?: { enabled?: boolean }) {
-  const getToken = useToken();
-  return useQuery({
-    queryKey: [...advisersQueryKey, id],
-    enabled: (options?.enabled ?? true) && Boolean(id),
-    queryFn: async () => {
-      const token = await requireAuthToken(getToken);
-      return settingsApi.getAdviser(token, id);
-    },
-  });
-}
-
-export function useUpdateAdviser(id: string) {
+export function useUpdateAdviser() {
   const getToken = useToken();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (input: UpdateAdviserInput) => {
+    mutationFn: async ({ id, ...input }: UpdateAdviserInput & { id: string }) => {
       const token = await requireAuthToken(getToken);
       return settingsApi.updateAdviser(token, id, input);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: advisersQueryKey });
-      qc.invalidateQueries({ queryKey: [...advisersQueryKey, id] });
     },
   });
 }
 
-export function useResendAdviserInvite(id: string) {
+export function useDeleteAdviser() {
   const getToken = useToken();
+  const qc = useQueryClient();
   return useMutation({
-    mutationFn: async () => {
+    mutationFn: async (id: string) => {
+      const token = await requireAuthToken(getToken);
+      return settingsApi.deleteAdviser(token, id);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: advisersQueryKey });
+    },
+  });
+}
+
+export function useResendAdviserInvite() {
+  const getToken = useToken();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
       const token = await requireAuthToken(getToken);
       return settingsApi.resendAdviserInvite(token, id);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: advisersQueryKey });
     },
   });
 }

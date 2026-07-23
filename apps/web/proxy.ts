@@ -13,6 +13,8 @@ const isPublicRoute = createRouteMatcher([
   '/sign-in(.*)',
   '/sign-up(.*)',
   '/portal(.*)',
+  // Adviser invite landing — page handles sign-in/up then accept-invite.
+  '/adviser/invite(.*)',
   // Handlers enforce auth — never redirect /api to sign-in (cross-origin SPA).
   '/api/(.*)',
 ]);

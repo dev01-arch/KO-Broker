@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import {
   X,
   User,
@@ -15,8 +15,10 @@ import {
   ArrowLeft,
   Share2,
 } from 'lucide-react';
+import { useUser } from '@clerk/nextjs';
 import { useCreateClient } from '@/hooks/use-clients';
 import { useAdvisers } from '@/hooks/use-settings';
+import { useIsAdmin } from '@/hooks/use-org';
 import {
   formatApiError,
   getApiErrorFieldMap,
@@ -61,7 +63,18 @@ function isPositiveNumber(value: string): boolean {
 export function AddClientModal({ open, onClose }: AddClientModalProps) {
   const { mutateAsync, isPending } = useCreateClient();
   const { data: advisersData, isLoading: advisersLoading } = useAdvisers();
+  const isAdmin = useIsAdmin();
+  const { user } = useUser();
+  const currentEmail = user?.primaryEmailAddress?.emailAddress?.toLowerCase() ?? '';
+
   const activeAdvisers = (advisersData?.data ?? []).filter((adviser) => adviser.isActive);
+  // Advisers can only assign themselves; admins see the full team list.
+  const selectableAdvisers = isAdmin
+    ? activeAdvisers
+    : activeAdvisers.filter((adviser) => adviser.email.toLowerCase() === currentEmail);
+
+  const selfMemberId =
+    selectableAdvisers[0]?.memberId ?? selectableAdvisers[0]?.id ?? '';
 
   const [clientType, setClientType] = useState<ClientType>('INDIVIDUAL');
   const [individualStep, setIndividualStep] = useState<IndividualStep>('referral');
@@ -85,6 +98,15 @@ export function AddClientModal({ open, onClose }: AddClientModalProps) {
 
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [globalError, setGlobalError] = useState<string | null>(null);
+
+  // Default adviser selection: lock non-admins to themselves.
+  useEffect(() => {
+    if (!open) return;
+    if (isAdmin) return;
+    if (selfMemberId && assignedMemberId !== selfMemberId) {
+      setAssignedMemberId(selfMemberId);
+    }
+  }, [open, isAdmin, selfMemberId, assignedMemberId]);
 
   const isCompany = clientType === 'COMPANY';
   const showReferralStep = !isCompany && individualStep === 'referral';
@@ -150,7 +172,7 @@ export function AddClientModal({ open, onClose }: AddClientModalProps) {
           form.companyNumber.trim() &&
           form.email.trim() &&
           form.phone.trim() &&
-          (activeAdvisers.length === 0 || assignedMemberId),
+          (selectableAdvisers.length === 0 || assignedMemberId),
       )
     : Boolean(
         form.firstName.trim() &&
@@ -161,7 +183,7 @@ export function AddClientModal({ open, onClose }: AddClientModalProps) {
           form.email.trim() &&
           form.phone.trim() &&
           (!isReferred || referredToCompany.trim()) &&
-          (activeAdvisers.length === 0 || assignedMemberId),
+          (selectableAdvisers.length === 0 || assignedMemberId),
       );
 
   async function handleSubmit(e: FormEvent) {
@@ -182,7 +204,7 @@ export function AddClientModal({ open, onClose }: AddClientModalProps) {
       }
     }
 
-    if (activeAdvisers.length > 0 && !assignedMemberId) {
+    if (selectableAdvisers.length > 0 && !assignedMemberId) {
       setFieldErrors({ assignedMemberId: 'Please select an adviser' });
       return;
     }
@@ -620,12 +642,13 @@ export function AddClientModal({ open, onClose }: AddClientModalProps) {
                   </div>
                 )}
 
-                {activeAdvisers.length > 0 && (
+                {selectableAdvisers.length > 0 && (
                   <Field label="Adviser" required error={fieldErrors.assignedMemberId}>
                     <select
                       required
                       value={assignedMemberId}
                       onChange={(e) => {
+                        if (!isAdmin) return;
                         setAssignedMemberId(e.target.value);
                         setFieldErrors((prev) => {
                           const next = { ...prev };
@@ -633,13 +656,15 @@ export function AddClientModal({ open, onClose }: AddClientModalProps) {
                           return next;
                         });
                       }}
-                      disabled={advisersLoading}
+                      disabled={advisersLoading || !isAdmin}
                       className={selectCls(!!fieldErrors.assignedMemberId)}
                     >
-                      <option value="">
-                        {advisersLoading ? 'Loading advisers…' : 'Select adviser'}
-                      </option>
-                      {activeAdvisers.map((adviser) => (
+                      {isAdmin && (
+                        <option value="">
+                          {advisersLoading ? 'Loading advisers…' : 'Select adviser'}
+                        </option>
+                      )}
+                      {selectableAdvisers.map((adviser) => (
                         <option key={adviser.id} value={adviser.memberId ?? adviser.id}>
                           {[adviser.firstName, adviser.lastName].filter(Boolean).join(' ') ||
                             adviser.email}

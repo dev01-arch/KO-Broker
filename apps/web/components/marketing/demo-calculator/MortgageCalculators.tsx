@@ -133,7 +133,7 @@ function MetricCard({
         <div className="text-[#535e5b] opacity-70 mt-0.5">{icon}</div>
       </div>
       <div className="flex flex-col gap-1">
-        <p className="font-bold text-[26px] text-[#061f18] leading-none tracking-tight">{value}</p>
+        <p className="font-numeric font-bold text-[26px] text-[#061f18] leading-none tracking-tight">{value}</p>
         <p className="text-[#16856f] text-[10px]">{subtext}</p>
       </div>
     </div>
@@ -912,15 +912,15 @@ function RemortgageCalculator() {
       <div className="grid gap-3">
         <div className="flex justify-between items-center p-4 bg-muted rounded-lg">
           <span className="text-sm text-muted-foreground">Current monthly payment</span>
-          <span className="text-lg font-semibold">{formatCurrency(currentPayment)}</span>
+          <span className="text-lg font-semibold font-numeric">{formatCurrency(currentPayment)}</span>
         </div>
         <div className="flex justify-between items-center p-4 bg-muted rounded-lg">
           <span className="text-sm text-muted-foreground">New monthly payment</span>
-          <span className="text-lg font-semibold text-primary">{formatCurrency(newPayment)}</span>
+          <span className="text-lg font-semibold font-numeric text-primary">{formatCurrency(newPayment)}</span>
         </div>
         <div className="flex justify-between items-center p-4 bg-primary/10 rounded-lg border-2 border-primary">
           <span className="text-sm font-medium">Break-even period</span>
-          <span className="text-lg font-semibold text-primary">
+          <span className="text-lg font-semibold font-numeric text-primary">
             {breakEvenMonths.toFixed(1)} months
           </span>
         </div>

@@ -22,7 +22,11 @@ import { serializeClientSummary } from '@/lib/api/clients';
 export const GET = createHandler({
   method: 'GET',
   handler: async (req: NextRequest, { orgId }) => {
+    // Advisers with canViewAllClients=false only see assigned clients.
+    // ADMIN and advisers with the switch ON see all org clients.
     const currentUser = await getCurrentUser();
+    const isAdviserWithRestriction =
+      currentUser?.role === 'ADVISER' && !currentUser.canViewAllClients;
     const hideAccountDetails =
       currentUser?.role === 'ADVISER' && !currentUser.canViewAccountDetails;
 
@@ -59,8 +63,10 @@ export const GET = createHandler({
       clientType,
       clientCategory,
       status,
-      assignedMemberId,
       isReferred,
+      assignedMemberId: isAdviserWithRestriction ? undefined : assignedMemberId,
+      restrictToAdviserUserId:
+        isAdviserWithRestriction && currentUser ? currentUser.id : undefined,
     });
 
     let finalClients = clients.map(serializeClientSummary);
@@ -122,7 +128,10 @@ export const POST = createHandler({
       {
         success: true,
         data: result.client,
-        meta: { welcomeEmail: result.welcomeEmail },
+        meta: {
+          welcomeEmail: result.welcomeEmail,
+          adviserEmail: result.adviserEmail,
+        },
       },
       { status: 201 }
     );

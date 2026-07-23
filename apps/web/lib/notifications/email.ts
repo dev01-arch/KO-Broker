@@ -281,18 +281,30 @@ export async function sendAdviserInvite(params: {
   orgName: string;
   invitedBy: string;
   inviteUrl: string;
-}): Promise<boolean> {
+}): Promise<SendEmailResult> {
   const { to, firstName, orgName, invitedBy, inviteUrl } = params;
 
   const subject = `You've been invited to join ${orgName} on KO Broker`;
   const text = `Hi ${firstName},\n\n${invitedBy} has invited you to join ${orgName} on KO Broker.\n\nAccept your invitation here: ${inviteUrl}\n\nThis link expires in 48 hours.`;
 
+  const fromName = process.env.RESEND_FROM_NAME?.trim();
+  const fromEmail = process.env.RESEND_FROM_EMAIL?.trim();
+  const from =
+    fromName && fromEmail ? `${fromName} <${fromEmail}>` : fromEmail;
+
   const result = await sendEmail({
     to,
     subject,
     body: text,
+    from,
     html: `<p>Hi ${firstName},</p><p><strong>${invitedBy}</strong> has invited you to join <strong>${orgName}</strong> on KO Broker.</p><p><a href="${inviteUrl}">Accept Invitation</a></p><p>This link expires in 48 hours.</p>`,
   });
 
-  return result.ok;
+  if (!result.ok) {
+    console.error('[sendAdviserInvite] failed:', result.error, { to });
+  } else {
+    console.log('[sendAdviserInvite] sent:', result.id, { to });
+  }
+
+  return result;
 }

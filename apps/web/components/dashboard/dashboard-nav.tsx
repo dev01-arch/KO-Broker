@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { UserButton } from '@clerk/nextjs';
 import { Building2, Lock } from 'lucide-react';
-import { usePlanFeature } from '@/hooks/use-org';
+import { useAdviserVisibility, useIsAdmin, usePlanFeature } from '@/hooks/use-org';
 
 const NAV_ITEMS = [
   { label: 'Overview', href: '/dashboard' },
@@ -15,7 +15,12 @@ const NAV_ITEMS = [
 const TOOL_ITEMS = [
   { label: 'Messages', href: '/dashboard/messages', feature: 'messages' as const },
   { label: 'Compliance', href: '/dashboard/compliance' },
-  { label: 'AI Reports', href: '/dashboard/ai-reports', feature: 'ai_reports' as const },
+  {
+    label: 'AI Reports',
+    href: '/dashboard/ai-reports',
+    feature: 'ai_reports' as const,
+    needsAiVisibility: true,
+  },
   { label: 'Calculators', href: '/dashboard/calculators' },
   { label: 'Settings', href: '/dashboard/settings' },
 ];
@@ -24,6 +29,8 @@ export function DashboardNav({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const hasMessages = usePlanFeature('messages');
   const hasAiReports = usePlanFeature('ai_reports');
+  const { canViewAiSummaries } = useAdviserVisibility();
+  const isAdmin = useIsAdmin();
 
   const isMainDashboard = pathname === '/dashboard';
 
@@ -73,7 +80,10 @@ export function DashboardNav({ children }: { children: React.ReactNode }) {
           <div className="mt-4 px-4 pb-1 text-[10px] font-bold tracking-wider text-ink-60 uppercase">
             Tools
           </div>
-          {TOOL_ITEMS.map((item) => {
+          {TOOL_ITEMS.filter((item) => {
+            if (item.needsAiVisibility && !isAdmin && !canViewAiSummaries) return false;
+            return true;
+          }).map((item) => {
             const locked =
               (item.feature === 'messages' && !hasMessages) ||
               (item.feature === 'ai_reports' && !hasAiReports);
@@ -90,7 +100,9 @@ export function DashboardNav({ children }: { children: React.ReactNode }) {
                 ].join(' ')}
               >
                 <span>{item.label}</span>
-                {locked && <Lock className="h-3.5 w-3.5 shrink-0 text-ink-60" aria-label="Upgrade required" />}
+                {locked && (
+                  <Lock className="h-3.5 w-3.5 shrink-0 text-ink-60" aria-label="Upgrade required" />
+                )}
               </Link>
             );
           })}

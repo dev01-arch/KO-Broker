@@ -591,6 +591,8 @@ export interface AdviserRecord {
   canViewAiSummaries?: boolean;
   /** OrganisationMember id — use for client assignedMemberId when present. */
   memberId?: string | null;
+  emailSent?: boolean;
+  emailError?: string;
 }
 
 export interface UpdateAdviserInput {
@@ -900,6 +902,9 @@ export interface OrgProfile {
   role: 'ADMIN' | 'ADVISER' | 'COMPLIANCE' | 'VIEWER';
   orgId: string;
   orgName: string;
+  canViewAllClients?: boolean;
+  canViewAccountDetails?: boolean;
+  canViewAiSummaries?: boolean;
 }
 
 export interface DashboardBootstrapPayload {
@@ -950,10 +955,6 @@ export const settingsApi = {
     return apiFetch<AdviserRecord[]>('/api/settings/advisers', token);
   },
 
-  getAdviser(token: string, id: string) {
-    return apiFetch<AdviserRecord>(`/api/settings/advisers/${id}`, token);
-  },
-
   createAdviser(token: string, input: CreateAdviserInput) {
     return apiFetch<AdviserRecord>('/api/settings/advisers', token, {
       method: 'POST',
@@ -965,6 +966,12 @@ export const settingsApi = {
     return apiFetch<AdviserRecord>(`/api/settings/advisers/${id}`, token, {
       method: 'PATCH',
       body: JSON.stringify(input),
+    });
+  },
+
+  deleteAdviser(token: string, id: string) {
+    return apiFetch<{ message: string }>(`/api/settings/advisers/${id}`, token, {
+      method: 'DELETE',
     });
   },
 

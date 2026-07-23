@@ -1,4 +1,5 @@
 import { requireApiAuth } from '@/lib/api/require-api-auth';
+import { getCurrentUser } from '@/lib/auth';
 import { getDashboardBootstrap } from '@/lib/api/dashboard-data';
 import { apiError, apiNotFound, apiSuccess } from '@/lib/api/responses';
 import { isPrismaConnectionError } from '@/lib/api/prisma-errors';
@@ -10,7 +11,14 @@ export async function GET() {
     if ('response' in authResult) return authResult.response;
 
     const { orgId, user } = authResult;
-    const data = await getDashboardBootstrap(orgId, user);
+    const visibilityUser = await getCurrentUser();
+    const data = await getDashboardBootstrap(orgId, {
+      id: visibilityUser?.id ?? user.id,
+      role: visibilityUser?.role ?? user.role,
+      canViewAllClients: visibilityUser?.canViewAllClients,
+      canViewAccountDetails: visibilityUser?.canViewAccountDetails,
+      canViewAiSummaries: visibilityUser?.canViewAiSummaries,
+    });
 
     if (!data.org) return apiNotFound('Organisation not found');
 

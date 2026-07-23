@@ -4,6 +4,7 @@ import { createParamHandler } from '@/lib/api/handler';
 import { prisma } from '@/lib/db';
 import { logAuditEvent, computeDiff } from '@/lib/compliance/audit';
 import { requireVisibility, getCurrentUser, maskClientFinancials, maskCaseFinancials } from '@/lib/auth';
+import { clientAssignedToAdviserWhere, isRestrictedAdviser } from '@/lib/auth/adviser-scope';
 import { UpdateClientSchema } from '@ko/types';
 
 // ── GET /api/clients/[id] ─────────────────────────────────────────────────────
@@ -13,10 +14,9 @@ export const GET = createParamHandler<unknown, { id: string }>({
     handler: async (_req: NextRequest, { orgId, params }) => {
         const { id } = params;
 
-        // ADVISER with canViewAllClients=false: only show clients from their assigned cases
+        // ADVISER with canViewAllClients=false: only show assigned clients
         const currentUser = await getCurrentUser();
-        const isAdviserWithRestriction =
-            currentUser?.role === 'ADVISER' && !currentUser.canViewAllClients;
+        const isAdviserWithRestriction = isRestrictedAdviser(currentUser);
         const hideAccountDetails =
             currentUser?.role === 'ADVISER' && !currentUser.canViewAccountDetails;
 
@@ -25,7 +25,7 @@ export const GET = createParamHandler<unknown, { id: string }>({
                 id,
                 orgId,
                 ...(isAdviserWithRestriction && currentUser
-                    ? { cases: { some: { assignedAdviserId: currentUser.id } } }
+                    ? clientAssignedToAdviserWhere(currentUser.id)
                     : {}),
             },
             include: {

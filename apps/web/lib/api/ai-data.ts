@@ -13,6 +13,7 @@ import {
   generateReportPdfBuffer,
 } from '@/lib/pdf/generateReportPdf';
 import { uploadToR2 } from '@/lib/storage/r2';
+import { caseAssignedToAdviserWhere } from '@/lib/auth/adviser-scope';
 import {
   sendRecommendationNotification,
 } from '@/lib/notifications/email';
@@ -69,11 +70,22 @@ export function coerceReportSections(sections: unknown): ReportSection[] {
 
 export async function listAiReportsForOrg(
   orgId: string,
-  params: { page: number; perPage: number; caseId?: string },
+  params: {
+    page: number;
+    perPage: number;
+    caseId?: string;
+    /** When set, only reports for cases/clients assigned to this adviser. */
+    restrictToAdviserUserId?: string;
+  },
 ) {
   try {
     const where = {
-      case: { orgId },
+      case: {
+        orgId,
+        ...(params.restrictToAdviserUserId
+          ? caseAssignedToAdviserWhere(params.restrictToAdviserUserId)
+          : {}),
+      },
       ...(params.caseId ? { caseId: params.caseId } : {}),
     };
     const [total, reports] = await Promise.all([

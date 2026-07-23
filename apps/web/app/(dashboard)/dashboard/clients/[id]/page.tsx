@@ -948,7 +948,7 @@ function StatCard({
   return (
     <div className="rounded-xl border border-ink-20 bg-white p-4 flex flex-col gap-1">
       {icon}
-      <span className="text-2xl font-bold font-body text-ink">{value}</span>
+      <span className="text-2xl font-bold font-numeric text-ink">{value}</span>
       <span className="text-xs text-ink-60">{label}</span>
     </div>
   );

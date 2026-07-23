@@ -10,11 +10,18 @@
 import { NextRequest } from 'next/server';
 import { SendMessageSchema } from '@ko/types';
 import { requireApiAuth } from '@/lib/api/require-api-auth';
+import { getCurrentUser } from '@/lib/auth';
+import {
+  caseAssignedToAdviserWhere,
+  clientAssignedToAdviserWhere,
+  isRestrictedAdviser,
+} from '@/lib/auth/adviser-scope';
 import { listMessagesForOrg, sendMessageForOrg } from '@/lib/api/messages-data';
 import { orgHasFeature } from '@/lib/api/plan-access';
 import { apiError, apiFromZodError, apiPlanLimitExceeded, apiSuccess } from '@/lib/api/responses';
 import { isPrismaConnectionError, isPrismaMissingColumnError } from '@/lib/api/prisma-errors';
 import { logAuditEvent } from '@/lib/compliance/audit';
+import { prisma } from '@/lib/db';
 
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl;
@@ -35,6 +42,7 @@ export async function GET(req: NextRequest) {
       return authResult.response;
     }
     const { orgId } = authResult;
+    const currentUser = await getCurrentUser();
 
     if (!(await orgHasFeature(orgId, 'messages'))) {
       return apiPlanLimitExceeded('Messages require a Professional or Enterprise plan');
@@ -46,6 +54,8 @@ export async function GET(req: NextRequest) {
       caseId,
       clientId,
       unreadOnly,
+      restrictToAdviserUserId:
+        isRestrictedAdviser(currentUser) && currentUser ? currentUser.id : undefined,
     });
 
     return apiSuccess(messages, { meta: { total, page, perPage } });
@@ -79,6 +89,36 @@ export async function POST(req: NextRequest) {
 
     const parsed = SendMessageSchema.safeParse(body);
     if (!parsed.success) return apiFromZodError(parsed.error);
+
+    const currentUser = await getCurrentUser();
+    if (isRestrictedAdviser(currentUser) && currentUser) {
+      const { caseId, clientId } = parsed.data;
+      if (caseId) {
+        const allowedCase = await prisma.case.findFirst({
+          where: {
+            id: caseId,
+            orgId,
+            ...caseAssignedToAdviserWhere(currentUser.id),
+          },
+          select: { id: true },
+        });
+        if (!allowedCase) {
+          return apiError('FORBIDDEN', 'You can only message clients assigned to you.', 403);
+        }
+      } else if (clientId) {
+        const allowedClient = await prisma.client.findFirst({
+          where: {
+            id: clientId,
+            orgId,
+            ...clientAssignedToAdviserWhere(currentUser.id),
+          },
+          select: { id: true },
+        });
+        if (!allowedClient) {
+          return apiError('FORBIDDEN', 'You can only message clients assigned to you.', 403);
+        }
+      }
+    }
 
     const result = await sendMessageForOrg(orgId, parsed.data);
 

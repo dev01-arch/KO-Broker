@@ -59,4 +59,15 @@ export function useIsAdmin(): boolean {
   return useOrgRole() === 'ADMIN';
 }
 
+/** Per-adviser visibility from org profile. ADMIN always true. */
+export function useAdviserVisibility() {
+  const { data: profile } = useOrgProfile();
+  const isAdmin = profile?.role === 'ADMIN';
+  return {
+    canViewAllClients: isAdmin || Boolean(profile?.canViewAllClients),
+    canViewAccountDetails: isAdmin || Boolean(profile?.canViewAccountDetails),
+    canViewAiSummaries: isAdmin || Boolean(profile?.canViewAiSummaries),
+  };
+}
+
 export type { OrgProfile };

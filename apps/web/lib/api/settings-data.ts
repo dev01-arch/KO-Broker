@@ -250,7 +250,15 @@ export async function updateOrgMessagingSettings(
   }
 }
 
-export async function getOrgProfile(orgId: string, user: { role: string }) {
+export async function getOrgProfile(
+  orgId: string,
+  user: {
+    role: string;
+    canViewAllClients?: boolean;
+    canViewAccountDetails?: boolean;
+    canViewAiSummaries?: boolean;
+  },
+) {
   try {
     const org = await prisma.organisation.findUnique({
       where: { id: orgId },
@@ -262,6 +270,10 @@ export async function getOrgProfile(orgId: string, user: { role: string }) {
       orgName: org.name,
       plan: org.plan as 'STARTER' | 'PROFESSIONAL' | 'ENTERPRISE',
       role: user.role as 'ADMIN' | 'ADVISER' | 'COMPLIANCE' | 'VIEWER',
+      // Per-adviser visibility (ADMIN UI ignores these; advisers use for nav/gates)
+      canViewAllClients: user.role === 'ADMIN' ? true : Boolean(user.canViewAllClients),
+      canViewAccountDetails: user.role === 'ADMIN' ? true : Boolean(user.canViewAccountDetails),
+      canViewAiSummaries: user.role === 'ADMIN' ? true : Boolean(user.canViewAiSummaries),
     };
   } catch (error) {
     if (useDevStore(error)) {
@@ -271,6 +283,9 @@ export async function getOrgProfile(orgId: string, user: { role: string }) {
         orgName: org?.name ?? 'Development Organisation',
         plan: org?.plan ?? 'STARTER',
         role: user.role as 'ADMIN' | 'ADVISER' | 'COMPLIANCE' | 'VIEWER',
+        canViewAllClients: user.role === 'ADMIN' ? true : Boolean(user.canViewAllClients),
+        canViewAccountDetails: user.role === 'ADMIN' ? true : Boolean(user.canViewAccountDetails),
+        canViewAiSummaries: user.role === 'ADMIN' ? true : Boolean(user.canViewAiSummaries),
       };
     }
     throw error;
@@ -295,6 +310,65 @@ export async function listAdvisersForOrg(orgId: string) {
   } catch (error) {
     if (useDevStore(error)) {
       return devStore.listAdvisers(orgId);
+    }
+    throw error;
+  }
+}
+
+const SETTINGS_ADVISER_SELECT = {
+  id: true,
+  email: true,
+  firstName: true,
+  lastName: true,
+  role: true,
+  isActive: true,
+  invitePending: true,
+  inviteTokenExpiry: true,
+  canViewAllClients: true,
+  canViewAccountDetails: true,
+  canViewAiSummaries: true,
+  createdAt: true,
+  organisationMember: { select: { id: true } },
+} as const;
+
+/**
+ * Advisers for settings UI + assignment: User rows that were invited
+ * (pending invite or linked OrganisationMember). Excludes Clerk-only
+ * users who were never invited via Add adviser.
+ */
+export async function listInvitedAdvisersForOrg(orgId: string) {
+  try {
+    const advisers = await prisma.user.findMany({
+      where: {
+        orgId,
+        role: { not: 'ADMIN' },
+        OR: [{ invitePending: true }, { organisationMember: { isNot: null } }],
+      },
+      select: SETTINGS_ADVISER_SELECT,
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return advisers.map(({ organisationMember, ...adviser }) => ({
+      ...adviser,
+      memberId: organisationMember?.id ?? null,
+    }));
+  } catch (error) {
+    if (useDevStore(error)) {
+      return devStore.listAdvisers(orgId).map((member) => ({
+        id: member.id,
+        email: member.email,
+        firstName: member.firstName,
+        lastName: member.lastName,
+        role: member.role,
+        isActive: member.isActive,
+        invitePending: false,
+        inviteTokenExpiry: null as string | null,
+        canViewAllClients: false,
+        canViewAccountDetails: false,
+        canViewAiSummaries: false,
+        createdAt: member.createdAt,
+        memberId: member.id,
+      }));
     }
     throw error;
   }

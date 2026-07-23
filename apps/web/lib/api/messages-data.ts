@@ -10,6 +10,7 @@ import {
 } from '@/lib/notifications/message-email-digest';
 import { sendSMS } from '@/lib/notifications/sms';
 import type { MessageChannel, MessageDirection, MessageSource } from '@ko/types';
+import { messageAssignedToAdviserWhere } from '@/lib/auth/adviser-scope';
 
 function useDevStore(error: unknown) {
   return process.env.NODE_ENV === 'development' && isPrismaConnectionError(error);
@@ -117,14 +118,23 @@ export async function listMessagesForOrg(
     caseId?: string;
     clientId?: string;
     unreadOnly?: boolean;
+    /** When set, only messages for clients/cases assigned to this adviser. */
+    restrictToAdviserUserId?: string;
   },
 ) {
   try {
+    const andFilters = [
+      ...(params.restrictToAdviserUserId
+        ? [messageAssignedToAdviserWhere(params.restrictToAdviserUserId)]
+        : []),
+    ];
+
     const where = {
       orgId,
       ...(params.caseId ? { caseId: params.caseId } : {}),
       ...(params.clientId ? { clientId: params.clientId } : {}),
       ...(params.unreadOnly ? { isRead: false } : {}),
+      ...(andFilters.length > 0 ? { AND: andFilters } : {}),
     };
     const [total, messages] = await Promise.all([
       prisma.message.count({ where }),

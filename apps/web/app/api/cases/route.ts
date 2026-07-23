@@ -10,6 +10,7 @@ import { logAuditEvent } from '@/lib/compliance/audit';
 import { CreateCaseSchema } from '@ko/types';
 import { generateReference, calculateLTV } from '@ko/utils';
 import { getCurrentUser, maskCaseFinancials } from '@/lib/auth';
+import { caseAssignedToAdviserWhere, isRestrictedAdviser } from '@/lib/auth/adviser-scope';
 
 // ── GET /api/cases ────────────────────────────────────────────────────────────
 
@@ -17,8 +18,7 @@ export const GET = createHandler({
     method: 'GET',
     handler: async (req: NextRequest, { orgId }) => {
         const currentUser = await getCurrentUser();
-        const isAdviserWithRestriction =
-            currentUser?.role === 'ADVISER' && !currentUser.canViewAllClients;
+        const isAdviserWithRestriction = isRestrictedAdviser(currentUser);
         const hideAccountDetails =
             currentUser?.role === 'ADVISER' && !currentUser.canViewAccountDetails;
 
@@ -30,25 +30,30 @@ export const GET = createHandler({
         const adviserId = searchParams.get('adviserId') ?? undefined;
         const search = searchParams.get('search') ?? '';
 
+        const andFilters = [
+            ...(isAdviserWithRestriction && currentUser
+                ? [caseAssignedToAdviserWhere(currentUser.id)]
+                : adviserId
+                  ? [{ assignedAdviserId: adviserId }]
+                  : []),
+            ...(search
+                ? [
+                    {
+                      OR: [
+                        { referenceNumber: { contains: search, mode: 'insensitive' as const } },
+                        { client: { firstName: { contains: search, mode: 'insensitive' as const } } },
+                        { client: { lastName: { contains: search, mode: 'insensitive' as const } } },
+                      ],
+                    },
+                  ]
+                : []),
+        ];
+
         const where = {
             orgId,
             ...(stage ? { stage: stage as never } : {}),
             ...(type ? { type: type as never } : {}),
-            // Scope to assigned adviser if restricted
-            ...(isAdviserWithRestriction && currentUser
-                ? { assignedAdviserId: currentUser.id }
-                : adviserId
-                ? { assignedAdviserId: adviserId }
-                : {}),
-            ...(search
-                ? {
-                    OR: [
-                        { referenceNumber: { contains: search, mode: 'insensitive' as const } },
-                        { client: { firstName: { contains: search, mode: 'insensitive' as const } } },
-                        { client: { lastName: { contains: search, mode: 'insensitive' as const } } },
-                    ],
-                }
-                : {}),
+            ...(andFilters.length > 0 ? { AND: andFilters } : {}),
         };
 
         const [cases, total] = await Promise.all([

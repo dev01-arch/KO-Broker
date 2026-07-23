@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server';
+import { AuthError, requireVisibility } from '@/lib/auth';
 import { requireApiAuth } from '@/lib/api/require-api-auth';
 import { approveAiReportForOrg } from '@/lib/api/ai-data';
 import { apiBusinessRuleViolation, apiError, apiNotFound, apiSuccess } from '@/lib/api/responses';
@@ -12,6 +13,15 @@ export async function POST(_req: NextRequest, context: RouteContext) {
     if ('response' in authResult) return authResult.response;
     const { orgId, user } = authResult;
     const { id } = await context.params;
+
+    try {
+      await requireVisibility('canViewAiSummaries');
+    } catch (error) {
+      if (error instanceof AuthError) {
+        return apiError(error.code, error.message, error.statusCode);
+      }
+      throw error;
+    }
 
     const result = await approveAiReportForOrg(orgId, id, user.id);
     if ('error' in result) {

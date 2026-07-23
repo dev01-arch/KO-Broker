@@ -1,16 +1,23 @@
 import { requireApiAuth } from '@/lib/api/require-api-auth';
+import { getCurrentUser } from '@/lib/auth';
 import { getOrgProfile } from '@/lib/api/settings-data';
 import { apiError, apiNotFound, apiSuccess } from '@/lib/api/responses';
 import { isPrismaConnectionError } from '@/lib/api/prisma-errors';
 
-/** Returns the signed-in user's org plan and role for UI gating (§1, §4). */
+/** Returns the signed-in user's org plan, role, and visibility for UI gating (§1, §4). */
 export async function GET() {
   try {
     const authResult = await requireApiAuth();
     if ('response' in authResult) return authResult.response;
     const { orgId, user } = authResult;
+    const visibilityUser = await getCurrentUser();
 
-    const profile = await getOrgProfile(orgId, user);
+    const profile = await getOrgProfile(orgId, {
+      role: visibilityUser?.role ?? user.role,
+      canViewAllClients: visibilityUser?.canViewAllClients,
+      canViewAccountDetails: visibilityUser?.canViewAccountDetails,
+      canViewAiSummaries: visibilityUser?.canViewAiSummaries,
+    });
     if (!profile) return apiNotFound('Organisation not found');
 
     return apiSuccess(profile);

@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&display=block" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script>
 (function () {
   var qs = new URLSearchParams(location.search);
@@ -17,6 +18,7 @@
 </script>
 <style>
 :root {
+  --font-numeric:'Outfit',sans-serif;
   --teal-900:#04342C; --teal-800:#085041; --teal-700:#0F6E56; --teal-500:#1D9E75; --teal-400:#5DCAA5; --teal-100:#9FE1CB; --teal-50:#E1F5EE;
   --ink:#0D1F1A; --ink-60:rgba(13,31,26,0.6); --ink-20:rgba(13,31,26,0.12); --ink-08:rgba(13,31,26,0.06);
   --white:#FFFFFF; --surface:#F7FBF9; --amber:#EF9F27; --red:#E24B4A; --blue:#378ADD;
@@ -82,7 +84,7 @@ h1 em{font-style:normal;color:var(--teal-400)}
 .mock-stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
 .mock-stat{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:14px}
 .mock-stat-label{font-size:11px;color:rgba(255,255,255,0.4);margin-bottom:6px}
-.mock-stat-val{font-family:'DM Sans',sans-serif;font-size:22px;font-weight:700}
+.mock-stat-val{font-family:var(--font-numeric);font-size:22px;font-weight:700}
 .mock-stat-val.teal{color:var(--teal-400)}
 .mock-stat-val.amber{color:var(--amber)}
 .mock-kanban{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;flex:1}
@@ -120,7 +122,7 @@ h2{font-family:'Syne',sans-serif;font-size:clamp(28px,3.5vw,42px);font-weight:80
 .pricing-card.featured{background:var(--teal-700);border-color:var(--teal-500)}
 .pricing-badge{position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:var(--teal-400);color:var(--ink);font-size:11px;font-weight:700;padding:3px 12px;border-radius:100px}
 .plan-name{font-size:13px;font-weight:600;color:rgba(255,255,255,0.6);margin-bottom:12px;letter-spacing:.06em;text-transform:uppercase}
-.price{font-family:'DM Sans',sans-serif;font-size:44px;font-weight:800;line-height:1}
+.price{font-family:var(--font-numeric);font-size:44px;font-weight:800;line-height:1}
 .price sup{font-size:22px;vertical-align:top;margin-top:8px}
 .price-sub{font-size:13px;color:rgba(255,255,255,0.5);margin-bottom:24px}
 .feature-list{list-style:none;display:flex;flex-direction:column;gap:10px;margin-bottom:28px}
@@ -129,7 +131,7 @@ h2{font-family:'Syne',sans-serif;font-size:clamp(28px,3.5vw,42px);font-weight:80
 .stats-strip{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid rgba(255,255,255,0.07);text-align:center}
 .stat-item{padding:56px 40px;border-right:1px solid rgba(255,255,255,0.07)}
 .stat-item:last-child{border-right:none}
-.stat-num{font-family:'DM Sans',sans-serif;font-size:52px;font-weight:800;color:var(--teal-400);line-height:1;margin-bottom:8px}
+.stat-num{font-family:var(--font-numeric);font-size:52px;font-weight:800;color:var(--teal-400);line-height:1;margin-bottom:8px}
 .stat-label{font-size:14px;color:rgba(255,255,255,0.5)}
 footer{border-top:1px solid rgba(255,255,255,0.07);padding:40px 80px;display:flex;align-items:center;justify-content:space-between}
 .footer-copy{font-size:13px;color:rgba(255,255,255,0.35)}
@@ -177,7 +179,7 @@ footer{border-top:1px solid rgba(255,255,255,0.07);padding:40px 80px;display:fle
 #tab-overview .ov-kpi-copy,#tab-ai .ov-kpi-copy{display:flex;flex-direction:column;align-items:flex-start;gap:5px;min-width:0;flex:1;text-align:left}
 #tab-overview .ov-kpi-title,#tab-ai .ov-kpi-title{font-family:'Syne',sans-serif;font-size:14px;font-style:normal;font-weight:600;line-height:normal;color:#000;align-self:stretch;text-align:left}
 #tab-overview .ov-kpi-hint,#tab-ai .ov-kpi-hint{font-family:'DM Sans',sans-serif;font-size:10px;font-style:normal;font-weight:400;line-height:normal;color:#535E5B;text-align:left;align-self:stretch}
-#tab-overview .ov-kpi-val,#tab-ai .ov-kpi-val{font-family:'DM Sans',sans-serif;font-size:26px;font-style:normal;font-weight:700;line-height:normal;color:#061F18;align-self:stretch;text-align:left}
+#tab-overview .ov-kpi-val,#tab-ai .ov-kpi-val{font-family:var(--font-numeric);font-size:26px;font-style:normal;font-weight:700;line-height:normal;color:#061F18;align-self:stretch;text-align:left}
 #tab-overview .ov-kpi-trend,#tab-ai .ov-kpi-trend{font-family:'DM Sans',sans-serif;font-size:10px;font-style:normal;font-weight:400;line-height:normal;color:#16856F;text-align:left;align-self:stretch}
 #tab-overview .ov-kpi-trend span,#tab-ai .ov-kpi-trend span{text-align:left}
 #tab-overview .ov-kpi-icon,#tab-ai .ov-kpi-icon{width:26px;height:26px;flex-shrink:0;display:block}
@@ -219,8 +221,8 @@ footer{border-top:1px solid rgba(255,255,255,0.07);padding:40px 80px;display:fle
 #tab-overview .ov-pb-summary-card .ov-pb-tab--application{background:#FFF1FD;color:#CE2DB0}
 #tab-overview .ov-pb-summary-card .ov-pb-tab--completion{background:#EDFFFA;color:#0F6E56}
 #tab-overview .ov-pb-stats{display:flex;flex-direction:column;align-items:flex-start;width:100%;gap:6px;margin:0;padding:0}
-#tab-overview .ov-pb-stats .ov-stage-count{font-family:'DM Sans',sans-serif;font-size:30px;font-weight:700;color:#18181b;line-height:1;margin:0}
-#tab-overview .ov-pb-val{font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;letter-spacing:0.02em;margin:0;line-height:normal}
+#tab-overview .ov-pb-stats .ov-stage-count{font-family:var(--font-numeric);font-size:30px;font-weight:700;color:#18181b;line-height:1;margin:0}
+#tab-overview .ov-pb-val{font-family:var(--font-numeric);font-size:12px;font-weight:700;letter-spacing:0.02em;margin:0;line-height:normal}
 #tab-overview .ov-pb-val--lead{color:#066D80}
 #tab-overview .ov-pb-val--factfind{color:#CE652D}
 #tab-overview .ov-pb-val--research{color:#A552E4}
@@ -236,7 +238,7 @@ footer{border-top:1px solid rgba(255,255,255,0.07);padding:40px 80px;display:fle
 #tab-overview .kb-cc-ref{font-size:10px;font-weight:500;color:#a1a1aa;margin-top:2px}
 #tab-overview .kb-cc-tags{display:flex;flex-wrap:wrap;gap:6px}
 #tab-overview .kb-cc-tag{font-size:9px;padding:4px 12px;border-radius:9999px;background:#fafafa;color:#a1a1aa;font-weight:700;border:1px solid #f4f4f5}
-#tab-overview .kb-cc-amt{font-size:12px;font-weight:700;margin-top:0}
+#tab-overview .kb-cc-amt{font-family:var(--font-numeric);font-size:12px;font-weight:700;margin-top:0}
 #tab-overview .kb-cc-amt--lead{color:#066D80}
 #tab-overview .kb-cc-amt--factfind{color:#CE652D}
 #tab-overview .kb-cc-amt--research{color:#A552E4}
@@ -263,8 +265,8 @@ footer{border-top:1px solid rgba(255,255,255,0.07);padding:40px 80px;display:fle
 #tab-cases .ov-pb-summary-card .ov-pb-tab--research{background:#F5EEFA;color:#A552E4}
 #tab-cases .ov-pb-summary-card .ov-pb-tab--application{background:#FFF1FD;color:#CE2DB0}
 #tab-cases .ov-pb-summary-card .ov-pb-tab--completion{background:#EDFFFA;color:#0F6E56}
-#tab-cases .ov-pb-stats .ov-stage-count{font-family:'DM Sans',sans-serif;font-size:30px;font-weight:700;color:#18181b;line-height:1;margin:0}
-#tab-cases .ov-pb-val{font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;letter-spacing:0.02em;margin:0;line-height:normal}
+#tab-cases .ov-pb-stats .ov-stage-count{font-family:var(--font-numeric);font-size:30px;font-weight:700;color:#18181b;line-height:1;margin:0}
+#tab-cases .ov-pb-val{font-family:var(--font-numeric);font-size:12px;font-weight:700;letter-spacing:0.02em;margin:0;line-height:normal}
 #tab-cases .ov-pb-val--lead{color:#066D80}
 #tab-cases .ov-pb-val--factfind{color:#CE652D}
 #tab-cases .ov-pb-val--research{color:#A552E4}
@@ -279,7 +281,7 @@ footer{border-top:1px solid rgba(255,255,255,0.07);padding:40px 80px;display:fle
 #tab-cases .kb-cc-ref{font-size:10px;font-weight:500;color:#a1a1aa;margin-top:2px}
 #tab-cases .kb-cc-tags{display:flex;flex-wrap:wrap;gap:6px}
 #tab-cases .kb-cc-tag{font-size:9px;padding:4px 12px;border-radius:9999px;background:#fafafa;color:#a1a1aa;font-weight:700;border:1px solid #f4f4f5}
-#tab-cases .kb-cc-amt{font-size:12px;font-weight:700;margin-top:0}
+#tab-cases .kb-cc-amt{font-family:var(--font-numeric);font-size:12px;font-weight:700;margin-top:0}
 #tab-cases .kb-cc-amt--lead{color:#066D80}
 #tab-cases .kb-cc-amt--factfind{color:#CE652D}
 #tab-cases .kb-cc-amt--research{color:#A552E4}
@@ -343,8 +345,8 @@ body.embedded #tab-cases{background:transparent}
 #tab-cases .cs-pipeline-mobile-trigger-main--application .cs-pipeline-mobile-stage-val{color:#CE2DB0}
 #tab-cases .cs-pipeline-mobile-trigger-main--completion .cs-pipeline-mobile-stage-name,
 #tab-cases .cs-pipeline-mobile-trigger-main--completion .cs-pipeline-mobile-stage-val{color:#0F6E56}
-#tab-cases .cs-pipeline-mobile-stage-val{font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;line-height:1.2;margin:0}
-#tab-cases .cs-pipeline-mobile-stage-count{font-family:'DM Sans',sans-serif;font-size:36px;font-weight:700;color:#18181b;line-height:1;flex-shrink:0}
+#tab-cases .cs-pipeline-mobile-stage-val{font-family:var(--font-numeric);font-size:13px;font-weight:700;line-height:1.2;margin:0}
+#tab-cases .cs-pipeline-mobile-stage-count{font-family:var(--font-numeric);font-size:36px;font-weight:700;color:#18181b;line-height:1;flex-shrink:0}
 #tab-cases .cs-pipeline-mobile-chevron{display:flex;align-items:center;justify-content:center;width:56px;flex-shrink:0;background:#fff;border-left:1px solid rgba(13,31,26,0.08)}
 #tab-cases .cs-pipeline-mobile-chevron-btn{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;border:1px solid #e4e4e7;background:#fff;color:#3f3f46}
 #tab-cases .cs-pipeline-mobile-trigger[aria-expanded="true"] .cs-pipeline-mobile-chevron-btn{transform:rotate(180deg)}
@@ -388,7 +390,7 @@ body.embedded #tab-cases{background:transparent}
 #tab-overview .ov-activity-copy{display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-width:0}
 #tab-overview .ov-activity-name{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:#18181b;line-height:1.3;margin:0}
 #tab-overview .ov-activity-ref{font-family:'DM Sans',sans-serif;font-size:11px;font-weight:400;color:#a1a1aa;line-height:normal;margin:0}
-#tab-overview .ov-activity-amt{font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;color:#16856F;flex-shrink:0;white-space:nowrap}
+#tab-overview .ov-activity-amt{font-family:var(--font-numeric);font-size:14px;font-weight:700;color:#16856F;flex-shrink:0;white-space:nowrap}
 
 /* Overview — mobile pipeline (stage pills + single column); hidden on desktop */
 #tab-overview .ov-pipeline-mobile{display:none;flex-direction:column;align-items:stretch;gap:14px;width:100%;box-sizing:border-box}
@@ -698,7 +700,7 @@ body.embedded #tab-ai{background:transparent}
 .stat-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
 .stat-card{background:var(--white);border:1px solid var(--ink-20);border-radius:var(--r);padding:18px 20px}
 .stat-card-label{font-size:12px;font-weight:500;color:var(--ink-60);margin-bottom:6px}
-.stat-card-val{font-family:'DM Sans',sans-serif;font-size:30px;font-weight:800;color:var(--ink);line-height:1;margin-bottom:4px}
+.stat-card-val{font-family:var(--font-numeric);font-size:30px;font-weight:800;color:var(--ink);line-height:1;margin-bottom:4px}
 .stat-card-sub{font-size:12px;color:var(--ink-60)}
 .accent{display:inline-block;padding:2px 8px;border-radius:100px;font-size:11px;font-weight:600}
 .accent-green{background:rgba(15,110,86,0.1);color:var(--teal-700)}
@@ -1045,7 +1047,7 @@ body.embedded #tab-case-detail{background:transparent}
 .msg-stat-icon--amber{background:rgba(239,159,39,0.1)}
 .msg-stat-icon--red{background:rgba(226,75,74,0.08)}
 .msg-stat-icon--blue{background:rgba(55,138,221,0.1)}
-.msg-stat-val{font-family:'DM Sans',sans-serif;font-size:24px;font-weight:700;color:#18181b;line-height:1}
+.msg-stat-val{font-family:var(--font-numeric);font-size:24px;font-weight:700;color:#18181b;line-height:1}
 .msg-stat-label{font-size:13px;font-weight:500;color:#18181b;margin-top:3px}
 .msg-stat-sub{font-size:11px;color:#a1a1aa;margin-top:1px}
 .msg-hub-body{background:#fff;border:1px solid #e4e4e7;border-radius:14px;overflow:hidden;display:flex;min-height:420px;height:min(640px, calc(100vh - 280px));max-height:calc(100vh - 240px)}
@@ -1247,9 +1249,14 @@ body.embedded .msg-hub-body{min-height:420px;height:min(640px, calc(100vh - 260p
 .ai-badge{background:rgba(15,110,86,0.12);border:1px solid rgba(15,110,86,0.25);color:var(--teal-700);font-size:11px;font-weight:600;padding:4px 12px;border-radius:100px;display:inline-flex;align-items:center;gap:5px}
 
 /* ── FACT FIND WIZARD ─────────────────────────────────────────────────────── */
-html.ff-open,body.ff-open{overflow:hidden!important;height:100%}
-#ff-overlay{position:fixed;inset:0;z-index:500;width:100%;height:100%;height:100vh;height:100dvh;max-height:100dvh;background:#FAFBFC;display:flex;flex-direction:column;justify-content:flex-start;align-items:stretch;gap:clamp(72px,12vh,112px);font-family:'DM Sans',system-ui,sans-serif;color:#18181b;overflow:hidden;padding:12px 0 32px;box-sizing:border-box}
+/* Parent locks page scroll + sizes iframe to the visible viewport when open.
+   Only #ff-overlay scrolls; Auto-fill float is pinned to that viewport. */
+html.ff-open,body.ff-open{overflow:hidden!important;height:100%!important;max-height:100%!important}
+body.ff-open .dash-layout{height:100%!important;max-height:100%!important;overflow:hidden!important}
+body.ff-open .dash-main{overflow:hidden!important;height:100%!important;max-height:100%!important}
+#ff-overlay{position:fixed;inset:0;z-index:500;width:100%;height:100%;height:100vh;height:100dvh;max-height:100dvh;background:#FAFBFC;display:flex;flex-direction:column;justify-content:flex-start;align-items:stretch;gap:0;font-family:'DM Sans',system-ui,sans-serif;color:#18181b;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;padding:48px 0 88px;box-sizing:border-box;-webkit-overflow-scrolling:touch}
 #ff-overlay.ff-hidden{display:none!important}
+.ff-upload-float.ff-hidden{display:none!important}
 #ff-progress-outer{position:fixed;top:0;left:0;right:0;z-index:550;height:3px;background:#e4e4e7;pointer-events:none}
 #ff-progress-inner{height:100%;background:#0F6E56;transition:width .4s cubic-bezier(.4,0,.2,1)}
 #ff-topbar{position:fixed;top:3px;left:0;right:0;z-index:540;display:flex;align-items:center;justify-content:space-between;padding:10px 24px;background:transparent}
@@ -1268,7 +1275,7 @@ html.ff-open,body.ff-open{overflow:hidden!important;height:100%}
 #ff-section-strip::-webkit-scrollbar{display:none}
 .dash-main,.dash-content,.cl-table-panel,.cs-table-panel,.ai-rpt-table-panel,.cd-body,#tab-case-detail,.ov-kanban-section{scrollbar-width:none}
 .dash-main::-webkit-scrollbar,.dash-content::-webkit-scrollbar,.cl-table-panel::-webkit-scrollbar,.cs-table-panel::-webkit-scrollbar,.ai-rpt-table-panel::-webkit-scrollbar,.cd-body::-webkit-scrollbar,#tab-case-detail::-webkit-scrollbar,.ov-kanban-section::-webkit-scrollbar{display:none}
-#ff-section-inner{display:flex;align-items:center;padding:32px 56px 40px 24px;width:max-content;min-width:100%;justify-content:center}
+#ff-section-inner{display:flex;align-items:center;padding:16px 56px 16px 24px;width:max-content;min-width:100%;justify-content:center}
 .ff-sg{display:flex;align-items:center}
 .ff-sg-pill{display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:99px;font-size:11px;font-weight:700;transition:all .3s;white-space:nowrap;user-select:none}
 .ff-sg-pill.ff-active{background:#0F6E56;color:#fff;box-shadow:0 2px 8px rgba(15,110,86,.2)}
@@ -1279,18 +1286,21 @@ html.ff-open,body.ff-open{overflow:hidden!important;height:100%}
 .ff-sg-connector.ff-conn-done{background:rgba(15,110,86,.3)}
 .ff-sg-connector.ff-conn-active{background:rgba(15,110,86,.2)}
 .ff-sg-connector.ff-conn-pending{background:#e4e4e7}
-#ff-card-area{flex:0 0 auto;min-height:0;overflow:visible;display:block;padding:64px 24px;width:100%;box-sizing:border-box}
-#ff-card{width:100%;max-width:672px;max-height:calc(100dvh - 12px - 32px - 2 * clamp(72px,12vh,112px) - 128px - 96px - 128px - 64px);overflow-y:auto;overscroll-behavior:contain;padding:32px 0;margin:0 auto;animation:ff-slide-in .3s cubic-bezier(.34,1.56,.64,1)}
+#ff-card-area{flex:0 0 auto;min-height:0;overflow:visible;display:block;padding:8px 24px 0;width:100%;box-sizing:border-box}
+#ff-card{width:100%;max-width:720px;overflow:visible;max-height:none;padding:8px 0 24px;margin:0 auto;animation:ff-slide-in .3s cubic-bezier(.34,1.56,.64,1)}
 #ff-card.ff-dir-back{animation:ff-slide-back .3s cubic-bezier(.34,1.56,.64,1)}
 @keyframes ff-slide-in{from{opacity:0;transform:translateX(50px)}to{opacity:1;transform:none}}
 @keyframes ff-slide-back{from{opacity:0;transform:translateX(-50px)}to{opacity:1;transform:none}}
-.ff-section-label{font-size:11px;font-weight:700;color:rgba(15,110,86,.6);text-transform:uppercase;letter-spacing:.1em;margin-bottom:20px}
-.ff-q-row{display:flex;align-items:flex-start;gap:12px;margin-bottom:8px}
-.ff-q-num-wrap{display:flex;align-items:center;gap:4px;flex-shrink:0;margin-top:6px}
-.ff-q-num-wrap span{font-size:14px;font-weight:700;color:#0F6E56}
+.ff-section-label{font-size:11px;font-weight:700;color:rgba(15,110,86,.6);text-transform:uppercase;letter-spacing:.1em;margin-bottom:12px}
+.ff-q-block{padding:16px 0;border-bottom:1px solid rgba(228,228,231,.7)}
+.ff-q-block:last-of-type{border-bottom:0;padding-bottom:8px}
+.ff-q-block.ff-q-solo .ff-q-label{font-size:28px}
+.ff-q-row{display:flex;align-items:flex-start;gap:12px;margin-bottom:6px}
+.ff-q-num-wrap{display:flex;align-items:center;gap:4px;flex-shrink:0;margin-top:4px}
+.ff-q-num-wrap span{font-size:13px;font-weight:700;color:#0F6E56}
 .ff-q-num-wrap svg{width:14px;height:14px;stroke:#0F6E56;fill:none;stroke-width:3;flex-shrink:0}
-.ff-q-label{font-size:28px;font-weight:700;color:#18181b;line-height:1.25}
-.ff-q-sub{font-size:14px;color:#71717a;margin:0 0 24px 26px;line-height:1.5}
+.ff-q-label{font-size:18px;font-weight:700;color:#18181b;line-height:1.3}
+.ff-q-sub{font-size:13px;color:#71717a;margin:0 0 12px 26px;line-height:1.5}
 .ff-q-input{margin-left:26px}
 .ff-uinput-wrap{display:flex;align-items:flex-end;gap:8px;border-bottom:2px solid rgba(24,24,27,.2);padding-bottom:4px;transition:border-color .2s}
 .ff-uinput-wrap:focus-within{border-bottom-color:#0F6E56}
@@ -1378,7 +1388,7 @@ html.ff-open,body.ff-open{overflow:hidden!important;height:100%}
 .ff-dep-row>div{flex:1}
 .ff-dep-remove{padding:8px;color:#71717a;cursor:pointer;border:0;background:transparent;border-radius:8px;transition:color .15s;font-size:15px;font-family:inherit;flex-shrink:0;align-self:flex-end;margin-bottom:0}
 .ff-dep-remove:hover{color:#ef4444}
-#ff-action-row{display:flex;align-items:center;gap:12px;margin-top:32px;margin-left:26px;flex-wrap:wrap}
+#ff-action-row{display:flex;align-items:center;gap:12px;margin-top:20px;margin-left:26px;padding-top:16px;border-top:1px solid rgba(228,228,231,.7);flex-wrap:wrap}
 .ff-btn-back{display:inline-flex;align-items:center;gap:4px;padding:10px 16px;border-radius:12px;font-size:14px;font-weight:700;border:2px solid #e4e4e7;background:transparent;color:rgba(24,24,27,.5);cursor:pointer;transition:all .15s;font-family:inherit}
 .ff-btn-back:hover{border-color:rgba(24,24,27,.3);color:#18181b}
 .ff-btn-back.ff-invisible{opacity:0;pointer-events:none;border-color:transparent}
@@ -1390,7 +1400,7 @@ html.ff-open,body.ff-open{overflow:hidden!important;height:100%}
 .ff-spacer{flex:1}
 .ff-btn-skip{display:inline-flex;align-items:center;gap:4px;padding:10px 16px;border-radius:12px;font-size:14px;font-weight:700;border:2px solid transparent;color:rgba(24,24,27,.4);cursor:pointer;transition:all .15s;background:transparent;font-family:inherit}
 .ff-btn-skip:hover{color:#18181b;border-color:#e4e4e7}
-#ff-dot-strip{flex:0 0 auto;display:flex;align-items:center;justify-content:center;padding:40px 24px;pointer-events:none;gap:4px}
+#ff-dot-strip{flex:0 0 auto;display:flex;align-items:center;justify-content:center;padding:12px 24px 8px;pointer-events:none;gap:4px}
 .ff-dot{border-radius:99px;transition:all .2s;display:inline-block}
 .ff-dot.ff-dot-active{width:16px;height:6px;background:#0F6E56}
 .ff-dot.ff-dot-past{width:6px;height:6px;background:rgba(15,110,86,.3)}
@@ -1417,7 +1427,7 @@ html.ff-open,body.ff-open{overflow:hidden!important;height:100%}
 .ff-state-banner span{font-size:13px;line-height:1.5}
 .ff-inline-error{display:flex;align-items:center;gap:6px;margin:10px 0 0 26px;font-size:14px;font-weight:600;color:#DC2626}
 .ff-inline-error svg{width:14px;height:14px;flex-shrink:0}
-.ff-floating-alert{position:fixed;right:22px;bottom:260px;z-index:590;display:flex;align-items:center;gap:8px;border-radius:999px;padding:10px 14px;border:1px solid transparent;box-shadow:0 10px 30px rgba(24,24,27,.16);font-size:13px;font-weight:700}
+.ff-floating-alert{position:fixed;right:22px;bottom:18px;z-index:590;display:flex;align-items:center;gap:8px;border-radius:999px;padding:10px 14px;border:1px solid transparent;box-shadow:0 10px 30px rgba(24,24,27,.16);font-size:13px;font-weight:700}
 .ff-floating-alert svg{width:14px;height:14px;flex-shrink:0}
 .ff-mini-spinner{width:12px;height:12px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;display:inline-block;animation:spin .8s linear infinite}
 .ff-floating-alert.ff-floating-alert--amber{background:#EF9F27;border-color:transparent;color:#fff}
@@ -1484,17 +1494,14 @@ html.ff-open,body.ff-open{overflow:hidden!important;height:100%}
 .ff-upload-empty{font-size:12px;color:#A1A1AA}
 .ff-upload-skip{display:inline-flex;align-items:center;gap:6px;height:36px;padding:0 14px;border-radius:8px;border:0;background:#0F6E56;color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap}
 .ff-upload-skip:hover{background:#16856F}
-.ff-upload-float{position:fixed;left:16px;top:50%;transform:translateY(-50%);z-index:586;display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:14px;border:1px solid #99DCC5;background:#EDFFFA;box-shadow:0 10px 24px rgba(15,110,86,.18);cursor:pointer;max-width:240px}
-.ff-upload-float:hover{background:#E1F5EE}
-.ff-upload-float-ico{width:30px;height:30px;border-radius:50%;background:#DDF4EB;display:flex;align-items:center;justify-content:center;color:#0F6E56;flex-shrink:0}
-.ff-upload-float-ico svg{width:15px;height:15px}
-.ff-upload-float-copy strong{display:block;font-size:12px;font-weight:800;color:#0F6E56;line-height:1.2}
-.ff-upload-float-copy span{display:block;font-size:11px;color:#166534;line-height:1.3;margin-top:2px}
-.ff-upload-tooltip-wrap{position:relative;display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:#DDF4EB;color:#0F6E56;flex-shrink:0;cursor:help}
-.ff-upload-tooltip-wrap svg{width:13px;height:13px}
-.ff-upload-tooltip{position:absolute;left:calc(100% + 10px);top:50%;transform:translateY(-50%);width:220px;padding:10px 12px;border-radius:10px;background:#18181B;color:#fff;font-size:11px;line-height:1.45;font-weight:500;text-align:left;box-shadow:0 10px 24px rgba(24,24,27,.22);opacity:0;visibility:hidden;pointer-events:none;transition:opacity .15s,visibility .15s;z-index:590}
-.ff-upload-tooltip-wrap:hover .ff-upload-tooltip,.ff-upload-tooltip-wrap:focus-visible .ff-upload-tooltip{opacity:1;visibility:visible}
-.ff-upload-tooltip::before{content:'';position:absolute;right:100%;top:50%;transform:translateY(-50%);border:6px solid transparent;border-right-color:#18181B}
+.ff-upload-float{position:fixed;right:18px;bottom:18px;left:auto;top:auto;transform:none;z-index:1200;display:inline-flex;align-items:center;gap:8px;height:44px;padding:0 18px 0 16px;border-radius:999px;border:0;background:#0F6E56;color:#fff;box-shadow:0 8px 24px rgba(15,110,86,.28);cursor:pointer;max-width:none;pointer-events:auto;font-family:'DM Sans',system-ui,sans-serif}
+.ff-upload-float:hover{background:#0a5a44}
+.ff-upload-float-ico{width:18px;height:18px;border-radius:0;background:transparent;display:flex;align-items:center;justify-content:center;color:#fff;flex-shrink:0}
+.ff-upload-float-ico svg{width:18px;height:18px}
+.ff-upload-float-copy{display:block;font-size:14px;font-weight:600;color:#fff;line-height:1.2;white-space:nowrap}
+.ff-upload-float-copy strong{display:inline;font-size:inherit;font-weight:inherit;color:inherit;line-height:inherit}
+.ff-upload-float-copy span{display:none}
+.ff-upload-tooltip-wrap{display:none}
 .ff-credit-preview-wrap{position:fixed;inset:0;z-index:588;background:rgba(13,31,26,.35);display:flex;align-items:center;justify-content:center;padding:20px}
 .ff-credit-preview{width:min(520px,100%);max-height:min(82vh,720px);background:#fff;border-radius:16px;box-shadow:0 24px 60px rgba(24,24,27,.2);overflow:hidden;font-family:'DM Sans',sans-serif;display:flex;flex-direction:column}
 .ff-credit-preview-head{padding:18px 20px 14px;border-bottom:1px solid #E4E4E7;display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
@@ -3746,6 +3753,46 @@ function switchCasesView(v) {
   });
   filterUnread?.addEventListener('click', () => toggleChip(filterUnread));
   filterProduct?.addEventListener('click', () => toggleChip(filterProduct));
+
+  function renderCasesAdviserFilter(advisers, options) {
+    if (!filterAdviser) return;
+    const opts = options || {};
+    const lockToSelf = !!opts.lockToSelf;
+    const active = (advisers || []).filter(function (a) { return a && a.isActive !== false; });
+    filterAdviser.innerHTML = '';
+    if (!lockToSelf) {
+      const allOpt = document.createElement('option');
+      allOpt.value = '';
+      allOpt.textContent = 'All advisers';
+      filterAdviser.appendChild(allOpt);
+    }
+    active.forEach(function (a) {
+      const opt = document.createElement('option');
+      opt.value = a.memberId || a.id;
+      opt.textContent = [a.firstName, a.lastName].filter(Boolean).join(' ') || a.email || 'Adviser';
+      filterAdviser.appendChild(opt);
+    });
+    if (lockToSelf && active.length) {
+      filterAdviser.value = active[0].memberId || active[0].id;
+    }
+  }
+
+  window.addEventListener('message', function (event) {
+    if (event.origin !== window.location.origin) return;
+    const data = event.data;
+    if (data?.type === 'ko:advisers-sync' && Array.isArray(data.advisers)) {
+      renderCasesAdviserFilter(data.advisers, { lockToSelf: !!data.lockToSelf });
+    }
+  });
+
+  // Live dashboard: clear prototype adviser names immediately.
+  if (
+    new URLSearchParams(window.location.search).get('liveData') === '1' &&
+    document.body.classList.contains('embedded') &&
+    filterAdviser
+  ) {
+    filterAdviser.innerHTML = '<option value="">All advisers</option>';
+  }
   refreshCasesKanbanColumns();
 })();
 
@@ -4682,6 +4729,22 @@ function triggerGenerate() {
   const tbody = document.getElementById('ai-rpt-table-body');
   if (!tbody) return;
 
+  const isLiveData =
+    new URLSearchParams(window.location.search).get('liveData') === '1' &&
+    document.body.classList.contains('embedded');
+
+  // Personal dashboard: strip prototype demo rows immediately.
+  if (isLiveData) {
+    tbody.innerHTML =
+      '<tr class="ai-rpt-empty-row" data-ai-rpt-empty><td colspan="6">Loading reports…</td></tr>';
+    var subtitleEl = document.getElementById('ai-rpt-subtitle');
+    var statTotalEl = document.getElementById('ai-rpt-stat-total');
+    var statFlagsEl = document.getElementById('ai-rpt-stat-flags');
+    if (subtitleEl) subtitleEl.textContent = '0 of 0 clients';
+    if (statTotalEl) statTotalEl.textContent = '0';
+    if (statFlagsEl) statFlagsEl.textContent = '0';
+  }
+
   const allRows = () => Array.from(tbody.querySelectorAll('[data-ai-rpt-row]'));
   const visibleRows = () => allRows().filter((tr) => !tr.classList.contains('ai-rpt-row-hidden'));
   const visibleCbs = () => visibleRows().map((tr) => tr.querySelector('.ai-rpt-row-cb')).filter(Boolean);
@@ -5601,6 +5664,44 @@ function calcRun() {
       ' · £' + total.toLocaleString('en-GB') + ' total';
   }
 
+  function updateStageSummaries(caseList) {
+    const stageMap = {
+      ENQUIRY: 'lead',
+      FACT_FIND: 'factfind',
+      RESEARCH: 'research',
+      DIP: 'application',
+      OFFER: 'completion',
+      COMPLETION: 'completion',
+      ARCHIVED: null,
+    };
+    const buckets = {
+      lead: [],
+      factfind: [],
+      research: [],
+      application: [],
+      completion: [],
+    };
+    (caseList || []).forEach(function (c) {
+      if (!c || c.stage === 'ARCHIVED') return;
+      const key = stageMap[c.stage] || 'lead';
+      if (key && buckets[key]) buckets[key].push(c);
+    });
+    Object.keys(buckets).forEach(function (key) {
+      var items = buckets[key];
+      var count = items.length;
+      var total = items.reduce(function (sum, c) {
+        return sum + (Number(c.loanAmount) || 0);
+      }, 0);
+      var tab = document.querySelector('#tab-cases .ov-pb-tab--' + key);
+      var card = tab ? tab.closest('.ov-pb-summary-card') : null;
+      if (!card) return;
+      var countEl = card.querySelector('.ov-stage-count');
+      var valEl = card.querySelector('.ov-pb-val');
+      if (countEl) countEl.textContent = String(count);
+      if (valEl) valEl.textContent = '£' + total.toLocaleString('en-GB');
+    });
+  }
+
   function renderLiveCases(caseList) {
     cacheCaseSummaries(caseList);
     document.querySelectorAll('#tab-cases .cs-case-card').forEach((el) => el.remove());
@@ -5612,7 +5713,9 @@ function calcRun() {
       if (tableBody) tableBody.appendChild(buildTableRow(caseItem));
     });
     updateSubtitle(caseList);
+    updateStageSummaries(caseList);
     if (typeof refreshCasesKanbanColumns === 'function') refreshCasesKanbanColumns();
+    if (typeof window.koRefreshCasesMobilePipeline === 'function') window.koRefreshCasesMobilePipeline();
   }
 
   window.koRenderCases = renderLiveCases;
@@ -5648,6 +5751,7 @@ function calcRun() {
   document.querySelectorAll('#tab-cases .cs-case-card').forEach((el) => el.remove());
   if (tableBody) tableBody.querySelectorAll('.cs-table-row').forEach((el) => el.remove());
   updateSubtitle([]);
+  updateStageSummaries([]);
 })();
 
 // New Client slide panel
@@ -5701,20 +5805,39 @@ function calcRun() {
     'on-boarding': 'EMPLOYED',
   };
 
-  function renderAdviserSelectOptions(advisers) {
+  function renderAdviserSelectOptions(advisers, options) {
     if (!adviserSelect) return;
+    const opts = options || {};
+    const lockToSelf = !!opts.lockToSelf;
+    const selfMemberId = opts.selfMemberId || '';
     const active = (advisers || []).filter(function (a) { return a && a.isActive !== false; });
     const previous = adviserSelect.value;
-    adviserSelect.innerHTML = '<option value="" disabled' + (previous ? '' : ' selected') + '>Select adviser</option>';
+    adviserSelect.innerHTML = '';
+    if (!lockToSelf) {
+      const placeholder = document.createElement('option');
+      placeholder.value = '';
+      placeholder.disabled = true;
+      placeholder.selected = !previous;
+      placeholder.textContent = 'Select adviser';
+      adviserSelect.appendChild(placeholder);
+    }
     active.forEach(function (a) {
       const opt = document.createElement('option');
-      opt.value = a.id;
+      // Prefer OrganisationMember id for assignedMemberId payloads.
+      opt.value = a.memberId || a.id;
       opt.textContent = [a.firstName, a.lastName].filter(Boolean).join(' ') || a.email || 'Adviser';
       adviserSelect.appendChild(opt);
     });
     adviserSelect.required = active.length > 0;
-    if (previous && active.some(function (a) { return a.id === previous; })) {
+    adviserSelect.disabled = lockToSelf && active.length > 0;
+    if (lockToSelf && selfMemberId) {
+      adviserSelect.value = selfMemberId;
+    } else if (lockToSelf && active.length === 1) {
+      adviserSelect.value = active[0].memberId || active[0].id;
+    } else if (previous && active.some(function (a) { return (a.memberId || a.id) === previous; })) {
       adviserSelect.value = previous;
+    } else if (active.length === 1) {
+      adviserSelect.value = active[0].memberId || active[0].id;
     }
   }
 
@@ -5727,7 +5850,10 @@ function calcRun() {
     if (event.origin !== window.location.origin) return;
     const data = event.data;
     if (data?.type === 'ko:advisers-sync' && Array.isArray(data.advisers)) {
-      renderAdviserSelectOptions(data.advisers);
+      renderAdviserSelectOptions(data.advisers, {
+        lockToSelf: !!data.lockToSelf,
+        selfMemberId: data.selfMemberId || '',
+      });
     }
   });
 
@@ -6310,14 +6436,14 @@ calcRun();
 
   function ffApplyExtractedFields(extracted) {
     if (!extracted || typeof extracted !== 'object') return 0;
-    const beforeVis = ffVisible();
-    const stepId = beforeVis[ff.idx]?.id;
+    const beforePages = ffPages();
+    const stepId = beforePages[ff.idx]?.questions?.[0]?.id;
     ff.form = ffDeepMerge(ff.form, extracted);
     if (stepId) {
-      const afterVis = ffVisible();
-      const nextIdx = afterVis.findIndex((q) => q.id === stepId);
+      const afterPages = ffPages();
+      const nextIdx = ffPageOfQuestionId(afterPages, stepId);
       if (nextIdx >= 0) ff.idx = nextIdx;
-      else ff.idx = Math.min(ff.idx, Math.max(afterVis.length - 1, 0));
+      else ffClampPageIdx(afterPages);
     }
     let count = 0;
     const walk = (obj) => {
@@ -6643,8 +6769,92 @@ calcRun();
     {id:'vulnerability',s:'Vulnerability Assessment',l:'Vulnerability assessment questionnaire',t:'vulnerability',sub:'6 domains, 2 questions each, scored 0–2. Score ≥ 16 triggers the isVulnerable flag.'},
   ];
 
-  // ── Visible questions ─────────────────────────────────────────────────────
+  // ── Visible questions / pages (group by subsection) ───────────────────────
   function ffVisible() { return FF_Q.filter(q => !q.si || q.si(ff.form)); }
+  function ffPages() {
+    const pages = [];
+    ffVisible().forEach((q) => {
+      const last = pages[pages.length - 1];
+      if (!last || last.s !== q.s) pages.push({ s: q.s, questions: [q] });
+      else last.questions.push(q);
+    });
+    return pages;
+  }
+  function ffClampPageIdx(pages) {
+    const list = pages || ffPages();
+    ff.idx = Math.max(0, Math.min(ff.idx, Math.max(list.length - 1, 0)));
+    return list;
+  }
+  function ffPageOfQuestionId(pages, questionId) {
+    if (!questionId) return -1;
+    return pages.findIndex((p) => p.questions.some((q) => q.id === questionId));
+  }
+  function ffQuestionOrdinal(pages, questionId) {
+    let n = 0;
+    for (const page of pages) {
+      for (const q of page.questions) {
+        n += 1;
+        if (q.id === questionId) return n;
+      }
+    }
+    return n;
+  }
+  /** Re-render only when conditional questions appear/disappear on the current page. */
+  function ffMaybeRefreshPageForVisibility() {
+    const pages = ffClampPageIdx();
+    const page = pages[ff.idx];
+    const card = document.getElementById('ff-card');
+    if (!card || !page) return;
+    const renderedIds = Array.from(card.querySelectorAll('[data-q-id]')).map((el) => el.dataset.qId).join('|');
+    const nextIds = page.questions.map((q) => q.id).join('|');
+    if (renderedIds !== nextIds) {
+      ffRenderCard();
+      ffUpdateHdr();
+    }
+  }
+
+  function ffNotifyParent(open) {
+    try {
+      if (window.parent && window.parent !== window) {
+        window.parent.postMessage(
+          { type: open ? 'ko:fact-find-open' : 'ko:fact-find-close' },
+          window.location.origin
+        );
+      }
+    } catch (_) { /* ignore cross-origin */ }
+  }
+
+  function ffMountUploadFloat() {
+    let el = document.getElementById('ff-upload-float');
+    const overlayHidden = document.getElementById('ff-overlay')?.classList.contains('ff-hidden');
+    const modalOpen = !!(ff.showUploadModal || ff.showCreditReportPreview || ff.done);
+    const show = !overlayHidden && !modalOpen;
+    // Remount once if an older toast markup is still in the DOM
+    if (el && el.dataset.ffPill !== '1') {
+      el.remove();
+      el = null;
+    }
+    if (!el) {
+      const wrap = document.createElement('div');
+      wrap.innerHTML = ffUploadFloatHTML();
+      el = wrap.firstElementChild;
+      if (!el) return null;
+      el.dataset.ffPill = '1';
+      document.body.appendChild(el);
+      el.addEventListener('click', () => {
+        ff.showUploadModal = true;
+        ff.uploadError = '';
+        ffRender();
+      });
+    }
+    el.classList.toggle('ff-hidden', !show);
+    return el;
+  }
+
+  function ffHideUploadFloat() {
+    const el = document.getElementById('ff-upload-float');
+    if (el) el.classList.add('ff-hidden');
+  }
 
   // ── Open / close ──────────────────────────────────────────────────────────
   window.openFactFindWizard = function (caseId) {
@@ -6665,12 +6875,11 @@ calcRun();
     document.body.classList.add('ff-open');
     document.documentElement.style.overflow = 'hidden';
     document.body.style.overflow = 'hidden';
-    if (document.body.classList.contains('embedded')) {
-      const h = window.innerHeight + 'px';
-      document.documentElement.style.height = h;
-      document.body.style.height = h;
-      document.body.style.minHeight = h;
-    }
+    const h = window.innerHeight + 'px';
+    document.documentElement.style.height = h;
+    document.body.style.height = h;
+    document.body.style.minHeight = h;
+    ffNotifyParent(true);
     ffRender();
     document.addEventListener('keydown', ffKeyDown);
   };
@@ -6696,6 +6905,8 @@ calcRun();
     ff.uploadError = '';
     ffClearPendingAutofill();
     ffClearAutoFillSimulation();
+    ffHideUploadFloat();
+    ffNotifyParent(false);
     document.removeEventListener('keydown', ffKeyDown);
   }
 
@@ -6715,8 +6926,9 @@ calcRun();
       return;
     }
     if (ff.showUploadModal || ff.showCreditReportPreview || ff.simulatedAutoFill.stalled || ff.simulatedAutoFill.paused) return;
-    const vis = ffVisible(), cur = vis[ff.idx];
-    if (!cur) return;
+    const pages = ffClampPageIdx();
+    const page = pages[ff.idx];
+    if (!page) return;
     if (e.key === 'Enter' && !e.shiftKey && !(e.target instanceof HTMLTextAreaElement)) {
       e.preventDefault(); ffGoNext();
     }
@@ -6853,10 +7065,10 @@ calcRun();
     if (ff.showUploadModal || ff.showCreditReportPreview || ff.simulatedAutoFill.stalled || ff.simulatedAutoFill.paused) return;
     if (ff.submitting) return;
     if (!ffValidateCurrentCard()) return;
-    const vis = ffVisible();
-    if (ff.idx >= vis.length - 1) { ffSubmitToApi(); return; }
+    const pages = ffClampPageIdx();
+    if (ff.idx >= pages.length - 1) { ffSubmitToApi(); return; }
     ff.dir = 1;
-    ff.idx = Math.min(ff.idx + 1, vis.length - 1);
+    ff.idx = Math.min(ff.idx + 1, pages.length - 1);
     ffRenderCard(); ffUpdateHdr();
   }
   function ffGoBack() {
@@ -6875,53 +7087,60 @@ calcRun();
       ov.querySelector('#ff-comp-reset').addEventListener('click', () => {
         ff.form = ffInitForm(); ff.idx = 0; ff.done = false; ff.dir = 1; ffRender();
       });
+      ffHideUploadFloat();
       return;
     }
-    const vis = ffVisible(), cur = vis[ff.idx] || vis[0];
-    const pct = vis.length ? Math.round(((ff.idx+1)/vis.length)*100) : 0;
+    const pages = ffClampPageIdx();
+    const page = pages[ff.idx] || pages[0];
+    const cur = page?.questions?.[0];
+    const pct = pages.length ? Math.round(((ff.idx + 1) / pages.length) * 100) : 0;
     ov.innerHTML = `
       <div id="ff-progress-outer"><div id="ff-progress-inner" style="width:${pct}%"></div></div>
-      ${ffTopbarHTML(vis)}
+      ${ffTopbarHTML(pages)}
       <button type="button" class="ff-close-btn" id="ff-close-btn" style="position:fixed;top:10px;right:16px;z-index:560;" title="Close">✕</button>
-      ${ffUploadFloatHTML()}
       <div id="ff-section-strip"><div id="ff-section-inner">${ffSectionHTML(cur)}</div></div>
-      <div id="ff-card-area"><div id="ff-card">${ffCardHTML(cur, vis)}</div></div>
-      <div id="ff-dot-strip">${ffDotHTML(vis)}</div>
+      <div id="ff-card-area"><div id="ff-card">${ffCardHTML(page, pages)}</div></div>
+      <div id="ff-dot-strip">${ffDotHTML(pages)}</div>
       ${ffStateOverlayHTML()}`;
     ov.querySelector('#ff-close-btn').addEventListener('click', ffClose);
     ffBindOverlayActions(ov);
-    ffBindCard(vis[ff.idx] || vis[0]);
+    ffBindCard(page);
+    ffMountUploadFloat();
   }
 
   function ffUpdateHdr() {
-    const vis = ffVisible(), cur = vis[ff.idx] || vis[0];
-    const pct = vis.length ? Math.round(((ff.idx+1)/vis.length)*100) : 0;
+    const pages = ffClampPageIdx();
+    const page = pages[ff.idx] || pages[0];
+    const cur = page?.questions?.[0];
+    const pct = pages.length ? Math.round(((ff.idx + 1) / pages.length) * 100) : 0;
     const pi = document.getElementById('ff-progress-inner');
     if (pi) pi.style.width = pct + '%';
     const si = document.getElementById('ff-section-inner');
     if (si) si.innerHTML = ffSectionHTML(cur);
     const ds = document.getElementById('ff-dot-strip');
-    if (ds) ds.innerHTML = ffDotHTML(vis);
+    if (ds) ds.innerHTML = ffDotHTML(pages);
     const tb = document.getElementById('ff-topbar-right');
     if (tb) {
-      tb.innerHTML = `${ffSaveStatusHTML()}<span id="ff-topbar-count">${ff.idx + 1} / ${vis.length}</span>`;
+      tb.innerHTML = `${ffSaveStatusHTML()}<span id="ff-topbar-count">${ff.idx + 1} / ${pages.length}</span>`;
     }
   }
 
   function ffRenderCard() {
-    const vis = ffVisible(), cur = vis[ff.idx] || vis[0];
+    const pages = ffClampPageIdx();
+    const page = pages[ff.idx] || pages[0];
     const el = document.getElementById('ff-card');
     if (!el) return;
     el.style.animation = 'none';
     el.offsetHeight; // reflow
-    el.innerHTML = ffCardHTML(cur, vis);
+    el.innerHTML = ffCardHTML(page, pages);
     el.className = ff.dir >= 0 ? 'ff-dir-fwd' : 'ff-dir-back';
     el.style.animation = ff.dir >= 0
       ? 'ff-slide-in .3s cubic-bezier(.34,1.56,.64,1)'
       : 'ff-slide-back .3s cubic-bezier(.34,1.56,.64,1)';
-    ffBindCard(cur);
-    // Auto-focus first text/email input
-    if (!['pills','yesno','insurance'].includes(cur.t)) {
+    ffBindCard(page);
+    // Auto-focus first text/email input on the page
+    const firstQ = page?.questions?.[0];
+    if (firstQ && !['pills','yesno','insurance'].includes(firstQ.t)) {
       const inp = el.querySelector('input[type="text"],input[type="email"]');
       if (inp) setTimeout(() => inp.focus(), 60);
     }
@@ -6940,15 +7159,15 @@ calcRun();
   }
 
   // ── Dot strip ─────────────────────────────────────────────────────────────
-  function ffDotHTML(vis) {
-    const n = Math.min(vis.length, 12);
+  function ffDotHTML(pages) {
+    const n = Math.min(pages.length, 12);
     let h = '';
     for (let i=0;i<n;i++) h += `<div class="ff-dot ${i===ff.idx?'ff-dot-active':i<ff.idx?'ff-dot-past':'ff-dot-future'}"></div>`;
-    if (vis.length>12) h += `<span class="ff-dot-more">+${vis.length-12}</span>`;
+    if (pages.length>12) h += `<span class="ff-dot-more">+${pages.length-12}</span>`;
     return h;
   }
 
-  function ffTopbarHTML(vis) {
+  function ffTopbarHTML(pages) {
     return `<div id="ff-topbar">
       <div id="ff-topbar-left">
         <div id="ff-topbar-logo">KO</div>
@@ -6956,20 +7175,16 @@ calcRun();
       </div>
       <div id="ff-topbar-right">
         ${ffSaveStatusHTML()}
-        <span id="ff-topbar-count">${ff.idx + 1} / ${vis.length}</span>
+        <span id="ff-topbar-count">${ff.idx + 1} / ${pages.length}</span>
       </div>
     </div>`;
   }
 
   function ffUploadFloatHTML() {
     const tooltipText = 'AI isn\u2019t perfect and can be wrong sometimes. Please check that extracted values are correct.';
-    return `<button type="button" class="ff-upload-float" id="ff-upload-float" aria-label="Auto-fill from uploaded document">
-      <span class="ff-upload-float-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 16V4"/><path d="M8 8l4-4 4 4"/><path d="M20 16.5v2a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18.5v-2"/></svg></span>
-      <span class="ff-upload-float-copy"><strong>Auto-fill from documents</strong><span>Upload a file to prefill key fact-find fields.</span></span>
-      <span class="ff-upload-tooltip-wrap" tabindex="0" role="note" aria-label="${tooltipText}" data-ff-stop-prop>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v.01"/><path d="M11 12h1v4h1"/></svg>
-        <span class="ff-upload-tooltip">${tooltipText}</span>
-      </span>
+    return `<button type="button" class="ff-upload-float" id="ff-upload-float" aria-label="Upload documents" title="${tooltipText}">
+      <span class="ff-upload-float-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg></span>
+      <span class="ff-upload-float-copy"><strong>Upload documents</strong></span>
     </button>`;
   }
 
@@ -7001,15 +7216,8 @@ calcRun();
   }
 
   function ffBindOverlayActions(scope) {
-    const openBtn = scope.querySelector('#ff-upload-float');
-    if (openBtn) {
-      openBtn.addEventListener('click', (e) => {
-        if (e.target instanceof HTMLElement && e.target.closest('[data-ff-stop-prop]')) return;
-        ff.showUploadModal = true;
-        ff.uploadError = '';
-        ffRender();
-      });
-    }
+    // Auto-fill float is mounted on document.body (ffMountUploadFloat) so it stays
+    // viewport-fixed and above the scrolling overlay.
     scope.querySelectorAll('[data-ff-stop-prop]').forEach((el) => {
       el.addEventListener('click', (e) => e.stopPropagation());
     });
@@ -7222,36 +7430,44 @@ calcRun();
   }
 
   // ── Card HTML ─────────────────────────────────────────────────────────────
-  function ffCardHTML(cur, vis) {
-    if (!cur) return '';
-    const isLast  = ff.idx >= vis.length - 1;
+  function ffCardHTML(page, pages) {
+    if (!page || !page.questions || !page.questions.length) return '';
+    const qs = page.questions;
+    const isLast  = ff.idx >= pages.length - 1;
     const isFirst = ff.idx === 0;
-    const autoAdv = cur.aa && ['pills','yesno','insurance'].includes(cur.t);
-    const isTa    = cur.t === 'textarea';
+    const solo = qs.length === 1;
+    const hasTa   = qs.some((q) => q.t === 'textarea');
     const autoFillFailure = ffState(FF_ERROR_STATES.AUTO_FILL_API_FAILURE) || ff.simulatedAutoFill.apiFailure;
     const fieldValidationError = ffState(FF_ERROR_STATES.FIELD_VALIDATION_ERROR);
-    return `
-      <div class="ff-section-label">${esc(cur.s)}</div>
-      ${autoFillFailure ? `<div class="ff-state-banner"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4l16 16"/><path d="M12 3a9 9 0 0 1 9 9"/><path d="M3 12a9 9 0 0 0 9 9"/></svg><div><strong>Document auto-fill unavailable</strong><span>We couldn\u2019t extract fields from your upload right now. You can continue manually \u2014 your progress is unaffected.</span></div></div>` : ''}
-      <div class="ff-q-row">
-        <div class="ff-q-num-wrap">
-          <span>${ff.idx+1}</span>
-          <svg viewBox="0 0 24 24" width="14" height="14"><polyline points="9 18 15 12 9 6" stroke="#0F6E56" stroke-width="3" fill="none"/></svg>
+    const questionsHtml = qs.map((q) => {
+      const ordinal = ffQuestionOrdinal(pages, q.id);
+      return `
+      <div class="ff-q-block${solo ? ' ff-q-solo' : ''}" data-q-id="${esc(q.id)}" data-q-type="${esc(q.t)}" data-q-path="${esc(q.p || '')}" data-q-aa="${q.aa ? '1' : '0'}" data-q-dp="${esc(q.dp || '')}">
+        <div class="ff-q-row">
+          <div class="ff-q-num-wrap">
+            <span>${ordinal}</span>
+            <svg viewBox="0 0 24 24" width="14" height="14"><polyline points="9 18 15 12 9 6" stroke="#0F6E56" stroke-width="3" fill="none"/></svg>
+          </div>
+          <h2 class="ff-q-label">${esc(q.l)}</h2>
         </div>
-        <h2 class="ff-q-label">${esc(cur.l)}</h2>
-      </div>
-      ${cur.sub?`<p class="ff-q-sub">${esc(cur.sub)}</p>`:'<div style="margin-bottom:24px"></div>'}
-      <div class="ff-q-input" id="ff-q-input">${ffQHTML(cur)}</div>
+        ${q.sub ? `<p class="ff-q-sub">${esc(q.sub)}</p>` : '<div style="margin-bottom:12px"></div>'}
+        <div class="ff-q-input">${ffQHTML(q)}</div>
+      </div>`;
+    }).join('');
+    return `
+      <div class="ff-section-label">${esc(page.s)}</div>
+      ${autoFillFailure ? `<div class="ff-state-banner"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4l16 16"/><path d="M12 3a9 9 0 0 1 9 9"/><path d="M3 12a9 9 0 0 0 9 9"/></svg><div><strong>Document auto-fill unavailable</strong><span>We couldn\u2019t extract fields from your upload right now. You can continue manually \u2014 your progress is unaffected.</span></div></div>` : ''}
+      ${questionsHtml}
       ${fieldValidationError ? `<div class="ff-inline-error"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v5"/><path d="M12 16h.01"/></svg>Please enter a valid value — must be a positive number.</div>` : ''}
       <div id="ff-action-row">
         <button type="button" class="ff-btn-back${isFirst?' ff-invisible':''}" id="ff-btn-back">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>Back
         </button>
-        ${!autoAdv?`<button type="button" class="ff-btn-ok" id="ff-btn-ok">
-          ${isLast?'Submit fact-find':'OK'}
+        <button type="button" class="ff-btn-ok" id="ff-btn-ok">
+          ${isLast?'Submit fact-find':'Continue'}
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-        </button>`:''}
-        ${!isTa?`<span class="ff-kbd-hint">press <kbd class="ff-kbd">Enter</kbd></span>`:`<span class="ff-kbd-hint">⌘ + Enter to continue</span>`}
+        </button>
+        ${!hasTa?`<span class="ff-kbd-hint">press <kbd class="ff-kbd">Enter</kbd></span>`:`<span class="ff-kbd-hint">⌘ + Enter to continue</span>`}
         <div class="ff-spacer"></div>
         ${!isLast?`<button type="button" class="ff-btn-skip" id="ff-btn-skip">Skip <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="display:inline"><polyline points="9 18 15 12 9 6"/></svg></button>`:''}
       </div>`;
@@ -7263,11 +7479,11 @@ calcRun();
     switch (q.t) {
       case 'text': case 'email': case 'currency': {
         const v = q.p ? ffGet(f,q.p)||'' : '';
-        return `<div class="ff-uinput-wrap">${q.t==='currency'?'<span class="ff-uinput-pfx">£</span>':''}<input class="ff-uinput" id="ff-main-input" type="${q.t==='email'?'email':'text'}" value="${esc(v)}" placeholder="${esc(q.ph||'')}" data-path="${esc(q.p||'')}"></div>`;
+        return `<div class="ff-uinput-wrap">${q.t==='currency'?'<span class="ff-uinput-pfx">£</span>':''}<input class="ff-uinput ff-main-input" type="${q.t==='email'?'email':'text'}" value="${esc(v)}" placeholder="${esc(q.ph||'')}" data-path="${esc(q.p||'')}"></div>`;
       }
       case 'textarea': {
         const v = q.p ? ffGet(f,q.p)||'' : '';
-        return `<textarea class="ff-utextarea" id="ff-main-input" rows="4" placeholder="${esc(q.ph||'')}" data-path="${esc(q.p||'')}">${esc(v)}</textarea>`;
+        return `<textarea class="ff-utextarea ff-main-input" rows="4" placeholder="${esc(q.ph||'')}" data-path="${esc(q.p||'')}">${esc(v)}</textarea>`;
       }
       case 'yesno': {
         const v = q.p ? ffGet(f,q.p) : false;
@@ -7282,7 +7498,7 @@ calcRun();
       case 'yesno-detail': {
         const v = q.p ? ffGet(f,q.p)||'' : '';
         const d = q.dp ? ffGet(f,q.dp)||'' : '';
-        return `<div><div class="ff-yesno-wrap"><button type="button" class="ff-yn${v==='YES'?' ff-yn-yes':''}" data-yn="YES">Yes</button><button type="button" class="ff-yn${v==='NO'?' ff-yn-no':''}" data-yn="NO">No</button></div>${v==='YES'?`<div class="ff-detail-area"><p class="ff-detail-label">Please provide details</p><textarea class="ff-detail-ta" id="ff-detail-input" rows="3" placeholder="${esc(q.dph||'')}" data-path="${esc(q.dp||'')}">${esc(d)}</textarea></div>`:''}</div>`;
+        return `<div><div class="ff-yesno-wrap"><button type="button" class="ff-yn${v==='YES'?' ff-yn-yes':''}" data-yn="YES">Yes</button><button type="button" class="ff-yn${v==='NO'?' ff-yn-no':''}" data-yn="NO">No</button></div>${v==='YES'?`<div class="ff-detail-area"><p class="ff-detail-label">Please provide details</p><textarea class="ff-detail-ta ff-detail-input" rows="3" placeholder="${esc(q.dph||'')}" data-path="${esc(q.dp||'')}">${esc(d)}</textarea></div>`:''}</div>`;
       }
       case 'name-group': {
         const b = q.tgt||'client1Personal';
@@ -7395,8 +7611,11 @@ calcRun();
   }
 
   // ── Bind card events ──────────────────────────────────────────────────────
-  function ffBindCard(q) {
+  function ffBindCard(page) {
     const card = document.getElementById('ff-card'); if (!card) return;
+    const qs = page?.questions || [];
+    const solo = qs.length === 1;
+    const soloQ = solo ? qs[0] : null;
 
     // Nav buttons
     const bk = document.getElementById('ff-btn-back'), ok = document.getElementById('ff-btn-ok'), sk = document.getElementById('ff-btn-skip');
@@ -7404,16 +7623,16 @@ calcRun();
     if (ok) ok.addEventListener('click', ffGoNext);
     if (sk) sk.addEventListener('click', ffGoNext);
 
-    // Main single text/textarea
-    const mi = document.getElementById('ff-main-input');
-    if (mi) {
+    // Main text/textarea inputs (may be multiple on a page)
+    card.querySelectorAll('.ff-main-input').forEach((mi) => {
       mi.addEventListener('input', e => { const p=e.target.dataset.path; if(p) ffUpd(p,e.target.value); });
       if (mi.tagName==='TEXTAREA') mi.addEventListener('keydown', e => { if(e.key==='Enter'&&(e.metaKey||e.ctrlKey)){e.preventDefault();ffGoNext();} });
-    }
+    });
 
-    // Detail textarea (yesno-detail)
-    const di = document.getElementById('ff-detail-input');
-    if (di) di.addEventListener('input', e => { const p=e.target.dataset.path; if(p) ffUpd(p,e.target.value); });
+    // Detail textarea (yesno-detail) — may be multiple
+    card.querySelectorAll('.ff-detail-input').forEach((di) => {
+      di.addEventListener('input', e => { const p=e.target.dataset.path; if(p) ffUpd(p,e.target.value); });
+    });
 
     // Box inputs with data-path (standard form paths)
     card.querySelectorAll('.ff-box-input[data-path]').forEach(inp => {
@@ -7424,6 +7643,8 @@ calcRun();
         if (msg) ff.fieldErrors[p] = msg; else delete ff.fieldErrors[p];
         ffRenderFieldErrors(card);
         if(p==='propertyValue'||p==='mortgageRequired') ffUpdateLTV();
+        // Address move-in date can reveal previous-address question on this page
+        if(p.endsWith('.dateFrom')) ffMaybeRefreshPageForVisibility();
       });
     });
 
@@ -7434,28 +7655,37 @@ calcRun();
         ffUpd(p,e.target.value);
         delete ff.fieldErrors[p];
         ffRenderFieldErrors(card);
-        // contract type affects field visibility — re-render card
+        // Fields that affect conditional question visibility on the same page
         if(p.endsWith('.contractType')) { ffRenderCard(); ffUpdateHdr(); }
+        else if(p.endsWith('.ownershipStatus')) ffMaybeRefreshPageForVisibility();
       });
     });
 
-    // Pills (standard)
+    // Pills (scoped to question block)
     card.querySelectorAll('[data-pill]').forEach(btn => {
       btn.addEventListener('click', e => {
-        const v=e.currentTarget.dataset.pill; if(q.p) ffUpd(q.p,v);
-        if(q.aa) setTimeout(ffGoNext,350); else { ffRenderCard(); ffUpdateHdr(); }
+        const block = e.currentTarget.closest('[data-q-id]');
+        const path = block?.dataset.qPath;
+        const aa = block?.dataset.qAa === '1';
+        const v=e.currentTarget.dataset.pill;
+        if(path) ffUpd(path,v);
+        // Auto-advance only on single-question pages that opted in
+        if(solo && aa) setTimeout(ffGoNext,350); else { ffRenderCard(); ffUpdateHdr(); }
       });
     });
 
-    // Yes/No
+    // Yes/No (scoped to question block)
     card.querySelectorAll('[data-yn]').forEach(btn => {
       btn.addEventListener('click', e => {
+        const block = e.currentTarget.closest('[data-q-id]');
+        const path = block?.dataset.qPath || soloQ?.p;
+        const aa = block?.dataset.qAa === '1';
         const yn=e.currentTarget.dataset.yn;
-        if(q.p){
+        if(path){
           const boolPaths=['hasJointApplicant','hasExistingMortgage'];
-          ffUpd(q.p, boolPaths.includes(q.p) ? (yn==='yes'||yn==='YES') : yn);
+          ffUpd(path, boolPaths.includes(path) ? (yn==='yes'||yn==='YES') : yn);
         }
-        if(q.aa) setTimeout(ffGoNext,350); else { ffRenderCard(); ffUpdateHdr(); }
+        if(solo && aa) setTimeout(ffGoNext,350); else { ffRenderCard(); ffUpdateHdr(); }
       });
     });
 

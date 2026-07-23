@@ -1,9 +1,10 @@
 import { prisma } from '@/lib/db';
 import { devStore } from '@/lib/api/dev-store';
 import { isPrismaConnectionError, isPrismaUniqueConflict } from '@/lib/api/prisma-errors';
-import { sendClientWelcomeEmail, type EmailDeliveryStatus } from '@/lib/notifications/client-emails';
+import { sendAdviserClientAssignedEmail, sendClientWelcomeEmail, type EmailDeliveryStatus } from '@/lib/notifications/client-emails';
 import { generateReference } from '@ko/utils';
 import type { ClientType, ClientStatus, ClientCategoryFilter, EmploymentStatus } from '@ko/types';
+import { clientAssignedToAdviserWhere } from '@/lib/auth/adviser-scope';
 
 function useDevStore(error: unknown) {
   return process.env.NODE_ENV === 'development' && isPrismaConnectionError(error);
@@ -133,6 +134,8 @@ export async function listClientsForOrg(
     clientCategory?: ClientCategoryFilter;
     status?: ClientStatus;
     assignedMemberId?: string;
+    /** When set, only clients assigned to this User (via cases or OrganisationMember). */
+    restrictToAdviserUserId?: string;
   },
 ) {
   try {
@@ -145,6 +148,29 @@ export async function listClientsForOrg(
             ? { clientType: 'COMPANY' as const }
             : {};
 
+    const searchOr = params.search
+      ? [
+          { firstName: { contains: params.search, mode: 'insensitive' as const } },
+          { lastName: { contains: params.search, mode: 'insensitive' as const } },
+          { companyName: { contains: params.search, mode: 'insensitive' as const } },
+          { email: { contains: params.search, mode: 'insensitive' as const } },
+          { referenceNumber: { contains: params.search, mode: 'insensitive' as const } },
+          { referredToCompany: { contains: params.search, mode: 'insensitive' as const } },
+        ]
+      : null;
+
+    const assignedOr = params.restrictToAdviserUserId
+      ? clientAssignedToAdviserWhere(params.restrictToAdviserUserId).OR
+      : null;
+
+    const andFilters = [
+      ...(assignedOr ? [{ OR: assignedOr }] : []),
+      ...(!assignedOr && params.assignedMemberId
+        ? [{ assignedMemberId: params.assignedMemberId }]
+        : []),
+      ...(searchOr ? [{ OR: searchOr }] : []),
+    ];
+
     const where = {
       orgId,
       ...categoryWhere,
@@ -156,19 +182,7 @@ export async function listClientsForOrg(
         ? { isReferred: params.isReferred }
         : {}),
       ...(params.status ? { status: params.status } : {}),
-      ...(params.assignedMemberId ? { assignedMemberId: params.assignedMemberId } : {}),
-      ...(params.search
-        ? {
-            OR: [
-              { firstName: { contains: params.search, mode: 'insensitive' as const } },
-              { lastName: { contains: params.search, mode: 'insensitive' as const } },
-              { companyName: { contains: params.search, mode: 'insensitive' as const } },
-              { email: { contains: params.search, mode: 'insensitive' as const } },
-              { referenceNumber: { contains: params.search, mode: 'insensitive' as const } },
-              { referredToCompany: { contains: params.search, mode: 'insensitive' as const } },
-            ],
-          }
-        : {}),
+      ...(andFilters.length > 0 ? { AND: andFilters } : {}),
     };
 
     const [total, clients] = await Promise.all([
@@ -241,11 +255,18 @@ export async function createClientForOrg(
       ? input.insurerName.trim()
       : undefined;
 
+  let assignedMember: {
+    id: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+  } | null = null;
+
   if (input.assignedMemberId) {
     try {
       const member = await prisma.organisationMember.findFirst({
         where: { id: input.assignedMemberId, orgId, isActive: true },
-        select: { id: true },
+        select: { id: true, email: true, firstName: true, lastName: true },
       });
       if (!member) {
         return {
@@ -253,6 +274,7 @@ export async function createClientForOrg(
           fields: { assignedMemberId: 'Selected adviser not found' },
         };
       }
+      assignedMember = member;
     } catch (error) {
       if (!useDevStore(error)) throw error;
       const member = devStore.getMember(orgId, input.assignedMemberId);
@@ -262,6 +284,12 @@ export async function createClientForOrg(
           fields: { assignedMemberId: 'Selected adviser not found' },
         };
       }
+      assignedMember = {
+        id: member.id,
+        email: member.email,
+        firstName: member.firstName,
+        lastName: member.lastName,
+      };
     }
   }
 
@@ -296,16 +324,28 @@ export async function createClientForOrg(
           firstName: true,
           lastName: true,
           email: true,
+          companyName: true,
+          clientType: true,
         },
       });
 
       const welcomeEmail = await sendClientWelcomeEmail(created);
-      return { client: created, welcomeEmail };
+      let adviserEmail: EmailDeliveryStatus | undefined;
+      if (assignedMember) {
+        adviserEmail = await sendAdviserClientAssignedEmail({
+          adviser: assignedMember,
+          client: created,
+        });
+      }
+      return { client: created, welcomeEmail, adviserEmail };
     } catch (error) {
       if (isPrismaUniqueConflict(error, 'referenceNumber') && attempt < 4) continue;
       if (!useDevStore(error)) throw error;
       const client = devStore.createClient(orgId, input);
       const welcomeEmail: EmailDeliveryStatus = { sent: false, error: 'Email skipped in offline dev mode' };
+      const adviserEmail: EmailDeliveryStatus | undefined = assignedMember
+        ? { sent: false, error: 'Email skipped in offline dev mode' }
+        : undefined;
       return {
         client: {
           id: client.id,
@@ -313,8 +353,11 @@ export async function createClientForOrg(
           firstName: client.firstName,
           lastName: client.lastName,
           email: client.email,
+          companyName: client.companyName,
+          clientType: client.clientType,
         },
         welcomeEmail,
+        adviserEmail,
       };
     }
   }

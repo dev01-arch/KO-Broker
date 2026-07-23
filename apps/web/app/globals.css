@@ -60,6 +60,7 @@
   /* ── Typography ── */
   --font-heading: var(--font-syne), 'Syne', sans-serif;
   --font-body: var(--font-dm-sans), 'DM Sans', sans-serif;
+  --font-numeric: var(--font-outfit), 'Outfit', sans-serif;
   --font-mono: 'Courier New', monospace;
 
   /* ── Border Radius ── */
@@ -115,10 +116,9 @@ h1, h2, h3, h4, h5, h6 {
   line-height: 1.05;
 }
 
-/* Numeric displays (stats, prices, counters) always use DM Sans, even inside
-   Syne-styled heading blocks — Syne's stylised digits are a poor fit for data. */
+/* Numeric displays (stats, prices, counters) use Outfit — clearer digits than Syne/DM Sans. */
 .marketing-site .heading-numeric {
-  font-family: var(--font-body);
+  font-family: var(--font-numeric);
   font-weight: 800;
   letter-spacing: -0.02em;
   line-height: 1;

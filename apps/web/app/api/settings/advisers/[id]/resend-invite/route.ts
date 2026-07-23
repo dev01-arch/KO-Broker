@@ -1,6 +1,8 @@
 /**
  * POST /api/settings/advisers/[id]/resend-invite
  * Re-generates the invite token and resends the invite email (ADMIN only).
+ *
+ * Matches backend engineer (KO-Broker-test) exactly.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -10,40 +12,20 @@ import { logAuditEvent } from '@/lib/compliance/audit';
 import { sendAdviserInvite } from '@/lib/notifications/email';
 import crypto from 'crypto';
 
-async function resolveAdviserUserId(orgId: string, id: string) {
-  const user = await prisma.user.findFirst({
-    where: { id, orgId, role: { not: 'ADMIN' } },
-    select: { id: true },
-  });
-  if (user) return user.id;
-
-  const member = await prisma.organisationMember.findFirst({
-    where: { id, orgId },
-    select: { userId: true },
-  });
-  return member?.userId ?? null;
-}
-
 export const POST = createParamHandler({
   method: 'POST',
   requiredRole: 'ADMIN',
   handler: async (_req: NextRequest, { user, orgId, params }) => {
-    const adviserUserId = await resolveAdviserUserId(orgId!, params.id);
-    if (!adviserUserId) {
-      return NextResponse.json(
-        { success: false, error: { code: 'NOT_FOUND', message: 'Pending adviser not found.' } },
-        { status: 404 },
-      );
-    }
+    const { id } = params;
 
     const adviser = await prisma.user.findFirst({
-      where: { id: adviserUserId, orgId, role: { not: 'ADMIN' }, invitePending: true },
+      where: { id, orgId, role: { not: 'ADMIN' }, invitePending: true },
     });
 
     if (!adviser) {
       return NextResponse.json(
         { success: false, error: { code: 'NOT_FOUND', message: 'Pending adviser not found.' } },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -57,7 +39,7 @@ export const POST = createParamHandler({
     const inviteTokenExpiry = new Date(Date.now() + 48 * 60 * 60 * 1000);
 
     await prisma.user.update({
-      where: { id: adviserUserId },
+      where: { id },
       data: { inviteToken, inviteTokenExpiry },
     });
 
@@ -68,7 +50,7 @@ export const POST = createParamHandler({
       ? `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim() || user.email
       : 'Your administrator';
 
-    await sendAdviserInvite({
+    const emailResult = await sendAdviserInvite({
       to: adviser.email,
       firstName: adviser.firstName ?? adviser.email,
       orgName: org?.name ?? 'your organisation',
@@ -80,10 +62,25 @@ export const POST = createParamHandler({
       orgId: orgId!,
       userId: user?.id,
       entityType: 'User',
-      entityId: adviserUserId,
+      entityId: id,
       action: 'ADVISER_INVITE_RESENT',
       diff: { after: { email: adviser.email } },
     });
+
+    if (!emailResult.ok) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: 'EMAIL_FAILED',
+            message:
+              emailResult.error ||
+              'Invite email failed to send. Check RESEND_API_KEY / RESEND_FROM_EMAIL.',
+          },
+        },
+        { status: 502 },
+      );
+    }
 
     return NextResponse.json({ success: true, message: 'Invite resent successfully.' }, { status: 200 });
   },

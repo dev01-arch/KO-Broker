@@ -111,6 +111,11 @@ export function BillingSettingsSection({
     }
   }, [billingNotice, refetchSubscription]);
 
+  // Advisers never see billing UI.
+  if (!isAdmin) {
+    return null;
+  }
+
   function handleSuccessModalContinue() {
     setShowSuccessModal(false);
     onBillingNoticeDismiss?.();

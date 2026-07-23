@@ -83,20 +83,21 @@ export async function POST(req: Request) {
     // Check if there is an existing pending invite user with this email
     const existingPendingUser = await prisma.user.findFirst({
       where: {
-        email,
+        email: { equals: email, mode: 'insensitive' },
         invitePending: true,
       },
     });
 
     if (existingPendingUser) {
-      // Link the Clerk ID directly, but don't clear the invite token/status yet.
-      // The browser-side accept-invite route will clear these when it processes the token.
+      // Link the Clerk ID, but keep the names entered on the platform invite form.
+      // Only fill blanks from Clerk — never overwrite invite first/last name.
+      // The browser-side accept-invite route will clear the token when it processes it.
       await prisma.user.update({
         where: { id: existingPendingUser.id },
         data: {
           clerkId: id,
-          firstName: first_name,
-          lastName: last_name,
+          firstName: existingPendingUser.firstName || first_name,
+          lastName: existingPendingUser.lastName || last_name,
         },
       });
     } else {

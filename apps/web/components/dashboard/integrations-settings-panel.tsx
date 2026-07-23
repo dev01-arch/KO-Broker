@@ -27,6 +27,7 @@ import {
   useAdvisers,
   useCreateAdviser,
   useUpdateAdviser,
+  useDeleteAdviser,
   useResendAdviserInvite,
   useUpdateIntegrations,
   useUpdateMessagingSettings,
@@ -140,6 +141,13 @@ export function IntegrationsSettingsPanel({
   const orgRole = useOrgRole();
   /** While role is loading, allow interaction; API enforces ADMIN. */
   const canEditMessaging = orgRole === undefined || isAdmin;
+  // Advisers only see Messaging + Account. Hide team/billing unless confirmed ADMIN.
+  const visibleSettingsSections = SETTINGS_SECTIONS.filter((section) => {
+    if (section.id === 'organization' || section.id === 'billing') {
+      return isAdmin;
+    }
+    return true;
+  });
   const { data: integrationsData, isLoading: integrationsLoading, error: integrationsError } =
     useIntegrations();
   const { data: messagingData, isLoading: messagingLoading, error: messagingError } =
@@ -149,7 +157,9 @@ export function IntegrationsSettingsPanel({
   const { data: advisersData, isLoading: advisersLoading, error: advisersError } = useAdvisers();
   const { mutateAsync: createAdviser, isPending: creatingAdviser } = useCreateAdviser();
 
-  const [activeSection, setActiveSection] = useState<SettingsSection>(initialSection);
+  const [activeSection, setActiveSection] = useState<SettingsSection>(
+    isAdmin ? initialSection : 'messaging',
+  );
   const [integrationsDraft, setIntegrationsDraft] = useState<IntegrationsDraft>(
     emptyIntegrationsDraft(),
   );
@@ -160,25 +170,38 @@ export function IntegrationsSettingsPanel({
   const [signingOut, setSigningOut] = useState(false);
   const [adviserDraft, setAdviserDraft] = useState({ firstName: '', lastName: '', email: '' });
   const [activeAdviserId, setActiveAdviserId] = useState<string | null>(null);
+  const [actionAdviserId, setActionAdviserId] = useState<string | null>(null);
 
-  const { mutateAsync: updateAdviser, isPending: updatingAdviser } = useUpdateAdviser(
-    activeAdviserId ?? '',
-  );
-  const { mutateAsync: resendAdviserInvite, isPending: resendingInvite } = useResendAdviserInvite(
-    activeAdviserId ?? '',
-  );
+  const { mutateAsync: updateAdviser, isPending: updatingAdviser } = useUpdateAdviser();
+  const { mutateAsync: deleteAdviser, isPending: deletingAdviser } = useDeleteAdviser();
+  const { mutateAsync: resendAdviserInvite, isPending: resendingInvite } = useResendAdviserInvite();
 
   useEffect(() => {
-    if (billingNotice) {
+    // Admins only: Stripe return URLs open Billing.
+    if (billingNotice && isAdmin) {
       setActiveSection('billing');
       return;
     }
-    if (sectionParam && SETTINGS_SECTIONS.some((section) => section.id === sectionParam)) {
+
+    const allowed = isAdmin
+      ? SETTINGS_SECTIONS.map((s) => s.id)
+      : (['messaging', 'account'] as SettingsSection[]);
+
+    if (sectionParam && allowed.includes(sectionParam as SettingsSection)) {
       setActiveSection(sectionParam as SettingsSection);
       return;
     }
-    setActiveSection(initialSection);
-  }, [billingNotice, initialSection, sectionParam]);
+
+    setActiveSection(isAdmin ? initialSection : 'messaging');
+  }, [billingNotice, initialSection, sectionParam, isAdmin]);
+
+  // Hard redirect: advisers never stay on team/billing.
+  useEffect(() => {
+    if (isAdmin) return;
+    if (activeSection === 'organization' || activeSection === 'billing') {
+      setActiveSection('messaging');
+    }
+  }, [isAdmin, activeSection]);
 
   function handleBillingNoticeDismiss() {
     router.replace('/dashboard/settings?section=billing');
@@ -202,7 +225,10 @@ export function IntegrationsSettingsPanel({
   const activeAdviser = activeAdviserId
     ? advisers.find((adviser) => adviser.id === activeAdviserId) ?? null
     : null;
-  const activeMeta = SETTINGS_SECTIONS.find((section) => section.id === activeSection)!;
+  const activeMeta =
+    visibleSettingsSections.find((section) => section.id === activeSection) ??
+    visibleSettingsSections[0] ??
+    SETTINGS_SECTIONS.find((section) => section.id === 'account')!;
 
   async function handleIntegrationToggle(integration: 'equifax' | 'twilio', enabled: boolean) {
     setIntegrationsDraft((prev) => ({ ...prev, [integration]: { enabled } }));
@@ -264,16 +290,46 @@ export function IntegrationsSettingsPanel({
     setError(null);
     setSaveSuccess(false);
     try {
-      await createAdviser({
+      const result = await createAdviser({
         firstName: adviserDraft.firstName.trim(),
         lastName: adviserDraft.lastName.trim(),
         email: adviserDraft.email.trim(),
       });
       setAdviserDraft({ firstName: '', lastName: '', email: '' });
+      if (result?.data && result.data.emailSent === false) {
+        setError(
+          result.data.emailError ||
+            'Adviser was added, but the invite email failed to send. Check RESEND_API_KEY and try Resend invite.',
+        );
+      } else {
+        setSaveSuccess(true);
+        setTimeout(() => setSaveSuccess(false), 2500);
+      }
+    } catch (err) {
+      setError(formatApiError(err, { fallback: 'Failed to add adviser. Please try again.' }));
+    }
+  }
+
+  async function handleUpdateAdviserById(
+    id: string,
+    input: {
+      isActive?: boolean;
+      canViewAllClients?: boolean;
+      canViewAccountDetails?: boolean;
+      canViewAiSummaries?: boolean;
+    },
+  ) {
+    setError(null);
+    setSaveSuccess(false);
+    setActionAdviserId(id);
+    try {
+      await updateAdviser({ id, ...input });
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 2500);
     } catch (err) {
-      setError(formatApiError(err, { fallback: 'Failed to add adviser. Please try again.' }));
+      setError(formatApiError(err, { fallback: 'Failed to update adviser.' }));
+    } finally {
+      setActionAdviserId(null);
     }
   }
 
@@ -284,27 +340,40 @@ export function IntegrationsSettingsPanel({
     canViewAiSummaries?: boolean;
   }) {
     if (!activeAdviserId) return;
+    await handleUpdateAdviserById(activeAdviserId, input);
+  }
+
+  async function handleResendInvite(id: string) {
     setError(null);
     setSaveSuccess(false);
+    setActionAdviserId(id);
     try {
-      await updateAdviser(input);
+      await resendAdviserInvite(id);
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 2500);
     } catch (err) {
-      setError(formatApiError(err, { fallback: 'Failed to update adviser.' }));
+      setError(formatApiError(err, { fallback: 'Failed to resend invite.' }));
+    } finally {
+      setActionAdviserId(null);
     }
   }
 
   async function handleResendActiveInvite() {
     if (!activeAdviserId) return;
+    await handleResendInvite(activeAdviserId);
+  }
+
+  async function handleDeleteActiveAdviser() {
+    if (!activeAdviserId) return;
     setError(null);
     setSaveSuccess(false);
     try {
-      await resendAdviserInvite();
+      await deleteAdviser(activeAdviserId);
+      setActiveAdviserId(null);
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 2500);
     } catch (err) {
-      setError(formatApiError(err, { fallback: 'Failed to resend invite.' }));
+      setError(formatApiError(err, { fallback: 'Failed to delete adviser.' }));
     }
   }
 
@@ -455,70 +524,186 @@ export function IntegrationsSettingsPanel({
                 onChange={(enabled) => void handleUpdateActiveAdviser({ isActive: enabled })}
               />
 
-              {activeAdviser.invitePending && (
+              <div className="flex flex-wrap items-center gap-2 pt-1">
+                {activeAdviser.invitePending && (
+                  <button
+                    type="button"
+                    disabled={resendingInvite}
+                    onClick={() => void handleResendActiveInvite()}
+                    className="inline-flex items-center gap-2 rounded-lg border border-brand-teal-300 bg-brand-teal-50 px-3 py-2 text-xs font-medium text-brand-teal-700 hover:bg-brand-teal-100 disabled:opacity-50"
+                  >
+                    {resendingInvite ? 'Resending…' : 'Resend invite'}
+                  </button>
+                )}
+
                 <button
                   type="button"
-                  disabled={resendingInvite}
-                  onClick={() => void handleResendActiveInvite()}
-                  className="inline-flex items-center gap-2 rounded-lg border border-brand-teal-300 bg-brand-teal-50 px-3 py-2 text-xs font-medium text-brand-teal-700 hover:bg-brand-teal-100 disabled:opacity-50"
+                  disabled={!isAdmin || updatingAdviser}
+                  onClick={() =>
+                    void handleUpdateActiveAdviser({ isActive: !activeAdviser.isActive })
+                  }
+                  className={`inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-medium disabled:opacity-50 ${
+                    activeAdviser.isActive
+                      ? 'border-ink-20 bg-white text-ink hover:bg-ink-08'
+                      : 'border-brand-teal-300 bg-brand-teal-50 text-brand-teal-700 hover:bg-brand-teal-100'
+                  }`}
                 >
-                  {resendingInvite ? 'Resending…' : 'Resend invite'}
+                  {updatingAdviser && actionAdviserId === activeAdviser.id
+                    ? activeAdviser.isActive
+                      ? 'Deactivating…'
+                      : 'Activating…'
+                    : activeAdviser.isActive
+                      ? 'Deactivate'
+                      : 'Activate'}
                 </button>
-              )}
+
+                {!activeAdviser.isActive && (
+                  <button
+                    type="button"
+                    disabled={!isAdmin || deletingAdviser}
+                    onClick={() => void handleDeleteActiveAdviser()}
+                    className="inline-flex items-center gap-2 rounded-lg border border-red/40 bg-red/10 px-3 py-2 text-xs font-medium text-red hover:bg-red/20 disabled:opacity-50"
+                  >
+                    {deletingAdviser ? 'Deleting…' : 'Delete adviser'}
+                  </button>
+                )}
+              </div>
             </section>
           </div>
         ) : (
-          <div className="rounded-lg border border-ink-20">
-            <div className="grid grid-cols-[1fr_1fr_1.5fr_auto] gap-3 border-b border-ink-20 bg-ink-08 px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-ink-60">
-              <span>First name</span>
-              <span>Last name</span>
-              <span>Email</span>
-              <span>Status</span>
-            </div>
-            {advisersLoading ? (
-              <div className="px-4 py-4 text-sm text-ink-60">Loading members…</div>
-            ) : advisers.length === 0 ? (
-              <div className="px-4 py-4 text-sm text-ink-60">No members added yet.</div>
-            ) : (
-              advisers.map((adviser) => (
-                <div
-                  key={adviser.id}
-                  className="grid grid-cols-[1fr_1fr_1.5fr_auto] gap-3 border-b border-ink-20 px-4 py-3 text-sm text-ink last:border-b-0"
-                >
-                  <span>
-                    {isAdmin ? (
-                      <button
-                        type="button"
-                        onClick={() => setActiveAdviserId(adviser.id)}
-                        className="font-medium text-brand-teal-700 hover:underline"
-                      >
-                        {adviser.firstName ?? '—'}
-                      </button>
-                    ) : (
-                      adviser.firstName ?? '—'
-                    )}
-                  </span>
-                  <span>
-                    {isAdmin ? (
-                      <button
-                        type="button"
-                        onClick={() => setActiveAdviserId(adviser.id)}
-                        className="font-medium text-brand-teal-700 hover:underline"
-                      >
-                        {adviser.lastName ?? '—'}
-                      </button>
-                    ) : (
-                      adviser.lastName ?? '—'
-                    )}
-                  </span>
-                  <span className="text-ink-60">{adviser.email}</span>
-                  <span className={adviser.isActive ? 'text-green-700' : 'text-ink-60'}>
-                    {adviser.isActive ? 'Active' : 'Inactive'}
-                    {adviser.invitePending ? ' · Pending' : ''}
-                  </span>
-                </div>
-              ))
-            )}
+          <div className="overflow-x-auto rounded-lg border border-ink-20">
+            <table className="w-full table-fixed border-collapse text-sm text-ink">
+              <colgroup>
+                <col className="w-[12%]" />
+                <col className="w-[12%]" />
+                <col className="w-[22%]" />
+                <col className="w-[18%]" />
+                <col className="w-[36%]" />
+              </colgroup>
+              <thead>
+                <tr className="border-b border-ink-20 bg-ink-08 text-left text-xs font-semibold uppercase tracking-wide text-ink-60">
+                  <th className="px-3 py-2.5 font-semibold">First name</th>
+                  <th className="px-3 py-2.5 font-semibold">Last name</th>
+                  <th className="px-3 py-2.5 font-semibold">Email</th>
+                  <th className="px-3 py-2.5 font-semibold">Status</th>
+                  <th className="px-3 py-2.5 font-semibold">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {advisersLoading ? (
+                  <tr>
+                    <td colSpan={5} className="px-4 py-4 text-sm text-ink-60">
+                      Loading members…
+                    </td>
+                  </tr>
+                ) : advisers.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="px-4 py-4 text-sm text-ink-60">
+                      No members added yet.
+                    </td>
+                  </tr>
+                ) : (
+                  advisers.map((adviser) => {
+                    const rowBusy = actionAdviserId === adviser.id;
+                    return (
+                      <tr key={adviser.id} className="border-b border-ink-20 last:border-b-0">
+                        <td className="px-3 py-3 align-middle">
+                          <div className="truncate">
+                            {isAdmin ? (
+                              <button
+                                type="button"
+                                onClick={() => setActiveAdviserId(adviser.id)}
+                                className="font-medium text-brand-teal-700 hover:underline"
+                              >
+                                {adviser.firstName ?? '—'}
+                              </button>
+                            ) : (
+                              (adviser.firstName ?? '—')
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-3 py-3 align-middle">
+                          <div className="truncate">
+                            {isAdmin ? (
+                              <button
+                                type="button"
+                                onClick={() => setActiveAdviserId(adviser.id)}
+                                className="font-medium text-brand-teal-700 hover:underline"
+                              >
+                                {adviser.lastName ?? '—'}
+                              </button>
+                            ) : (
+                              (adviser.lastName ?? '—')
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-3 py-3 align-middle">
+                          <div className="truncate text-ink-60" title={adviser.email}>
+                            {adviser.email}
+                          </div>
+                        </td>
+                        <td className="px-3 py-3 align-middle">
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <span
+                              className={`inline-flex whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium ${
+                                adviser.isActive
+                                  ? 'bg-green-50 text-green-700'
+                                  : 'bg-ink-08 text-ink-60'
+                              }`}
+                            >
+                              {adviser.isActive ? 'Active' : 'Inactive'}
+                            </span>
+                            {adviser.invitePending && (
+                              <span className="inline-flex whitespace-nowrap rounded-full bg-amber/10 px-2 py-0.5 text-xs font-medium text-amber">
+                                Pending
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-3 py-3 align-middle">
+                          <div className="flex flex-nowrap items-center gap-2">
+                            {isAdmin && adviser.invitePending && (
+                              <button
+                                type="button"
+                                disabled={rowBusy || resendingInvite}
+                                onClick={() => void handleResendInvite(adviser.id)}
+                                className="shrink-0 rounded-md border border-brand-teal-300 bg-brand-teal-50 px-2.5 py-1 text-xs font-medium text-brand-teal-700 hover:bg-brand-teal-100 disabled:opacity-50"
+                              >
+                                {rowBusy && resendingInvite ? 'Resending…' : 'Resend invite'}
+                              </button>
+                            )}
+                            {isAdmin && (
+                              <button
+                                type="button"
+                                disabled={rowBusy || updatingAdviser}
+                                onClick={() =>
+                                  void handleUpdateAdviserById(adviser.id, {
+                                    isActive: !adviser.isActive,
+                                  })
+                                }
+                                className={`shrink-0 rounded-md border px-2.5 py-1 text-xs font-medium disabled:opacity-50 ${
+                                  adviser.isActive
+                                    ? 'border-ink-20 bg-white text-ink hover:bg-ink-08'
+                                    : 'border-brand-teal-300 bg-brand-teal-50 text-brand-teal-700 hover:bg-brand-teal-100'
+                                }`}
+                              >
+                                {rowBusy && updatingAdviser
+                                  ? adviser.isActive
+                                    ? 'Deactivating…'
+                                    : 'Activating…'
+                                  : adviser.isActive
+                                    ? 'Deactivate'
+                                    : 'Activate'}
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
           </div>
         )}
       </div>
@@ -626,6 +811,12 @@ export function IntegrationsSettingsPanel({
   ) : null;
 
   function renderActiveSection() {
+    // Advisers: Messaging + Account only (never render team/billing content).
+    if (!isAdmin) {
+      if (activeSection === 'account') return accountSection;
+      return messagingSection;
+    }
+
     switch (activeSection) {
       case 'organization':
         return organizationSection;
@@ -651,7 +842,7 @@ export function IntegrationsSettingsPanel({
             <div className="sticky top-8 rounded-lg border border-ink-08 bg-card p-4">
               <h3 className="mb-3 px-2 text-sm font-semibold text-muted-foreground">SETTINGS</h3>
               <nav className="space-y-1">
-                {SETTINGS_SECTIONS.map((section) => {
+                {visibleSettingsSections.map((section) => {
                   const Icon = section.icon;
                   const isActive = activeSection === section.id;
                   return (

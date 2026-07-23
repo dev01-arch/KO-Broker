@@ -50,3 +50,61 @@ export async function sendClientWelcomeEmail(client: {
   if (result.ok) return { sent: true };
   return { sent: false, error: result.error };
 }
+
+/** Notify the assigned adviser that a new client has been created for them. */
+export async function sendAdviserClientAssignedEmail(input: {
+  adviser: { email: string; firstName: string; lastName: string };
+  client: {
+    email: string;
+    firstName: string;
+    lastName: string;
+    referenceNumber: string;
+    companyName?: string | null;
+    clientType?: string;
+  };
+}): Promise<EmailDeliveryStatus> {
+  const adviserName =
+    [input.adviser.firstName, input.adviser.lastName].filter(Boolean).join(' ').trim() ||
+    'Adviser';
+  const clientName =
+    input.client.clientType === 'COMPANY' && input.client.companyName?.trim()
+      ? input.client.companyName.trim()
+      : `${input.client.firstName} ${input.client.lastName}`.trim();
+  const subject = `New client assigned — ${input.client.referenceNumber}`;
+  const body = [
+    `Hi ${adviserName},`,
+    '',
+    `A new client has been assigned to you on KO Platform.`,
+    '',
+    `Client: ${clientName}`,
+    `Email: ${input.client.email}`,
+    `Reference: ${input.client.referenceNumber}`,
+    '',
+    'You can open their record from your Clients list on the dashboard.',
+    '',
+    'Best regards,',
+    'KO Platform',
+  ].join('\n');
+  const html = `
+    <p>Hi ${adviserName},</p>
+    <p>A new client has been assigned to you on <strong>KO Platform</strong>.</p>
+    <p>
+      <strong>Client:</strong> ${clientName}<br/>
+      <strong>Email:</strong> ${input.client.email}<br/>
+      <strong>Reference:</strong> ${input.client.referenceNumber}
+    </p>
+    <p>You can open their record from your Clients list on the dashboard.</p>
+    <p>Best regards,<br/>KO Platform</p>
+  `;
+
+  const result = await sendEmail({
+    to: input.adviser.email,
+    subject,
+    body,
+    html,
+    from: formatFromAddress(),
+  });
+
+  if (result.ok) return { sent: true };
+  return { sent: false, error: result.error };
+}

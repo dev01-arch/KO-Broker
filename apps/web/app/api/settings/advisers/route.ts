@@ -1,6 +1,9 @@
 /**
- * GET  /api/settings/advisers  — list advisers (backend User model + memberId for assignment)
- * POST /api/settings/advisers  — invite a new adviser (ADMIN) + sync OrganisationMember
+ * GET  /api/settings/advisers  — list invited advisers in the org
+ * POST /api/settings/advisers  — invite a new adviser (ADMIN only)
+ *
+ * Core logic matches backend engineer (KO-Broker-test).
+ * Frontend-only patches are marked below and must not change HIS behaviour.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -10,107 +13,29 @@ import { logAuditEvent } from '@/lib/compliance/audit';
 import { sendAdviserInvite } from '@/lib/notifications/email';
 import { InviteAdviserSchema } from '@ko/types';
 import { isPrismaMissingColumnError } from '@/lib/api/prisma-errors';
+import { listInvitedAdvisersForOrg } from '@/lib/api/settings-data';
 import crypto from 'crypto';
-
-const ADVISER_USER_SELECT = {
-  id: true,
-  email: true,
-  firstName: true,
-  lastName: true,
-  role: true,
-  isActive: true,
-  invitePending: true,
-  inviteTokenExpiry: true,
-  canViewAllClients: true,
-  canViewAccountDetails: true,
-  canViewAiSummaries: true,
-  createdAt: true,
-} as const;
-
-async function memberIdMapForOrg(orgId: string) {
-  const members = await prisma.organisationMember.findMany({
-    where: { orgId },
-    select: { id: true, userId: true, email: true },
-  });
-
-  const byUserId = new Map<string, string>();
-  const byEmail = new Map<string, string>();
-  for (const member of members) {
-    byEmail.set(member.email.toLowerCase(), member.id);
-    if (member.userId) byUserId.set(member.userId, member.id);
-  }
-  return { byUserId, byEmail };
-}
-
-function serializeAdviser(
-  adviser: {
-    id: string;
-    email: string;
-    firstName: string | null;
-    lastName: string | null;
-    role: string;
-    isActive: boolean;
-    invitePending?: boolean;
-    inviteTokenExpiry?: Date | null;
-    canViewAllClients?: boolean;
-    canViewAccountDetails?: boolean;
-    canViewAiSummaries?: boolean;
-    createdAt: Date;
-  },
-  memberLookup: { byUserId: Map<string, string>; byEmail: Map<string, string> },
-) {
-  return {
-    ...adviser,
-    invitePending: adviser.invitePending ?? false,
-    inviteTokenExpiry: adviser.inviteTokenExpiry?.toISOString() ?? null,
-    canViewAllClients: adviser.canViewAllClients ?? false,
-    canViewAccountDetails: adviser.canViewAccountDetails ?? false,
-    canViewAiSummaries: adviser.canViewAiSummaries ?? false,
-    memberId:
-      memberLookup.byUserId.get(adviser.id) ??
-      memberLookup.byEmail.get(adviser.email.toLowerCase()) ??
-      null,
-  };
-}
 
 // ── GET /api/settings/advisers ────────────────────────────────────────────────
 
 export const GET = createHandler({
   method: 'GET',
-  // === FRONTEND ADDITION: any authenticated user can list advisers (assignment UI) ===
-  // Backend spec: requiredRole ADMIN — relaxed here for client assignment dropdown.
+  // === FRONTEND ADDITION: allow any authenticated user to list advisers for
+  // client assignment UI. Backend HIS uses requiredRole: 'ADMIN'.
+  // requiredRole: 'ADMIN',
   // === END FRONTEND ADDITION ===
   handler: async (_req: NextRequest, { orgId }) => {
-    let advisers: Array<{
-      id: string;
-      email: string;
-      firstName: string | null;
-      lastName: string | null;
-      role: string;
-      isActive: boolean;
-      createdAt: Date;
-      invitePending?: boolean;
-      inviteTokenExpiry?: Date | null;
-      canViewAllClients?: boolean;
-      canViewAccountDetails?: boolean;
-      canViewAiSummaries?: boolean;
-    }> = [];
-
     try {
-      advisers = await prisma.user.findMany({
-        where: {
-          orgId,
-          role: { not: 'ADMIN' },
-        },
-        select: ADVISER_USER_SELECT,
-        orderBy: { createdAt: 'desc' },
-      });
+      const advisers = await listInvitedAdvisersForOrg(orgId!);
+      return NextResponse.json({ success: true, data: advisers }, { status: 200 });
     } catch (error) {
+      // === FRONTEND ADDITION: tolerate unmigrated invite/visibility columns ===
       if (!isPrismaMissingColumnError(error)) throw error;
-      advisers = await prisma.user.findMany({
+      const advisers = await prisma.user.findMany({
         where: {
           orgId,
           role: { not: 'ADMIN' },
+          organisationMember: { isNot: null },
         },
         select: {
           id: true,
@@ -120,20 +45,27 @@ export const GET = createHandler({
           role: true,
           isActive: true,
           createdAt: true,
+          organisationMember: { select: { id: true } },
         },
         orderBy: { createdAt: 'desc' },
       });
+      return NextResponse.json(
+        {
+          success: true,
+          data: advisers.map(({ organisationMember, ...a }) => ({
+            ...a,
+            invitePending: false,
+            inviteTokenExpiry: null,
+            canViewAllClients: false,
+            canViewAccountDetails: false,
+            canViewAiSummaries: false,
+            memberId: organisationMember?.id ?? null,
+          })),
+        },
+        { status: 200 },
+      );
+      // === END FRONTEND ADDITION ===
     }
-
-    const memberLookup = await memberIdMapForOrg(orgId!);
-
-    return NextResponse.json(
-      {
-        success: true,
-        data: advisers.map((adviser) => serializeAdviser(adviser, memberLookup)),
-      },
-      { status: 200 },
-    );
   },
 });
 
@@ -144,8 +76,9 @@ export const POST = createHandler({
   requiredRole: 'ADMIN',
   schema: InviteAdviserSchema,
   handler: async (_req: NextRequest, { body, user, orgId }) => {
+    // 1. Check no existing active user with that email in the org
     const existing = await prisma.user.findFirst({
-      where: { orgId, email: body.email },
+      where: { orgId, email: { equals: body.email, mode: 'insensitive' } },
     });
 
     if (existing) {
@@ -179,6 +112,7 @@ export const POST = createHandler({
     }
     // === END FRONTEND ADDITION ===
 
+    // 2. Fetch org info for the email
     const org = await prisma.organisation.findUnique({
       where: { id: orgId },
       select: { name: true },
@@ -191,13 +125,16 @@ export const POST = createHandler({
       );
     }
 
+    // 3. Generate invite token with 48-hour expiry
     const inviteToken = crypto.randomBytes(32).toString('hex');
     const inviteTokenExpiry = new Date(Date.now() + 48 * 60 * 60 * 1000);
 
+    // 4. Create pending adviser user record
+    // Names here are the source of truth for the adviser on the platform.
     const adviser = await prisma.user.create({
       data: {
-        clerkId: `pending_${inviteToken.slice(0, 16)}`,
-        email: body.email,
+        clerkId: `pending_${inviteToken.slice(0, 16)}`, // temporary placeholder
+        email: body.email.toLowerCase(),
         firstName: body.firstName,
         lastName: body.lastName,
         role: 'ADVISER',
@@ -210,10 +147,9 @@ export const POST = createHandler({
         canViewAccountDetails: body.canViewAccountDetails,
         canViewAiSummaries: body.canViewAiSummaries,
       },
-      select: ADVISER_USER_SELECT,
     });
 
-    // === FRONTEND ADDITION: dual-write OrganisationMember for client assignment UI ===
+    // === FRONTEND ADDITION: dual-write OrganisationMember for client assignment ===
     const member = await prisma.organisationMember.create({
       data: {
         orgId: orgId!,
@@ -228,6 +164,7 @@ export const POST = createHandler({
     });
     // === END FRONTEND ADDITION ===
 
+    // 5. Send invite email
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.kobroker.co.uk';
     const inviteUrl = `${baseUrl}/adviser/invite?token=${inviteToken}`;
 
@@ -235,7 +172,7 @@ export const POST = createHandler({
       ? `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim() || user.email
       : 'Your administrator';
 
-    await sendAdviserInvite({
+    const emailResult = await sendAdviserInvite({
       to: body.email,
       firstName: body.firstName,
       orgName: org.name,
@@ -243,6 +180,7 @@ export const POST = createHandler({
       inviteUrl,
     });
 
+    // 6. Audit log
     await logAuditEvent({
       orgId: orgId!,
       userId: user?.id,
@@ -252,13 +190,25 @@ export const POST = createHandler({
       diff: { after: { email: body.email, role: 'ADVISER', invitePending: true } },
     });
 
-    const memberLookup = {
-      byUserId: new Map([[adviser.id, member.id]]),
-      byEmail: new Map([[body.email.toLowerCase(), member.id]]),
-    };
-
     return NextResponse.json(
-      { success: true, data: serializeAdviser(adviser, memberLookup) },
+      {
+        success: true,
+        data: {
+          id: adviser.id,
+          email: adviser.email,
+          // === FRONTEND ADDITION: memberId + email delivery status ===
+          memberId: member.id,
+          emailSent: emailResult.ok,
+          ...(emailResult.ok
+            ? {}
+            : {
+                emailError:
+                  emailResult.error ||
+                  'Invite email failed to send. Check RESEND_API_KEY / RESEND_FROM_EMAIL.',
+              }),
+          // === END FRONTEND ADDITION ===
+        },
+      },
       { status: 201 },
     );
   },

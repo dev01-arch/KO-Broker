@@ -1,10 +1,13 @@
 import { NextRequest } from 'next/server';
 import { UpdateCaseSchema } from '@ko/types';
 import { requireApiAuth } from '@/lib/api/require-api-auth';
+import { getCurrentUser, maskCaseFinancials, maskClientFinancials } from '@/lib/auth';
+import { caseAssignedToAdviserWhere, isRestrictedAdviser } from '@/lib/auth/adviser-scope';
 import { getCaseForOrg, updateCaseForOrg } from '@/lib/api/cases-data';
 import { serializeCaseDetail, serializeCaseSummary } from '@/lib/api/cases';
 import { apiError, apiFromZodError, apiNotFound, apiSuccess } from '@/lib/api/responses';
 import { isPrismaConnectionError } from '@/lib/api/prisma-errors';
+import { prisma } from '@/lib/db';
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -15,13 +18,39 @@ export async function GET(_req: NextRequest, context: RouteContext) {
 
     const { orgId } = authResult;
     const { id } = await context.params;
+    const currentUser = await getCurrentUser();
+    const isAdviserWithRestriction = isRestrictedAdviser(currentUser);
+    const hideAccountDetails =
+      currentUser?.role === 'ADVISER' && !currentUser.canViewAccountDetails;
 
     const caseRecord = await getCaseForOrg(orgId, id);
     if (!caseRecord) {
       return apiNotFound('Case not found');
     }
 
-    return apiSuccess(serializeCaseDetail(caseRecord));
+    if (isAdviserWithRestriction && currentUser) {
+      const allowed = await prisma.case.findFirst({
+        where: {
+          id,
+          orgId,
+          ...caseAssignedToAdviserWhere(currentUser.id),
+        },
+        select: { id: true },
+      });
+      if (!allowed) {
+        return apiNotFound('Case not found');
+      }
+    }
+
+    let payload = serializeCaseDetail(caseRecord);
+    if (hideAccountDetails) {
+      payload = maskCaseFinancials(payload);
+      if (payload.client) {
+        payload = { ...payload, client: maskClientFinancials(payload.client) };
+      }
+    }
+
+    return apiSuccess(payload);
   } catch (error) {
     console.error('[GET /api/cases/:id]', error);
     if (isPrismaConnectionError(error)) {
@@ -38,6 +67,8 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
 
     const { orgId } = authResult;
     const { id } = await context.params;
+    const currentUser = await getCurrentUser();
+    const isAdviserWithRestriction = isRestrictedAdviser(currentUser);
 
     let body: unknown;
     try {
@@ -49,6 +80,20 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     const parsed = UpdateCaseSchema.safeParse(body);
     if (!parsed.success) {
       return apiFromZodError(parsed.error);
+    }
+
+    if (isAdviserWithRestriction && currentUser) {
+      const allowed = await prisma.case.findFirst({
+        where: {
+          id,
+          orgId,
+          ...caseAssignedToAdviserWhere(currentUser.id),
+        },
+        select: { id: true },
+      });
+      if (!allowed) {
+        return apiNotFound('Case not found');
+      }
     }
 
     const result = await updateCaseForOrg(orgId, id, parsed.data);

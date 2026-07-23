@@ -9,6 +9,7 @@ import {
   API_ERROR_CODES,
 } from '@/lib/api/errors';
 import { useCreateCheckout } from '@/hooks/use-billing';
+import { useIsAdmin } from '@/hooks/use-org';
 
 type ApiErrorStateProps = {
   error: unknown;
@@ -28,6 +29,7 @@ export function ApiErrorState({
   const details = getApiErrorDetails(error);
   const showRetry = onRetry && !isApiErrorCode(error, API_ERROR_CODES.UNAUTHORIZED);
   const isPlanLimit = isApiErrorCode(error, API_ERROR_CODES.PLAN_LIMIT_EXCEEDED);
+  const isAdmin = useIsAdmin();
   const { mutateAsync: checkout, isPending: checkoutPending } = useCreateCheckout();
 
   return (
@@ -44,7 +46,7 @@ export function ApiErrorState({
       {code && (
         <p className="font-mono text-xs text-ink-60/80">{code}</p>
       )}
-      {isPlanLimit && (
+      {isPlanLimit && isAdmin && (
         <button
           type="button"
           disabled={checkoutPending}
@@ -57,6 +59,11 @@ export function ApiErrorState({
           <Sparkles className="h-4 w-4" />
           {checkoutPending ? 'Redirecting…' : 'Upgrade plan'}
         </button>
+      )}
+      {isPlanLimit && !isAdmin && (
+        <p className="mt-2 max-w-md text-center text-xs text-ink-60">
+          Ask your organisation admin if you need a plan upgrade.
+        </p>
       )}
       {showRetry && (
         <button

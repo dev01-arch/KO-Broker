@@ -73,7 +73,7 @@ function toAuthUser(row: AuthUserRow): User {
     inviteToken: null,
     inviteTokenExpiry: null,
     invitePending: false,
-    // Defaults until invite columns are migrated + loaded in requireVisibility
+    // Defaults until loadVisibilityFlags enriches (or columns missing → stay false)
     canViewAllClients: false,
     canViewAccountDetails: false,
     canViewAiSummaries: false,
@@ -175,10 +175,14 @@ export async function getCurrentUser(): Promise<User | null> {
   if (!userId) return null;
 
   const existing = await findUserByClerkIdForAuth(userId);
-  if (existing) return existing;
+  if (existing) {
+    // Load per-adviser visibility switches (safe no-op if columns missing).
+    return loadVisibilityFlags(existing);
+  }
 
   // === FRONTEND ADDITION: auto-provision on first API call ===
-  return ensureDbUser(userId);
+  const provisioned = await ensureDbUser(userId);
+  return provisioned ? loadVisibilityFlags(provisioned) : null;
   // === END FRONTEND ADDITION ===
 }
 

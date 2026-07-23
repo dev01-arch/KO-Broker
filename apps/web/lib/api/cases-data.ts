@@ -4,6 +4,7 @@ import { isPrismaConnectionError, isPrismaUniqueConflict } from '@/lib/api/prism
 import { validateStageTransition } from '@/lib/api/stage-transition';
 import { calculateLTV, generateReference } from '@ko/utils';
 import type { CaseStage, CaseType, UpsertFactFindInput } from '@ko/types';
+import { caseAssignedToAdviserWhere } from '@/lib/auth/adviser-scope';
 
 function useDevStore(error: unknown) {
   return process.env.NODE_ENV === 'development' && isPrismaConnectionError(error);
@@ -52,26 +53,38 @@ export async function listCasesForOrg(
     type?: CaseType;
     clientId?: string;
     adviserId?: string;
+    /** When set, only cases linked to this adviser (case or client assignment). */
+    restrictToAdviserUserId?: string;
   },
 ) {
   try {
+    const andFilters = [
+      ...(params.restrictToAdviserUserId
+        ? [caseAssignedToAdviserWhere(params.restrictToAdviserUserId)]
+        : params.adviserId
+          ? [{ assignedAdviserId: params.adviserId }]
+          : []),
+      ...(params.search
+        ? [
+            {
+              OR: [
+                { referenceNumber: { contains: params.search, mode: 'insensitive' as const } },
+                { client: { companyName: { contains: params.search, mode: 'insensitive' as const } } },
+                { client: { firstName: { contains: params.search, mode: 'insensitive' as const } } },
+                { client: { lastName: { contains: params.search, mode: 'insensitive' as const } } },
+                { client: { email: { contains: params.search, mode: 'insensitive' as const } } },
+              ],
+            },
+          ]
+        : []),
+    ];
+
     const where = {
       orgId,
       ...(params.stage ? { stage: params.stage } : {}),
       ...(params.type ? { type: params.type } : {}),
       ...(params.clientId ? { clientId: params.clientId } : {}),
-      ...(params.adviserId ? { assignedAdviserId: params.adviserId } : {}),
-      ...(params.search
-        ? {
-            OR: [
-              { referenceNumber: { contains: params.search, mode: 'insensitive' as const } },
-              { client: { companyName: { contains: params.search, mode: 'insensitive' as const } } },
-              { client: { firstName: { contains: params.search, mode: 'insensitive' as const } } },
-              { client: { lastName: { contains: params.search, mode: 'insensitive' as const } } },
-              { client: { email: { contains: params.search, mode: 'insensitive' as const } } },
-            ],
-          }
-        : {}),
+      ...(andFilters.length > 0 ? { AND: andFilters } : {}),
     };
 
     const [total, cases] = await Promise.all([

@@ -15,7 +15,7 @@ import {
 import { useAiReports, useGenerateReport, useApproveReport, useRegenerateSection } from '@/hooks/use-ai-reports';
 import { ApiErrorState } from '@/components/dashboard/api-error-state';
 import { PlanGate } from '@/components/dashboard/plan-gate';
-import { usePlanFeature } from '@/hooks/use-org';
+import { usePlanFeature, useAdviserVisibility, useIsAdmin } from '@/hooks/use-org';
 import { useHealth } from '@/hooks/use-system';
 import { useCases } from '@/hooks/use-cases';
 import type { AiReport, ReportTemplate, ReportStatus } from '@/lib/api/client';
@@ -288,15 +288,18 @@ const LIST_QUERY = { page: 1, perPage: 50 } as const;
 
 export default function AIReportsPage() {
   const hasAiReports = usePlanFeature('ai_reports');
-  const { data: health } = useHealth({ enabled: hasAiReports });
+  const isAdmin = useIsAdmin();
+  const { canViewAiSummaries } = useAdviserVisibility();
+  const canAccessAi = isAdmin || canViewAiSummaries;
+  const { data: health } = useHealth({ enabled: hasAiReports && canAccessAi });
   const aiAvailable = health?.services?.ai !== false;
   const [showGenerate, setShowGenerate] = useState(false);
   const [generateError, setGenerateError] = useState<string | null>(null);
 
   const { data: reportsData, isLoading, isError, error, refetch } = useAiReports(LIST_QUERY, {
-    enabled: hasAiReports,
+    enabled: hasAiReports && canAccessAi,
   });
-  const { data: casesData } = useCases({ page: 1, perPage: 100 });
+  const { data: casesData } = useCases({ page: 1, perPage: 100 }, { enabled: hasAiReports && canAccessAi });
   const { mutateAsync: generateReport, isPending: isGenerating } = useGenerateReport();
 
   const reports = reportsData?.data ?? [];
@@ -311,6 +314,22 @@ export default function AIReportsPage() {
     } catch (err) {
       setGenerateError(formatApiError(err, { fallback: 'Could not generate report.' }));
     }
+  }
+
+  if (!canAccessAi) {
+    return (
+      <>
+        <div className="flex h-[52px] items-center border-b border-ink-20 bg-white px-7">
+          <h1 className="font-heading text-sm font-bold text-ink">AI Reports</h1>
+        </div>
+        <div className="px-7 py-10">
+          <div className="rounded-xl border border-amber/30 bg-amber/10 px-5 py-4 text-sm text-ink">
+            AI summaries are not enabled for your account. Ask your organisation admin to turn on
+            &ldquo;View AI summaries&rdquo; for you.
+          </div>
+        </div>
+      </>
+    );
   }
 
   if (!hasAiReports) {
