@@ -41,5 +41,9 @@ jobs:
       # - name: Run tests
       #   run: pnpm test
 
+      # Do not use root `pnpm build` here — it runs `db:push`, which needs a live DB.
       - name: Build
-        run: pnpm build
+        run: pnpm db:generate && pnpm --filter @ko/web build
+        env:
+          # Next may require these at build time; empty is fine for compile-only CI.
+          SKIP_ENV_VALIDATION: "1"
