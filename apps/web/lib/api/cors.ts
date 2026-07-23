@@ -31,7 +31,7 @@ export function corsHeadersForOrigin(origin: string | null): Record<string, stri
   };
 }
 
-export function applyCorsHeaders(req: NextRequest, res: Response): Response {
+export function applyCorsHeaders<T extends Response>(req: NextRequest, res: T): T {
   const cors = corsHeadersForOrigin(req.headers.get('origin'));
   if (!cors) return res;
   for (const [key, value] of Object.entries(cors)) {
