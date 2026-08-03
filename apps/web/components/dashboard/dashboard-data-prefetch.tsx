@@ -82,10 +82,10 @@ export function DashboardDataPrefetch() {
               .catch(() => null),
           ]);
         };
-        if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+        if (typeof window !== 'undefined' && typeof window.requestIdleCallback === 'function') {
           window.requestIdleCallback(warmSettings, { timeout: 8000 });
         } else {
-          window.setTimeout(warmSettings, 4000);
+          setTimeout(warmSettings, 4000);
         }
       } catch {
         // Prefetch is best-effort; hooks will fetch on mount.

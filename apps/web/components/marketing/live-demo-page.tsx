@@ -1367,6 +1367,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
         caseId?: string;
         clientIds?: string[];
         path?: string;
+        tab?: string;
         payload?: CreateClientInput | CreateCaseInput | Record<string, unknown>;
         file?: {
           name: string;
