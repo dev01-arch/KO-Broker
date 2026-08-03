@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   settingsApi,
   requireAuthToken,
+  type ApiSuccessResponse,
   type CreateAdviserInput,
   type OrgIntegrations,
   type OrgMessagingSettings,
@@ -21,6 +22,23 @@ function useToken() {
 export const integrationsQueryKey = ['settings', 'integrations'] as const;
 export const messagingQueryKey = ['settings', 'messaging'] as const;
 export const advisersQueryKey = ['settings', 'advisers'] as const;
+
+const DEFAULT_INTEGRATIONS: ApiSuccessResponse<OrgIntegrations> = {
+  success: true,
+  data: {
+    equifax: { enabled: false },
+    twilio: { enabled: false },
+  },
+};
+
+const DEFAULT_MESSAGING: ApiSuccessResponse<OrgMessagingSettings> = {
+  success: true,
+  data: {
+    inApp: { enabled: true },
+    email: { enabled: true },
+    sms: { enabled: true },
+  },
+};
 
 export type IntegrationsDraft = {
   equifax: { enabled: boolean };
@@ -41,6 +59,11 @@ export function useIntegrations() {
       const token = await requireAuthToken(getToken);
       return settingsApi.getIntegrations(token);
     },
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    placeholderData: DEFAULT_INTEGRATIONS,
   });
 }
 
@@ -52,8 +75,8 @@ export function useUpdateIntegrations() {
       const token = await requireAuthToken(getToken);
       return settingsApi.updateIntegrations(token, input);
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: integrationsQueryKey });
+    onSuccess: (response) => {
+      qc.setQueryData(integrationsQueryKey, response);
     },
   });
 }
@@ -66,6 +89,11 @@ export function useMessagingSettings() {
       const token = await requireAuthToken(getToken);
       return settingsApi.getMessaging(token);
     },
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    placeholderData: DEFAULT_MESSAGING,
   });
 }
 
@@ -79,7 +107,6 @@ export function useUpdateMessagingSettings() {
     },
     onSuccess: (response) => {
       qc.setQueryData(messagingQueryKey, response);
-      qc.invalidateQueries({ queryKey: messagingQueryKey });
     },
   });
 }
@@ -89,6 +116,10 @@ export function useAdvisers(options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: advisersQueryKey,
     enabled: options?.enabled ?? true,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
     queryFn: async () => {
       const token = await requireAuthToken(getToken);
       return settingsApi.listAdvisers(token);

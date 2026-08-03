@@ -22,10 +22,15 @@ export function DashboardAuthGuard({ children }: { children: React.ReactNode }) 
     }
   }, [isLoaded, isSignedIn, pathname, router]);
 
+  // Keep the shell mounted as soon as Clerk reports signed-in; only block
+  // when we still don't know auth state.
   if (!isLoaded) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-surface text-sm text-ink-60">
-        Loading…
+      <div className="flex min-h-screen items-center justify-center bg-[#F7F8FA] text-sm text-ink-60">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-brand-teal border-t-transparent" />
+          <p>Opening dashboard…</p>
+        </div>
       </div>
     );
   }

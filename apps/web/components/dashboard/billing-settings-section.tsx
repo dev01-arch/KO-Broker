@@ -83,13 +83,13 @@ export function BillingSettingsSection({
   onBillingNoticeDismiss,
 }: BillingSettingsSectionProps) {
   const isAdmin = useIsAdmin();
-  const { data: profile, isLoading } = useOrgProfile();
+  const { data: profile, isLoading: profileLoading } = useOrgProfile();
   const { mutateAsync: checkout, isPending, error } = useCreateCheckout();
   const {
     data: subscription,
     isLoading: subscriptionLoading,
     refetch: refetchSubscription,
-  } = useBillingSubscription(!isLoading);
+  } = useBillingSubscription(!profileLoading || Boolean(profile));
   const {
     mutateAsync: openBillingPortal,
     isPending: portalPending,
@@ -140,14 +140,7 @@ export function BillingSettingsSection({
     }
   }
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-12 text-sm text-ink-60">
-        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-        Loading billing…
-      </div>
-    );
-  }
+  // Don't block the billing section on a cold org fetch — plan defaults to STARTER.
 
   return (
     <>

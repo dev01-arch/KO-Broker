@@ -12,6 +12,11 @@ import {
   type UpdateProductConsideredInput,
   type UpsertFactFindInput,
 } from '@/lib/api/client';
+import {
+  applyCreatedCaseToCache,
+  applyUpdatedCaseToCache,
+  softInvalidateDashboardLists,
+} from '@/lib/api/query-cache';
 
 function useToken() {
   const { getToken } = useAuth();
@@ -43,6 +48,7 @@ export function useCases(
       return casesApi.list(token, params);
     },
     enabled: options?.enabled ?? true,
+    staleTime: 5 * 60 * 1000,
   });
 }
 
@@ -55,6 +61,7 @@ export function useCase(id: string) {
       return casesApi.get(token, id);
     },
     enabled: Boolean(id),
+    staleTime: 5 * 60 * 1000,
   });
 }
 
@@ -66,9 +73,9 @@ export function useCreateCase() {
       const token = await requireAuthToken(getToken);
       return casesApi.create(token, input);
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['cases'] });
-      qc.invalidateQueries({ queryKey: ['clients'] });
+    onSuccess: (result) => {
+      applyCreatedCaseToCache(qc, result.data);
+      softInvalidateDashboardLists(qc);
     },
   });
 }
@@ -81,9 +88,9 @@ export function useUpdateCase(id: string) {
       const token = await requireAuthToken(getToken);
       return casesApi.update(token, id, input);
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['cases'] });
-      qc.invalidateQueries({ queryKey: ['cases', id] });
+    onSuccess: (result) => {
+      applyUpdatedCaseToCache(qc, result.data);
+      softInvalidateDashboardLists(qc);
     },
   });
 }

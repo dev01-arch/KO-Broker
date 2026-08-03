@@ -8,10 +8,23 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ['@prisma/client', 'pdf-parse'],
   transpilePackages: ['@ko/db', '@ko/types', '@ko/utils'],
 
+  // Windows + Turbopack FS cache often stalls compiles for 20–60s ("writing to filesystem cache").
+  // Keep Turbopack; disable only the persistent disk cache so first navigations stay fast.
+  experimental: {
+    turbopackFileSystemCacheForDev: false,
+    optimizePackageImports: ['lucide-react', 'recharts'],
+  },
+
   async redirects() {
+    // Legacy React section dashboard — always land on LiveDemoPage (/dashboard).
     return [
       {
         source: '/dashboard/settings',
+        destination: '/dashboard?tab=settings',
+        permanent: false,
+      },
+      {
+        source: '/dashboard/settings/:path*',
         destination: '/dashboard?tab=settings',
         permanent: false,
       },

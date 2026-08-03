@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { useAuth, useUser } from '@clerk/nextjs';
 import { useQueryClient } from '@tanstack/react-query';
 import { Bell, Building2, Calculator as CalculatorIcon, FileText, Loader2, Settings, Upload, type LucideIcon } from 'lucide-react';
@@ -10,7 +10,12 @@ import MortgageCalculators from '@/components/marketing/demo-calculator/Mortgage
 import { IntegrationsSettingsPanel } from '@/components/dashboard/integrations-settings-panel';
 import { clientsQueryKey, useClients, useCreateClient } from '@/hooks/use-clients';
 import { advisersQueryKey, useAdvisers } from '@/hooks/use-settings';
-import { useDashboardBootstrap, LIVE_CLIENTS_QUERY, LIVE_CASES_QUERY } from '@/hooks/use-dashboard-bootstrap';
+import {
+  useDashboardBootstrap,
+  LIVE_CLIENTS_QUERY,
+  LIVE_CASES_QUERY,
+  dashboardBootstrapQueryKey,
+} from '@/hooks/use-dashboard-bootstrap';
 import { usePortalInvite } from '@/hooks/use-portal-invite';
 import { casesQueryKey, useCases, useCreateCase } from '@/hooks/use-cases';
 import { useAdviserVisibility, useIsAdmin, usePlanFeature } from '@/hooks/use-org';
@@ -31,6 +36,7 @@ import {
   messagesApi,
   normalizeAiReportSections,
   type AiReport,
+  type Case,
   type CaseSummary,
   type CaseStage,
   type ClientSummary,
@@ -45,8 +51,34 @@ import {
   type TimelineEntry,
   type ProductConsidered,
   type UpsertFactFindInput,
+  type ApiSuccessResponse,
 } from '@/lib/api/client';
 import { formatClientName, formatClientInitials } from '@/lib/api/client-display';
+import {
+  applyCreatedCaseToCache,
+  applyCreatedClientToCache,
+  applyDeletedClientsToCache,
+  applyUpdatedCaseToCache,
+  softInvalidateDashboardLists,
+} from '@/lib/api/query-cache';
+import {
+  readDashboardBootstrapSnapshot,
+  writeDashboardBootstrapSnapshot,
+} from '@/lib/api/dashboard-cache';
+
+/** Persist current bootstrap-shaped lists so the iframe can paint instantly next load. */
+function persistLiveListsSnapshot(
+  clients: ClientSummary[],
+  cases: CaseSummary[],
+  advisers: AdviserRecord[],
+) {
+  writeDashboardBootstrapSnapshot({
+    org: null,
+    clients,
+    cases,
+    advisers,
+  });
+}
 
 // ── Inline upload modal used by the live demo iframe ─────────────────────────
 
@@ -147,6 +179,59 @@ const LIVE_CLIENTS_QUERY_DEMO = { page: 1, perPage: 100 } as const;
 const LIVE_CASES_QUERY_DEMO = { page: 1, perPage: 100 } as const;
 
 type DemoTab = 'overview' | 'clients' | 'cases' | 'messages' | 'ai' | 'calculator' | 'settings';
+
+const DEMO_TABS: readonly DemoTab[] = [
+  'overview',
+  'clients',
+  'cases',
+  'messages',
+  'ai',
+  'calculator',
+  'settings',
+] as const;
+
+/** Map `?tab=` (and iframe aliases) → parent DemoTab. */
+function demoTabFromParam(raw: string | null | undefined): DemoTab | null {
+  if (!raw) return null;
+  if (raw === 'calculators') return 'calculator';
+  // Iframe-only nav item — keep the iframe visible (not an embedded React panel).
+  if (raw === 'compliance') return 'overview';
+  if ((DEMO_TABS as readonly string[]).includes(raw)) return raw as DemoTab;
+  return null;
+}
+
+function demoTabToParam(tab: DemoTab): string | null {
+  if (tab === 'overview') return null;
+  return tab;
+}
+
+/** Iframe query `tab` value for the HTML prototype. */
+function demoTabToIframeParam(tab: DemoTab): string {
+  if (tab === 'calculator') return 'calculators';
+  if (tab === 'settings') return 'overview';
+  return tab;
+}
+
+function resolveDemoTabFromSearch(sp: { get: (key: string) => string | null }): DemoTab {
+  const billing = sp.get('billing');
+  if (billing === 'success' || billing === 'cancel') return 'settings';
+  return demoTabFromParam(sp.get('tab')) ?? 'overview';
+}
+
+/** Prefer the address bar — Next soft-nav can lag behind optimistic tab switches. */
+function readLocationSearchParams(
+  fallback: { toString: () => string },
+): URLSearchParams {
+  if (typeof window !== 'undefined') {
+    return new URLSearchParams(window.location.search);
+  }
+  return new URLSearchParams(fallback.toString());
+}
+
+function locationHref(pathname: string, params: URLSearchParams): string {
+  const qs = params.toString();
+  return qs ? `${pathname}?${qs}` : pathname;
+}
 
 type NavItem =
   | { id: DemoTab; label: string; iconUrl: string }
@@ -251,20 +336,36 @@ type LiveDemoPageProps = {
 
 export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const { user, isLoaded: clerkLoaded } = useUser();
   const { getToken, signOut, isLoaded: authLoaded, isSignedIn } = useAuth();
   const [demoUsername, setDemoUsername] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<DemoTab>('overview');
+  const [activeTab, setActiveTab] = useState<DemoTab>(() => resolveDemoTabFromSearch(searchParams));
+  /** First iframe paint uses this so reload restores the URL tab without remounting on every switch. */
+  const initialIframeTabRef = useRef<string>(
+    (() => {
+      const raw = searchParams.get('tab');
+      if (raw === 'compliance') return 'compliance';
+      if (raw === 'calculators') return 'calculators';
+      return demoTabToIframeParam(resolveDemoTabFromSearch(searchParams));
+    })(),
+  );
+  /** Skip the first ko:switch-tab after load — iframe already opened on the URL tab. */
+  const skipNextIframeTabSyncRef = useRef(true);
+  /**
+   * Tab we just wrote to the address bar via history API.
+   * Ignores stale Next `useSearchParams` until the router catches up (or the user goes back).
+   */
+  const pendingTabUrlRef = useRef<DemoTab | 'compliance' | null>(null);
+  /** Once opened, keep Settings/Calculator mounted (hidden) so return visits don't remount. */
+  const [settingsMounted, setSettingsMounted] = useState(false);
+  const [calculatorMounted, setCalculatorMounted] = useState(false);
   const isDashboard = homeHref === '/dashboard';
   const isClerkUser = Boolean(user);
   const [frameHeight, setFrameHeight] = useState<number>(1200);
   const [iframeLoaded, setIframeLoaded] = useState(false);
   const [factFindOpen, setFactFindOpen] = useState(false);
-  // Cache-buster: initialised to 0 on both server and client (no hydration mismatch).
-  // Updated to Date.now() after first mount so the browser always fetches fresh iframe HTML.
-  const [iframeV, setIframeV] = useState<number>(0);
-  useEffect(() => { setIframeV(Date.now()); }, []);
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const [uploadModal, setUploadModal] = useState<{ caseId: string } | null>(null);
   const [notifOpen, setNotifOpen] = useState(false);
@@ -313,10 +414,15 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
     >
   >({});
   const hubMessagesRef = useRef<Record<string, MessageRecord[]>>({});
+  /** In-flight optimistic sends — never dropped by list refresh / confirm races. */
+  const pendingMessagesRef = useRef<Record<string, MessageRecord[]>>({});
+  const messagesListGenRef = useRef(0);
   const hubMetaRef = useRef<Record<string, { name: string; caseRef: string; caseSub: string; stage: string; type: 'client' | 'system' }>>({});
   const clientsDataRef = useRef<ClientSummary[]>([]);
   const casesDataRef = useRef<CaseSummary[]>([]);
   const advisersDataRef = useRef<AdviserRecord[]>([]);
+  /** Newly created clients kept until bootstrap/list queries catch up (avoids sync wipe). */
+  const pendingCreatedClientsRef = useRef<ClientSummary[]>([]);
   const clientsLoadingRef = useRef(false);
   const casesLoadingRef = useRef(false);
   const unreadMessagesCountRef = useRef(0);
@@ -325,13 +431,113 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
   const showEmbeddedPanel = isEmbeddedPanelTab(activeTab);
   const queryClient = useQueryClient();
 
-  useEffect(() => {
-    const tab = searchParams.get('tab');
-    const billing = searchParams.get('billing');
-    if (tab === 'settings' || billing === 'success' || billing === 'cancel') {
-      setActiveTab('settings');
+  const writeTabHref = useCallback(
+    (href: string, tabKey: DemoTab | 'compliance', options?: { replace?: boolean }) => {
+      const currentHref =
+        typeof window !== 'undefined'
+          ? `${window.location.pathname}${window.location.search}`
+          : locationHref(pathname, new URLSearchParams(searchParams.toString()));
+      if (href === currentHref) return;
+
+      pendingTabUrlRef.current = tabKey;
+      // Same-route `router.push(?tab=)` soft-nav often stalls on this dashboard and
+      // leaves the address bar stuck. History API updates immediately; popstate +
+      // location reads keep React in sync without double history entries.
+      if (typeof window === 'undefined') return;
+      if (options?.replace) window.history.replaceState(window.history.state, '', href);
+      else window.history.pushState(window.history.state, '', href);
+    },
+    [pathname, searchParams],
+  );
+
+  const selectTab = useCallback(
+    (tab: DemoTab, options?: { replace?: boolean }) => {
+      setActiveTab(tab);
+      if (tab === 'settings') setSettingsMounted(true);
+      if (tab === 'calculator') setCalculatorMounted(true);
+
+      const params = readLocationSearchParams(searchParams);
+      const tabParam = demoTabToParam(tab);
+      if (tabParam) params.set('tab', tabParam);
+      else params.delete('tab');
+
+      writeTabHref(locationHref(pathname, params), tab, options);
+    },
+    [pathname, searchParams, writeTabHref],
+  );
+
+  const applyTabFromLocation = useCallback(() => {
+    const sp = readLocationSearchParams(searchParams);
+    const raw = sp.get('tab');
+    if (raw === 'compliance') {
+      pendingTabUrlRef.current = null;
+      // Iframe-only section: restore iframe tab without flipping parent to Settings/Calculator.
+      setActiveTab((prev) => (isEmbeddedPanelTab(prev) ? 'overview' : prev));
+      skipNextIframeTabSyncRef.current = true;
+      iframeRef.current?.contentWindow?.postMessage(
+        { type: 'ko:switch-tab', tab: 'compliance' },
+        window.location.origin,
+      );
+      return;
     }
+    const next = resolveDemoTabFromSearch(sp);
+    if (pendingTabUrlRef.current !== null) {
+      const pending = pendingTabUrlRef.current;
+      if (pending !== 'compliance' && next === pending) {
+        pendingTabUrlRef.current = null;
+      } else if (searchParams.get('tab') !== raw) {
+        // Next soft-nav still on the old ?tab= — don't snap activeTab backward.
+        return;
+      } else {
+        pendingTabUrlRef.current = null;
+      }
+    }
+    setActiveTab((prev) => (prev === next ? prev : next));
+    if (next === 'settings') setSettingsMounted(true);
+    if (next === 'calculator') setCalculatorMounted(true);
   }, [searchParams]);
+
+  // Keep tab state in sync with the URL (reload + browser back/forward).
+  useEffect(() => {
+    applyTabFromLocation();
+  }, [applyTabFromLocation]);
+
+  useEffect(() => {
+    const onPopState = () => {
+      pendingTabUrlRef.current = null;
+      applyTabFromLocation();
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, [applyTabFromLocation]);
+
+  useEffect(() => {
+    if (activeTab === 'settings') setSettingsMounted(true);
+    if (activeTab === 'calculator') setCalculatorMounted(true);
+  }, [activeTab]);
+
+  // Idle-warm Settings after first paint so its API routes don't cold-compile with /dashboard.
+  useEffect(() => {
+    if (!(isDashboard && authLoaded && isSignedIn) || settingsMounted) return;
+    let cancelled = false;
+    const mount = () => {
+      if (!cancelled) setSettingsMounted(true);
+    };
+    let idleId: number | undefined;
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+      idleId = window.requestIdleCallback(mount, { timeout: 10000 });
+    } else {
+      timeoutId = setTimeout(mount, 5000);
+    }
+    return () => {
+      cancelled = true;
+      if (idleId !== undefined && 'cancelIdleCallback' in window) {
+        window.cancelIdleCallback(idleId);
+      }
+      if (timeoutId !== undefined) clearTimeout(timeoutId);
+    };
+  }, [isDashboard, authLoaded, isSignedIn, settingsMounted]);
 
   useEffect(() => {
     if (!isDashboard && clerkLoaded && isClerkUser) {
@@ -354,7 +560,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
       return;
     }
     clearAuthenticated();
-    router.push('/login');
+    router.push('/sign-in');
   }, [isClerkUser, router, signOut]);
 
   const { data: bootstrapData, isLoading: bootstrapLoading, isError: bootstrapError } =
@@ -392,25 +598,41 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
     ? 0
     : (unreadMessagesResponse?.meta?.total ?? unreadMessagesResponse?.data?.length ?? 0);
 
-  clientsDataRef.current = isPersonalDashboard
-    ? (bootstrapData?.data.clients ?? clientsData?.data ?? [])
-    : (clientsData?.data ?? []);
+  {
+    const baseClients = isPersonalDashboard
+      ? (bootstrapData?.data.clients ?? clientsData?.data ?? [])
+      : (clientsData?.data ?? []);
+    const pending = pendingCreatedClientsRef.current;
+    if (pending.length > 0) {
+      const idsInBase = new Set(baseClients.map((c) => c.id));
+      pendingCreatedClientsRef.current = pending.filter((c) => !idsInBase.has(c.id));
+      const stillPending = pendingCreatedClientsRef.current;
+      clientsDataRef.current =
+        stillPending.length > 0
+          ? [
+              ...stillPending,
+              ...baseClients.filter((c) => !stillPending.some((p) => p.id === c.id)),
+            ]
+          : baseClients;
+    } else {
+      clientsDataRef.current = baseClients;
+    }
+  }
   casesDataRef.current = isPersonalDashboard
     ? (bootstrapData?.data.cases ?? casesData?.data ?? [])
     : (casesData?.data ?? []);
   advisersDataRef.current = isPersonalDashboard
     ? (bootstrapData?.data.advisers ?? advisersData?.data ?? [])
     : (advisersData?.data ?? []);
+  // Only treat as "loading" when we have nothing to show yet (cached data paints instantly).
+  const hasLiveListData =
+    clientsDataRef.current.length > 0 || casesDataRef.current.length > 0;
   clientsLoadingRef.current = isPersonalDashboard
-    ? bootstrapError
-      ? clientsLoading
-      : bootstrapLoading
-    : clientsLoading;
+    ? (bootstrapError ? clientsLoading : bootstrapLoading) && !hasLiveListData
+    : clientsLoading && clientsDataRef.current.length === 0;
   casesLoadingRef.current = isPersonalDashboard
-    ? bootstrapError
-      ? casesLoading
-      : bootstrapLoading
-    : casesLoading;
+    ? (bootstrapError ? casesLoading : bootstrapLoading) && !hasLiveListData
+    : casesLoading && casesDataRef.current.length === 0;
 
   const liveUnreadNotifMessages = useMemo(() => {
     const rows = (unreadMessagesResponse?.data ?? []) as MessageWithContext[];
@@ -504,7 +726,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
   const handleNotifItemClick = useCallback(
     async (item: NotificationItem) => {
       setNotifOpen(false);
-      setActiveTab('messages');
+      selectTab('messages');
       if (!isPersonalDashboard) {
         setDemoUnreadNotifIds((prev) => prev.filter((id) => id !== item.id));
         return;
@@ -517,14 +739,17 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
         }
       }
     },
-    [isPersonalDashboard, markMessageRead],
+    [isPersonalDashboard, markMessageRead, selectTab],
   );
 
   const postClientsSync = useCallback((clients?: ClientSummary[]) => {
     const iframeWindow = iframeRef.current?.contentWindow;
     if (!iframeWindow) return;
+    const list = clients ?? clientsDataRef.current;
+    // Never clobber a sessionStorage/iframe paint with [] while bootstrap is still in flight.
+    if (list.length === 0 && clientsLoadingRef.current) return;
     iframeWindow.postMessage(
-      { type: 'ko:clients-sync', clients: clients ?? clientsDataRef.current },
+      { type: 'ko:clients-sync', clients: list },
       window.location.origin,
     );
   }, []);
@@ -532,8 +757,10 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
   const postCasesSync = useCallback((cases?: CaseSummary[]) => {
     const iframeWindow = iframeRef.current?.contentWindow;
     if (!iframeWindow) return;
+    const list = cases ?? casesDataRef.current;
+    if (list.length === 0 && casesLoadingRef.current) return;
     iframeWindow.postMessage(
-      { type: 'ko:cases-sync', cases: cases ?? casesDataRef.current },
+      { type: 'ko:cases-sync', cases: list },
       window.location.origin,
     );
   }, []);
@@ -706,15 +933,6 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
     iwin?.koRefreshOverviewMobilePipeline?.();
   }, [isPersonalDashboard]);
 
-  const postOverviewLoading = useCallback((loading: boolean) => {
-    const iframeWindow = iframeRef.current?.contentWindow;
-    if (!iframeWindow) return;
-    iframeWindow.postMessage(
-      { type: 'ko:overview-loading', loading },
-      window.location.origin,
-    );
-  }, []);
-
   const postOverviewStats = useCallback(() => {
     const iframeWindow = iframeRef.current?.contentWindow;
     if (!iframeWindow) return;
@@ -725,11 +943,14 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
     const isEmpty = clientCount === 0 && caseCount === 0;
 
     if (stillLoading && isEmpty) {
-      postOverviewLoading(true);
+      // Keep prior content if any; do not blank KPIs to "…"
       return;
     }
 
-    postOverviewLoading(false);
+    const pipelineValue = casesDataRef.current.reduce(
+      (sum, c) => sum + (Number(c.loanAmount) || 0),
+      0,
+    );
 
     iframeWindow.postMessage(
       { type: 'ko:overview-empty', empty: isEmpty },
@@ -743,6 +964,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
           stats: {
             clients: clientCount,
             cases: caseCount,
+            pipelineValue: `£${pipelineValue.toLocaleString('en-GB')}`,
             unreadMessages: unreadMessagesCountRef.current,
           },
         },
@@ -751,7 +973,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
     }
     const idoc = iframeRef.current?.contentDocument;
     if (idoc) renderPersonalOverviewSections(idoc);
-  }, [renderPersonalOverviewSections, postOverviewLoading]);
+  }, [renderPersonalOverviewSections]);
 
   // Start iframe as soon as Clerk auth is ready (don't wait for full user profile hydration).
   const overviewReady = !isDashboard || (authLoaded && isSignedIn);
@@ -765,12 +987,58 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
     (idoc: Document) => {
       if (!isPersonalDashboard) return;
       const overview = idoc.getElementById('tab-overview');
-      overview?.classList.add('ov-personal-mode', 'ov-empty-mode');
+      overview?.classList.add('ov-personal-mode');
+
+      const snapshot = readDashboardBootstrapSnapshot();
+      // Prefer live React Query / placeholder refs; fall back to session snapshot.
+      if (clientsDataRef.current.length === 0 && snapshot?.clients?.length) {
+        clientsDataRef.current = snapshot.clients;
+      }
+      if (casesDataRef.current.length === 0 && snapshot?.cases?.length) {
+        casesDataRef.current = snapshot.cases;
+      }
+      if (advisersDataRef.current.length === 0 && snapshot?.advisers?.length) {
+        advisersDataRef.current = snapshot.advisers;
+      }
+
+      const clients = clientsDataRef.current;
+      const cases = casesDataRef.current;
+      const hasData = clients.length > 0 || cases.length > 0;
+
+      if (hasData) {
+        // Instant paint — do not force empty/loading state.
+        overview?.classList.remove('ov-empty-mode');
+        const pipelineValue = cases.reduce(
+          (sum, c) => sum + (Number(c.loanAmount) || 0),
+          0,
+        );
+        const iwin = idoc.defaultView as Window & {
+          koSetOverviewEmpty?: (empty: boolean) => void;
+          koSetOverviewStats?: (stats: Record<string, unknown>) => void;
+          koRenderLiveOverviewPipeline?: (cases: unknown[]) => void;
+          koRenderCases?: (cases: unknown[]) => void;
+          koRenderClientsTable?: (clients: unknown[]) => void;
+        };
+        iwin.koSetOverviewEmpty?.(false);
+        iwin.koSetOverviewStats?.({
+          clients: clients.length,
+          cases: cases.length,
+          pipelineValue: `£${pipelineValue.toLocaleString('en-GB')}`,
+          unreadMessages: unreadMessagesCountRef.current,
+        });
+        iwin.koRenderLiveOverviewPipeline?.(cases);
+        iwin.koRenderCases?.(cases);
+        iwin.koRenderClientsTable?.(clients);
+      } else if (!clientsLoadingRef.current && !casesLoadingRef.current) {
+        // Confirmed empty org — show zeros. While loading, leave iframe self-hydrate alone.
+        overview?.classList.add('ov-empty-mode');
+        const emptyVals = idoc.querySelectorAll('#tab-overview [data-ov-kpi-val]');
+        emptyVals.forEach((el, index) => {
+          el.textContent = index === 2 ? '£0' : '0';
+        });
+      }
+
       if (displayName) applyGreetingToIframe(idoc, displayName);
-      const emptyVals = idoc.querySelectorAll('#tab-overview [data-ov-kpi-val]');
-      emptyVals.forEach((el, index) => {
-        el.textContent = index === 2 ? '£0' : '0';
-      });
       // Strip prototype demo AI rows immediately so advisers never see mock clients.
       const tbody = idoc.getElementById('ai-rpt-table-body');
       if (tbody) {
@@ -783,6 +1051,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
       if (subtitle) subtitle.textContent = '0 of 0 clients';
       if (statTotal) statTotal.textContent = '0';
       if (statFlags) statFlags.textContent = '0';
+      clearMessagesHubDemo(idoc);
     },
     [displayName, isPersonalDashboard],
   );
@@ -790,22 +1059,22 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
   const iframeSrc = useMemo(() => {
     if (!overviewReady) return null;
     const params = new URLSearchParams({ embedded: '1' });
-    // v is 0 on first SSR/hydration render (no mismatch), then Date.now() after mount.
-    if (iframeV) params.set('v', String(iframeV));
     // Personal dashboard: live API + personalised header (no mock Alex).
+    // Greeting is applied via postMessage / applyGreetingToIframe so src stays stable
+    // across Clerk hydration and tab switches (avoids full iframe reloads).
     if (isPersonalDashboard) {
       params.set('liveData', '1');
       params.set('personal', '1');
-      params.set('tab', 'overview');
-      if (displayName) params.set('userName', displayName);
-      // Start at zero while live stats load; postOverviewStats updates when API data arrives.
-      params.set('overviewEmpty', '1');
+      params.set('tab', initialIframeTabRef.current);
+      // Iframe hydrates from sessionStorage / parent sync — avoid locking into empty shell.
+      // Do not depend on activeTab — Settings/Calculator must not rebuild this URL.
     } else {
-      params.set('tab', activeTab);
+      params.set('tab', demoTabToIframeParam(activeTab));
       if (isMockDemo) params.set('userName', 'Alex');
     }
     return `/live-demo-prototype-v2a.html?${params}`;
-  }, [activeTab, overviewReady, isPersonalDashboard, isMockDemo, displayName, iframeV]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- personal src intentionally ignores activeTab
+  }, [isPersonalDashboard ? 'overview' : activeTab, overviewReady, isPersonalDashboard, isMockDemo]);
 
   const postPersonalGreeting = useCallback(() => {
     const iframeWindow = iframeRef.current?.contentWindow;
@@ -822,11 +1091,11 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
     setDemoUsername(getSessionUsername());
   }, []);
 
-  // Only reset load state when the iframe document actually changes (src), not on tab switches.
+  // Only reset load state when the iframe document URL changes — not when
+  // switching to/from Settings/Calculator (iframe stays mounted and hidden).
   useEffect(() => {
-    if (showEmbeddedPanel) return;
     setIframeLoaded(false);
-  }, [showEmbeddedPanel, iframeSrc]);
+  }, [iframeSrc]);
 
   // Fallback: if onLoad never fires (hydration edge-case, browser quirk, strict-mode remount),
   // force the iframe visible after 6 s so the demo is never permanently stuck loading.
@@ -895,22 +1164,65 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
     postPersonalGreeting();
   }, [iframeLoaded, displayName, showEmbeddedPanel, isPersonalDashboard, postPersonalGreeting]);
 
-  useEffect(() => {
-    if (!iframeLoaded || !isPersonalDashboard) return;
-    postOverviewLoading(bootstrapLoading || clientsLoading || casesLoading);
-  }, [
-    iframeLoaded,
-    isPersonalDashboard,
-    bootstrapLoading,
-    clientsLoading,
-    casesLoading,
-    postOverviewLoading,
-  ]);
+  // Intentionally no "loading…" KPI blanking — cached/snapshot data should stay visible.
+
+  const casePrefetchDoneRef = useRef(false);
 
   useEffect(() => {
     if (!iframeLoaded || !isPersonalDashboard) return;
     syncLiveDataToIframe();
     postOverviewStats();
+    persistLiveListsSnapshot(
+      clientsDataRef.current,
+      casesDataRef.current,
+      advisersDataRef.current,
+    );
+
+    // One-shot warm of recent case details (skip if already cached).
+    // Delayed + sequential so cold `/api/cases/[id]` compiles don't stall first paint.
+    if (casePrefetchDoneRef.current) return;
+    const cases = casesDataRef.current.slice(0, 4);
+    if (cases.length === 0) return;
+    casePrefetchDoneRef.current = true;
+    void (async () => {
+      try {
+        const token = await getToken();
+        if (!token) {
+          casePrefetchDoneRef.current = false;
+          return;
+        }
+        await new Promise((r) => window.setTimeout(r, 2500));
+        for (const c of cases) {
+          if (queryClient.getQueryData(['cases', c.id])) continue;
+          try {
+            const result = await casesApi.get(token, c.id);
+            queryClient.setQueryData(['cases', c.id], result);
+          } catch {
+            // best-effort warm
+          }
+        }
+        for (const c of cases.slice(0, 3)) {
+          const tlKey = ['cases', c.id, 'timeline'] as const;
+          if (queryClient.getQueryData(tlKey)) continue;
+          const tl = await casesApi.timeline(token, c.id).catch(() => null);
+          if (tl) queryClient.setQueryData(tlKey, tl);
+        }
+        if (hasMessagesRef.current) {
+          for (const c of cases.slice(0, 2)) {
+            const key = ['messages', 1, 100, c.id, '', false] as const;
+            if (queryClient.getQueryData(key)) continue;
+            try {
+              const msgs = await messagesApi.list(token, { caseId: c.id, perPage: 100 });
+              queryClient.setQueryData(key, msgs);
+            } catch {
+              // best-effort warm
+            }
+          }
+        }
+      } catch {
+        casePrefetchDoneRef.current = false;
+      }
+    })();
   }, [
     iframeLoaded,
     isPersonalDashboard,
@@ -923,6 +1235,8 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
     advisersData,
     syncLiveDataToIframe,
     postOverviewStats,
+    getToken,
+    queryClient,
   ]);
 
   useEffect(() => {
@@ -954,6 +1268,56 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
   ]);
 
   useEffect(() => {
+    if (!iframeLoaded || !isPersonalDashboard || !hasMessages) return;
+
+    const refreshOpenSurfaces = () => {
+      const idoc = iframeRef.current?.contentDocument;
+      if (!idoc || showEmbeddedPanel) return;
+
+      if (activeTab === 'messages') {
+        void refreshMessagesHubFromApi(idoc);
+      }
+
+      const caseId = activeCaseIdRef.current;
+      if (!caseId) return;
+      // Only refresh if the case messages panel is in the DOM (case is open).
+      if (!idoc.querySelector(`#caseview-msgs-${caseId}`)) return;
+
+      void (async () => {
+        try {
+          const token = await getTokenRef.current();
+          if (!token) return;
+          const gen = ++messagesListGenRef.current;
+          const fresh = await messagesApi.list(token, { caseId, perPage: 100 });
+          if (gen !== messagesListGenRef.current) return;
+          if (activeCaseIdRef.current !== caseId) return;
+          const threadKey = threadKeyForCase(caseId);
+          hubMessagesRef.current[threadKey] = mergeThreadMessages(threadKey, fresh.data);
+          renderMessagesThread(idoc, caseId);
+          if (activeTab === 'messages') {
+            const openInput = idoc.querySelector<HTMLInputElement>(
+              '.msg-hub-composer-input[data-thread-key]',
+            );
+            const openKey = openInput?.getAttribute('data-thread-key');
+            if (openKey === threadKey) {
+              renderHubThreadPanel(idoc, openKey);
+            }
+          }
+        } catch {
+          // Poll is best-effort.
+        }
+      })();
+    };
+
+    const first = window.setTimeout(refreshOpenSurfaces, 1500);
+    const interval = window.setInterval(refreshOpenSurfaces, 8000);
+    return () => {
+      window.clearTimeout(first);
+      window.clearInterval(interval);
+    };
+  }, [iframeLoaded, isPersonalDashboard, hasMessages, activeTab, showEmbeddedPanel]);
+
+  useEffect(() => {
     if (!iframeLoaded || !isPersonalDashboard || showEmbeddedPanel) return;
     if (activeTab === 'clients' || activeTab === 'cases') {
       syncLiveDataToIframe();
@@ -968,6 +1332,18 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
     if (activeTab === 'ai') {
       const idoc = iframeRef.current?.contentDocument;
       if (idoc) void refreshAiHubFromApi(idoc);
+    }
+    if (skipNextIframeTabSyncRef.current) {
+      skipNextIframeTabSyncRef.current = false;
+      const painted = initialIframeTabRef.current;
+      // Only skip when the iframe already painted the same tab as the URL.
+      // If the user switched tabs before load finished, still sync.
+      if (
+        painted === demoTabToIframeParam(activeTab) ||
+        (painted === 'compliance' && activeTab === 'overview')
+      ) {
+        return;
+      }
     }
     iframeRef.current?.contentWindow?.postMessage(
       { type: 'ko:switch-tab', tab: activeTab },
@@ -1002,10 +1378,23 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
 
       if (data?.type === 'ko:navigate' && typeof data.path === 'string') {
         if (data.path.includes('settings')) {
-          setActiveTab('settings');
+          selectTab('settings');
           return;
         }
         router.push(data.path);
+        return;
+      }
+
+      if (data?.type === 'ko:tab-change' && typeof data.tab === 'string') {
+        const raw = data.tab;
+        if (raw === 'compliance') {
+          const params = readLocationSearchParams(searchParams);
+          params.set('tab', 'compliance');
+          writeTabHref(locationHref(pathname, params), 'compliance');
+          return;
+        }
+        const tab = demoTabFromParam(raw === 'calculators' ? 'calculator' : raw);
+        if (tab) selectTab(tab);
         return;
       }
 
@@ -1043,84 +1432,263 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
       if (data?.type === 'ko:open-case' && typeof data.caseId === 'string') {
         const openedCaseId = data.caseId;
         activeCaseIdRef.current = openedCaseId;
-        try {
-          const token = await getToken();
-          if (!token) throw new Error('Not authenticated');
-          const [caseResult, docsResult, tlResult, aiResult, msgsResult] = await Promise.all([
-            casesApi.get(token, openedCaseId),
-            documentsApi.list(token, { caseId: openedCaseId, page: 1, perPage: 100 }).catch(() => null),
-            casesApi.timeline(token, openedCaseId).catch(() => null),
-            hasAiReportsRef.current
-              ? aiApi.listReports(token, { caseId: openedCaseId, perPage: 1 }).catch(() => null)
-              : Promise.resolve(null),
-            hasMessagesRef.current
-              ? messagesApi.list(token, { caseId: openedCaseId, perPage: 100 }).catch(() => null)
-              : Promise.resolve(null),
-          ]);
-          // Send case data so the iframe calls openCase(id) and renders the detail HTML.
-          iframeWindow.postMessage(
-            { type: 'ko:case-detail', case: caseResult.data },
-            window.location.origin,
-          );
-          caseDetailRef.current[openedCaseId] = {
-            referenceNumber: caseResult.data.referenceNumber,
-            type: caseResult.data.type,
-            stage: caseResult.data.stage,
-            client: {
-              firstName: caseResult.data.client?.firstName,
-              lastName: caseResult.data.client?.lastName,
-            },
-            selectedLender: caseResult.data.selectedLender,
-            selectedProduct: caseResult.data.selectedProduct,
-            selectedRate: caseResult.data.selectedRate,
-            selectedFee: caseResult.data.selectedFee,
-            adviserNotes: caseResult.data.adviserNotes,
-            loanAmount: caseResult.data.loanAmount,
-          };
-          // Wait a tick for openCase() to finish building the DOM, then populate
-          // the docs table, compliance panel, timeline track, and (if exists) AI report.
-          const docs = docsResult?.data ?? [];
-          const tlEntries = tlResult?.data ?? [];
-          const msgs = msgsResult?.data ?? [];
-          const caseApiStage = caseResult.data.stage;
-          const existingReport = aiResult?.data?.[0] ?? null;
-          const caseType = caseResult.data.type;
-          window.setTimeout(() => {
-            const idoc = iframeRef.current?.contentDocument;
-            if (!idoc) return;
-            renderDocsTable(idoc, docs, openedCaseId);
-            updateCompliancePanel(idoc, openedCaseId, caseApiStage);
-            renderTimelineTrack(idoc, tlEntries);
+
+        const paintCaseExtras = (
+          caseRow: Case | CaseSummary,
+          extras: {
+            docs?: Array<{
+              id: string;
+              name: string;
+              documentType: string;
+              mimeType?: string;
+              sizeBytes?: number;
+              uploadedBy?: string;
+              createdAt: string;
+            }>;
+            timeline?: TimelineEntry[];
+            messages?: MessageRecord[];
+            report?: AiReport | null;
+            paintDocs?: boolean;
+            paintTimeline?: boolean;
+            paintMessages?: boolean;
+            paintAi?: boolean;
+            paintCompliance?: boolean;
+          },
+        ) => {
+          if (activeCaseIdRef.current !== openedCaseId) return;
+          const idoc = iframeRef.current?.contentDocument;
+          if (!idoc) return;
+
+          if (extras.paintCompliance !== false) {
+            updateCompliancePanel(idoc, openedCaseId, caseRow.stage);
+          }
+          if (extras.paintDocs && extras.docs) {
+            renderDocsTable(idoc, extras.docs, openedCaseId);
+          }
+          if (extras.paintTimeline && extras.timeline) {
+            renderTimelineTrack(idoc, extras.timeline);
+          }
+          if (extras.paintMessages) {
             if (hasMessagesRef.current) {
-              renderMessagesThread(idoc, openedCaseId, msgs);
+              renderMessagesThread(idoc, openedCaseId, extras.messages ?? []);
             } else {
               renderMessagesPlanLocked(idoc, openedCaseId);
             }
-            if (hasMessagesRef.current) void refreshMessagesHubFromApi(idoc);
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const iwin = iframeRef.current?.contentWindow as any;
+          }
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const iwin = iframeRef.current?.contentWindow as any;
+          if (iwin) hookAiReportHandlers(iwin);
 
-            // Route AI report actions through the live API (not the prototype mock).
-            if (iwin) {
-              hookAiReportHandlers(iwin);
-            }
-
+          if (extras.paintAi) {
             if (!hasAiReportsRef.current) {
               renderAiReportPlanLocked(idoc, openedCaseId);
-            } else if (existingReport) {
-              renderAiReportBody(idoc, openedCaseId, existingReport);
+            } else if (extras.report) {
+              renderAiReportBody(idoc, openedCaseId, extras.report);
             } else {
-              // Pre-configure the AI setup panel so the Generate button is
-              // immediately enabled (all checks ticked + case-type template).
               const state = iwin?.caseAiReportState?.[openedCaseId];
               if (state) {
                 state.checklist = [true, true, true];
-                state.template = CASE_TYPE_TO_PROTO_TPL[caseType] ?? 'remortgage';
+                state.template = CASE_TYPE_TO_PROTO_TPL[caseRow.type] ?? 'remortgage';
                 state.phase = 'ready';
                 iwin?.refreshCaseReportUI?.(openedCaseId);
               }
             }
-          }, 80);
+          }
+        };
+
+        const postCaseDetail = (caseRow: Case | CaseSummary) => {
+          iframeWindow.postMessage(
+            { type: 'ko:case-detail', case: caseRow },
+            window.location.origin,
+          );
+          caseDetailRef.current[openedCaseId] = {
+            referenceNumber: caseRow.referenceNumber,
+            type: caseRow.type,
+            stage: caseRow.stage,
+            client: {
+              firstName: caseRow.client?.firstName,
+              lastName: caseRow.client?.lastName,
+            },
+            selectedLender: caseRow.selectedLender,
+            selectedProduct: caseRow.selectedProduct,
+            selectedRate: 'selectedRate' in caseRow ? caseRow.selectedRate : undefined,
+            selectedFee: 'selectedFee' in caseRow ? caseRow.selectedFee : undefined,
+            adviserNotes: 'adviserNotes' in caseRow ? caseRow.adviserNotes : undefined,
+            loanAmount: caseRow.loanAmount,
+          };
+          // Paint stage/progress rail immediately from list/cache — don't wait on extras.
+          const idoc = iframeRef.current?.contentDocument;
+          if (idoc) {
+            window.setTimeout(() => {
+              if (activeCaseIdRef.current !== openedCaseId) return;
+              updateCompliancePanel(idoc, openedCaseId, caseRow.stage);
+            }, 0);
+          }
+        };
+
+        try {
+          // Start shell from cache before awaiting Clerk token when possible.
+          const cachedDetail = queryClient.getQueryData<ApiSuccessResponse<Case>>([
+            'cases',
+            openedCaseId,
+          ]);
+          const listHit = casesDataRef.current.find((c) => c.id === openedCaseId);
+          const clientHit = listHit
+            ? clientsDataRef.current.find((c) => c.id === listHit.clientId)
+            : undefined;
+
+          if (cachedDetail?.data) {
+            postCaseDetail(cachedDetail.data);
+          } else if (listHit) {
+            postCaseDetail({
+              ...listHit,
+              client: {
+                ...listHit.client,
+                email: clientHit?.email ?? listHit.client.email,
+                ...(clientHit
+                  ? {
+                      employmentStatus: clientHit.employmentStatus,
+                    }
+                  : {}),
+              },
+            } as CaseSummary);
+          }
+
+          // Instant messages/docs/timeline from cache while network catches up.
+          const shellRow = cachedDetail?.data ?? listHit;
+          if (shellRow) {
+            const cachedMsgs =
+              hubMessagesRef.current[`case-${openedCaseId}`] ??
+              queryClient.getQueryData<ApiSuccessResponse<MessageRecord[]>>([
+                'messages',
+                1,
+                100,
+                openedCaseId,
+                '',
+                false,
+              ])?.data;
+            if (cachedMsgs?.length) {
+              paintCaseExtras(shellRow, {
+                messages: cachedMsgs,
+                paintMessages: true,
+                paintCompliance: false,
+              });
+            }
+            const cachedTl = queryClient.getQueryData<ApiSuccessResponse<TimelineEntry[]>>([
+              'cases',
+              openedCaseId,
+              'timeline',
+            ])?.data;
+            if (cachedTl?.length) {
+              paintCaseExtras(shellRow, {
+                timeline: cachedTl,
+                paintTimeline: true,
+                paintCompliance: false,
+              });
+            } else {
+              const createdAt =
+                'createdAt' in shellRow && typeof shellRow.createdAt === 'string'
+                  ? shellRow.createdAt
+                  : shellRow.updatedAt;
+              if (createdAt) {
+                // Provisional "Case created" so Overview isn't stuck on a blank stub.
+                paintCaseExtras(shellRow, {
+                  timeline: [
+                    {
+                      id: `local-created-${openedCaseId}`,
+                      entityType: 'Case',
+                      entityId: openedCaseId,
+                      action: 'CASE_CREATED',
+                      createdAt,
+                    },
+                  ],
+                  paintTimeline: true,
+                  paintCompliance: false,
+                });
+              }
+            }
+          }
+
+          const token = await getToken();
+          if (!token) throw new Error('Not authenticated');
+
+          // Fetch full case + secondary panels in parallel; paint each as it arrives.
+          const casePromise = casesApi.get(token, openedCaseId).then((result) => {
+            queryClient.setQueryData(['cases', openedCaseId], result);
+            return result;
+          });
+
+          const docsPromise = documentsApi
+            .list(token, { caseId: openedCaseId, page: 1, perPage: 100 })
+            .catch(() => null);
+          const tlPromise = casesApi.timeline(token, openedCaseId).then((result) => {
+            queryClient.setQueryData(['cases', openedCaseId, 'timeline'], result);
+            return result;
+          }).catch(() => null);
+          const aiPromise = hasAiReportsRef.current
+            ? aiApi.listReports(token, { caseId: openedCaseId, perPage: 1 }).catch(() => null)
+            : Promise.resolve(null);
+          const msgsPromise = hasMessagesRef.current
+            ? messagesApi.list(token, { caseId: openedCaseId, perPage: 100 }).catch(() => null)
+            : Promise.resolve(null);
+
+          void docsPromise.then((docsResult) => {
+            if (activeCaseIdRef.current !== openedCaseId || !docsResult) return;
+            const row =
+              queryClient.getQueryData<ApiSuccessResponse<Case>>(['cases', openedCaseId])?.data ??
+              listHit;
+            if (!row) return;
+            paintCaseExtras(row, {
+              docs: docsResult.data ?? [],
+              paintDocs: true,
+              paintCompliance: false,
+            });
+          });
+
+          void tlPromise.then((tlResult) => {
+            if (activeCaseIdRef.current !== openedCaseId || !tlResult) return;
+            const row =
+              queryClient.getQueryData<ApiSuccessResponse<Case>>(['cases', openedCaseId])?.data ??
+              listHit;
+            if (!row) return;
+            paintCaseExtras(row, {
+              timeline: tlResult.data ?? [],
+              paintTimeline: true,
+              paintCompliance: false,
+            });
+          });
+
+          void msgsPromise.then((msgsResult) => {
+            if (activeCaseIdRef.current !== openedCaseId) return;
+            const row =
+              queryClient.getQueryData<ApiSuccessResponse<Case>>(['cases', openedCaseId])?.data ??
+              listHit;
+            if (!row) return;
+            paintCaseExtras(row, {
+              messages: msgsResult?.data ?? [],
+              paintMessages: true,
+              paintCompliance: false,
+            });
+          });
+
+          void aiPromise.then((aiResult) => {
+            if (activeCaseIdRef.current !== openedCaseId) return;
+            const row =
+              queryClient.getQueryData<ApiSuccessResponse<Case>>(['cases', openedCaseId])?.data ??
+              listHit;
+            if (!row) return;
+            paintCaseExtras(row, {
+              report: aiResult?.data?.[0] ?? null,
+              paintAi: true,
+              paintCompliance: false,
+            });
+          });
+
+          const caseResult = await casePromise;
+          if (activeCaseIdRef.current !== openedCaseId) return;
+
+          // Refresh with full detail (soft-updates if already open) + correct progress.
+          postCaseDetail(caseResult.data);
         } catch (err) {
           iframeWindow.postMessage(
             {
@@ -1146,23 +1714,22 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
         try {
           const result = await createCase(casePayload);
           const created = result.data;
-          await queryClient.refetchQueries({ queryKey: ['cases'] });
-          await queryClient.refetchQueries({ queryKey: ['clients'] });
-          const freshCases = queryClient.getQueryData<{ data: CaseSummary[] }>(
-            casesQueryKey(LIVE_CASES_QUERY),
-          );
-          const freshClients = queryClient.getQueryData<{ data: ClientSummary[] }>(
-            clientsQueryKey(LIVE_CLIENTS_QUERY),
-          );
-          casesDataRef.current = freshCases?.data ?? [];
-          clientsDataRef.current = freshClients?.data ?? [];
-          setActiveTab('cases');
-          syncLiveDataToIframe();
+          // Mutation already patched caches; refresh refs immediately for iframe sync.
+          applyCreatedCaseToCache(queryClient, created);
+          const nextCases = [
+            created,
+            ...casesDataRef.current.filter((c) => c.id !== created.id),
+          ];
+          casesDataRef.current = nextCases;
+          // Show success immediately — sync lists in the background.
           replyCase({
             success: true,
             case: created,
             clientName: formatClientName(created.client),
           });
+          selectTab('cases');
+          postCasesSync(nextCases);
+          postClientsSync();
         } catch (err) {
           replyCase({ success: false, error: formatApiError(err, { fallback: 'Could not create case. Please try again.' }) });
         }
@@ -1216,16 +1783,19 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
             return;
           }
 
-          await queryClient.refetchQueries({ queryKey: ['clients'] });
-          await queryClient.refetchQueries({ queryKey: ['cases'] });
+          applyDeletedClientsToCache(queryClient, ids.filter((_, i) => results[i]?.status === 'fulfilled'));
+          softInvalidateDashboardLists(queryClient);
+          const bootstrap = queryClient.getQueryData<{
+            data: { clients: ClientSummary[]; cases: CaseSummary[] };
+          }>(dashboardBootstrapQueryKey);
           const freshClients = queryClient.getQueryData<{ data: ClientSummary[] }>(
             clientsQueryKey(LIVE_CLIENTS_QUERY),
           );
           const freshCases = queryClient.getQueryData<{ data: CaseSummary[] }>(
             casesQueryKey(LIVE_CASES_QUERY),
           );
-          clientsDataRef.current = freshClients?.data ?? [];
-          casesDataRef.current = freshCases?.data ?? [];
+          clientsDataRef.current = bootstrap?.data.clients ?? freshClients?.data ?? [];
+          casesDataRef.current = bootstrap?.data.cases ?? freshCases?.data ?? [];
           syncLiveDataToIframe();
           replyDelete({ success: true, deletedCount });
         } catch (err) {
@@ -1267,6 +1837,15 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
           if (payload.markComplete) {
             try {
               const updated = await casesApi.get(token, data.caseId as string);
+              applyUpdatedCaseToCache(queryClient, updated.data);
+              softInvalidateDashboardLists(queryClient);
+              const bootstrap = queryClient.getQueryData<{
+                data: { cases: CaseSummary[] };
+              }>(dashboardBootstrapQueryKey);
+              if (bootstrap?.data.cases) {
+                casesDataRef.current = bootstrap.data.cases;
+                syncLiveDataToIframe();
+              }
               iframeWindow.postMessage(
                 { type: 'ko:case-detail', case: updated.data },
                 window.location.origin,
@@ -1348,28 +1927,56 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
         const payload = data.payload as CreateClientInput;
         const result = await createClient(payload);
         const created = result.data;
-        await queryClient.refetchQueries({ queryKey: ['clients'] });
-        const fresh = queryClient.getQueryData<{ data: ClientSummary[] }>(
-          clientsQueryKey(LIVE_CLIENTS_QUERY),
+        const assignedId = payload.assignedMemberId;
+        const adviser = assignedId
+          ? advisersDataRef.current.find(
+              (a) => a.id === assignedId || a.memberId === assignedId,
+            )
+          : undefined;
+        const fullClient: ClientSummary = {
+          id: created.id,
+          referenceNumber: created.referenceNumber,
+          clientType: payload.clientType ?? 'INDIVIDUAL',
+          companyName: payload.companyName,
+          firstName: created.firstName,
+          lastName: created.lastName,
+          email: created.email,
+          employmentStatus: payload.employmentStatus ?? 'EMPLOYED',
+          annualIncome: payload.annualIncome,
+          isReferred: payload.isReferred ?? false,
+          referredToCompany: payload.referredToCompany,
+          insurerName: payload.insurerName,
+          status: 'PROSPECT',
+          isVulnerable: false,
+          assignedMember: adviser
+            ? {
+                id: adviser.memberId ?? adviser.id,
+                firstName: adviser.firstName ?? '',
+                lastName: adviser.lastName ?? '',
+              }
+            : null,
+          _count: { cases: 0, messages: 0 },
+        };
+        // Ensure bootstrap + lists include the new client before iframe sync.
+        applyCreatedClientToCache(queryClient, fullClient);
+        pendingCreatedClientsRef.current = [
+          fullClient,
+          ...pendingCreatedClientsRef.current.filter((c) => c.id !== fullClient.id),
+        ];
+        const nextClients = [
+          fullClient,
+          ...clientsDataRef.current.filter((c) => c.id !== fullClient.id),
+        ];
+        clientsDataRef.current = nextClients;
+        persistLiveListsSnapshot(
+          nextClients,
+          casesDataRef.current,
+          advisersDataRef.current,
         );
-        const clients = fresh?.data ?? [];
-        clientsDataRef.current = clients;
-        const fullClient =
-          clients.find((client) => client.id === created.id) ?? {
-            ...created,
-            clientType: payload.clientType ?? 'INDIVIDUAL',
-            companyName: payload.companyName,
-            employmentStatus: payload.employmentStatus ?? 'EMPLOYED',
-            annualIncome: payload.annualIncome,
-            isReferred: payload.isReferred ?? false,
-            referredToCompany: payload.referredToCompany,
-            status: 'PROSPECT' as const,
-            isVulnerable: false,
-            assignedMember: null,
-            _count: { cases: 0, messages: 0 },
-          };
-        setActiveTab('clients');
-        syncLiveDataToIframe();
+        selectTab('clients');
+        // Explicit list — same pattern as case create sync, avoids stale-ref races.
+        postClientsSync(nextClients);
+        postAdvisersSync();
         reply({
           success: true,
           client: fullClient,
@@ -1387,7 +1994,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
 
     window.addEventListener('message', onMessage);
     return () => window.removeEventListener('message', onMessage);
-  }, [isDashboard, isClerkUser, createClient, createCase, inviteToPortal, getToken, syncLiveDataToIframe, postAdvisersSync, queryClient, router]);
+  }, [isDashboard, isClerkUser, createClient, createCase, inviteToPortal, getToken, syncLiveDataToIframe, postClientsSync, postCasesSync, postAdvisersSync, queryClient, router, selectTab, writeTabHref, pathname, searchParams]);
 
   // ── Directly update the iframe's documents table ────────────────────────────
   // Works because the iframe is same-origin, so the parent can touch its DOM.
@@ -1747,6 +2354,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
       (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
     );
     type Group = {
+      id: string;
       body: string;
       createdAt: string;
       direction: MessageRecord['direction'];
@@ -1762,6 +2370,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
       if (existing === undefined) {
         indexByKey.set(key, groups.length);
         groups.push({
+          id: message.id,
           body: message.body,
           createdAt: message.createdAt,
           direction: message.direction,
@@ -1774,9 +2383,67 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
         if (!group.channels.includes(message.channel)) group.channels.push(message.channel);
         group.isRead = group.isRead && message.isRead;
         group.createdAt = message.createdAt;
+        // Prefer confirmed (non-optimistic) id when merging.
+        if (isOptimisticMessageId(group.id) && !isOptimisticMessageId(message.id)) {
+          group.id = message.id;
+        }
       }
     }
     return groups;
+  }
+
+  function isOptimisticMessageId(id: string) {
+    return id.startsWith('optimistic-');
+  }
+
+  function threadKeyForCase(caseId: string) {
+    return `case-${caseId}`;
+  }
+
+  /** Merge server/live rows with in-flight optimistic sends (never drop pending). */
+  function mergeThreadMessages(threadKey: string, base: MessageRecord[]): MessageRecord[] {
+    const pending = pendingMessagesRef.current[threadKey] ?? [];
+    const byId = new Map<string, MessageRecord>();
+    for (const m of base) {
+      if (!isOptimisticMessageId(m.id)) byId.set(m.id, m);
+    }
+    for (const p of pending) {
+      if (!byId.has(p.id)) byId.set(p.id, p);
+    }
+    return Array.from(byId.values()).sort(
+      (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+    );
+  }
+
+  function addOptimisticMessage(threadKey: string, msg: MessageRecord) {
+    pendingMessagesRef.current[threadKey] = [
+      ...(pendingMessagesRef.current[threadKey] ?? []),
+      msg,
+    ];
+    const existing = hubMessagesRef.current[threadKey] ?? [];
+    hubMessagesRef.current[threadKey] = mergeThreadMessages(threadKey, [...existing, msg]);
+  }
+
+  function confirmOptimisticMessage(threadKey: string, pendingId: string, confirmed: MessageRecord) {
+    pendingMessagesRef.current[threadKey] = (pendingMessagesRef.current[threadKey] ?? []).filter(
+      (m) => m.id !== pendingId,
+    );
+    const live = hubMessagesRef.current[threadKey] ?? [];
+    hubMessagesRef.current[threadKey] = mergeThreadMessages(threadKey, [
+      ...live.filter((m) => m.id !== pendingId && m.id !== confirmed.id),
+      confirmed,
+    ]);
+  }
+
+  function dropOptimisticMessage(threadKey: string, pendingId: string) {
+    pendingMessagesRef.current[threadKey] = (pendingMessagesRef.current[threadKey] ?? []).filter(
+      (m) => m.id !== pendingId,
+    );
+    const live = hubMessagesRef.current[threadKey] ?? [];
+    hubMessagesRef.current[threadKey] = mergeThreadMessages(
+      threadKey,
+      live.filter((m) => m.id !== pendingId),
+    );
   }
 
   function notifyDeliveryIssues(meta: unknown) {
@@ -1795,7 +2462,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
 
   // ── Render real messages into the Messages tab ───────────────────────────────
   // Mirrors the prototype's .cd-msg-feed bubble structure exactly.
-  function renderMessagesThread(idoc: Document, caseId: string, messages: MessageRecord[]) {
+  function renderMessagesThread(idoc: Document, caseId: string, messages?: MessageRecord[]) {
     const feed = idoc.querySelector<HTMLElement>(`#caseview-msgs-${caseId} .cd-msg-feed`);
     if (!feed) return;
 
@@ -1808,27 +2475,35 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
     const composer = panel?.querySelector<HTMLElement>('.cd-msg-composer');
     if (composer) composer.style.display = '';
 
-    if (!messages.length) {
+    const threadKey = threadKeyForCase(caseId);
+    const merged = mergeThreadMessages(
+      threadKey,
+      messages ?? hubMessagesRef.current[threadKey] ?? [],
+    );
+    hubMessagesRef.current[threadKey] = merged;
+
+    if (!merged.length) {
       feed.innerHTML = `<div style="flex:1;display:flex;align-items:center;justify-content:center;color:#a1a1aa;font-size:13px;font-family:'DM Sans',sans-serif">No messages yet. Start the conversation below.</div>`;
     } else {
       const escHtml = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
       let lastDate = '';
-      feed.innerHTML = groupMessagesForDisplay(messages).map((group) => {
+      feed.innerHTML = groupMessagesForDisplay(merged).map((group) => {
         const d = new Date(group.createdAt);
         const dateLabel = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
         const timeLabel = d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
         const dateSep = dateLabel !== lastDate ? `<div class="cd-msg-date">${dateLabel}</div>` : '';
         lastDate = dateLabel;
-        const tickSvg = group.isRead
-          ? `<span class="cd-msg-ticks cd-msg-ticks--blue">✓✓</span>`
-          : `<span class="cd-msg-ticks cd-msg-ticks--gray">✓</span>`;
+        const tickSvg =
+          group.isRead && !isOptimisticMessageId(group.id)
+            ? `<span class="cd-msg-ticks cd-msg-ticks--blue">✓✓</span>`
+            : `<span class="cd-msg-ticks cd-msg-ticks--gray">✓</span>`;
         if (group.direction === 'OUTBOUND') {
           return `${dateSep}<div class="cd-msg-row cd-msg-row--out">
   <div class="cd-msg-bubble cd-msg-bubble--out">
     <p class="cd-msg-bubble-text">${escHtml(group.body)}</p>
     <div class="cd-msg-bubble-meta"><span>${timeLabel}</span>${tickSvg}</div>
   </div>
-  ${group.isRead ? '<span class="cd-msg-sent">✓✓ Sent</span>' : ''}
+  ${group.isRead && !isOptimisticMessageId(group.id) ? '<span class="cd-msg-sent">✓✓ Sent</span>' : ''}
 </div>`;
         }
         return `${dateSep}<div class="cd-msg-row cd-msg-row--in">
@@ -1859,51 +2534,70 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
     // Clone send button to remove any pre-existing listeners.
     const freshBtn = sendBtn.cloneNode(true) as HTMLButtonElement;
     sendBtn.parentNode?.replaceChild(freshBtn, sendBtn);
+    // Mark wired so the document click handler does not double-send.
+    freshBtn.setAttribute('data-ko-wired', '1');
 
     const doSend = async () => {
       const body = input.value.trim();
       if (!body) return;
       input.value = '';
-      input.disabled = true;
-      freshBtn.disabled = true;
-      const feed = panel.querySelector<HTMLElement>('.cd-msg-feed');
-      if (feed) {
-        const now = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
-        const escHtml = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-        const bubble = idoc.createElement('div');
-        bubble.className = 'cd-msg-row cd-msg-row--out';
-        bubble.innerHTML = `<div class="cd-msg-bubble cd-msg-bubble--out">
-  <p class="cd-msg-bubble-text">${escHtml(body)}</p>
-  <div class="cd-msg-bubble-meta"><span>${now}</span><span class="cd-msg-ticks cd-msg-ticks--gray">✓</span></div>
-</div>`;
-        feed.appendChild(bubble);
-        feed.scrollTop = feed.scrollHeight;
-      }
+      const threadKey = threadKeyForCase(caseId);
+      const pendingId = `optimistic-${crypto.randomUUID()}`;
+      const optimistic = {
+        id: pendingId,
+        orgId: '',
+        body,
+        channel: 'IN_APP' as const,
+        direction: 'OUTBOUND' as const,
+        sourceType: 'CASE_UPDATE' as const,
+        isRead: false,
+        createdAt: new Date().toISOString(),
+        caseId,
+      } satisfies MessageRecord;
+      addOptimisticMessage(threadKey, optimistic);
+      renderMessagesThread(idoc, caseId);
       try {
         const token = await getTokenRef.current();
-        if (!token) return;
+        if (!token) {
+          dropOptimisticMessage(threadKey, pendingId);
+          renderMessagesThread(idoc, caseId);
+          return;
+        }
         const result = await messagesApi.send(token, { body, caseId, sourceType: 'CASE_UPDATE' });
         notifyDeliveryIssues(result.meta);
-        const fresh = await messagesApi.list(token, { caseId, perPage: 100 });
-        renderMessagesThread(idoc, caseId, fresh.data);
-        await refreshMessagesHubFromApi(idoc);
+        if (result.data) {
+          confirmOptimisticMessage(threadKey, pendingId, result.data);
+        } else {
+          dropOptimisticMessage(threadKey, pendingId);
+        }
+        renderMessagesThread(idoc, caseId);
+        void refreshMessagesHubFromApi(idoc);
       } catch {
-        // Leave the optimistic bubble in place — non-critical for demo.
+        dropOptimisticMessage(threadKey, pendingId);
+        renderMessagesThread(idoc, caseId);
       } finally {
-        input.disabled = false;
-        freshBtn.disabled = false;
         input.focus();
       }
     };
 
-    freshBtn.addEventListener('click', doSend);
-    input.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); doSend(); } });
+    freshBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      void doSend();
+    });
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        void doSend();
+      }
+    });
   }
 
   function renderHubThreadPanel(idoc: Document, threadKey: string) {
     const panel = idoc.getElementById('msg-hub-thread');
     if (!panel) return;
-    const msgs = hubMessagesRef.current[threadKey] ?? [];
+    const msgs = mergeThreadMessages(threadKey, hubMessagesRef.current[threadKey] ?? []);
+    hubMessagesRef.current[threadKey] = msgs;
     const meta = hubMetaRef.current[threadKey];
     if (!meta) return;
     const bubbles = groupMessagesForDisplay(msgs).map((group) => {
@@ -1953,6 +2647,32 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
     if (composer) composer.style.display = 'none';
   }
 
+  function clearMessagesHubDemo(idoc: Document, message?: string) {
+    if (!hasMessagesRef.current) {
+      renderMessagesHubPlanLocked(idoc);
+      return;
+    }
+    const tbody = idoc.querySelector<HTMLTableSectionElement>('#tab-messages .msg-hub-tbl tbody');
+    if (tbody && !tbody.querySelector('.ko-msg-hub-row')) {
+      tbody.innerHTML = `<tr class="msg-hub-loading-row"><td colspan="6" style="padding:48px 24px;text-align:center;color:#71717a;font-size:13px;font-family:'DM Sans',sans-serif">${
+        message ?? 'Loading messages…'
+      }</td></tr>`;
+    }
+    const statVals = idoc.querySelectorAll<HTMLElement>('#tab-messages .msg-hub-stats .msg-stat-card .msg-stat-val');
+    statVals.forEach((el, index) => {
+      el.textContent = index === 3 ? '—' : '0';
+    });
+    const footer = idoc.querySelector('#tab-messages .msg-hub-footer');
+    if (footer) footer.innerHTML = '<span>Loading messages…</span>';
+    const thread = idoc.getElementById('msg-hub-thread');
+    if (thread) {
+      thread.style.display = 'none';
+      thread.innerHTML = '';
+    }
+    hubMessagesRef.current = {};
+    hubMetaRef.current = {};
+  }
+
   function renderMessagesHubPlanLocked(idoc: Document) {
     const tbody = idoc.querySelector<HTMLTableSectionElement>('#tab-messages .msg-hub-tbl tbody');
     if (tbody) {
@@ -1979,43 +2699,75 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
       const token = await getTokenRef.current();
       if (!token) return;
       const all = await messagesApi.list(token, { page: 1, perPage: 100 });
-    const rowsByThread: Record<string, MessageRecord[]> = {};
-    const metaByThread: Record<string, { name: string; caseRef: string; caseSub: string; stage: string; type: 'client' | 'system' }> = {};
-    for (const m of all.data) {
-      const key = m.caseId ? `case-${m.caseId}` : `client-${m.clientId ?? 'general'}`;
-      if (!rowsByThread[key]) rowsByThread[key] = [];
-      rowsByThread[key].push(m);
-      if (!metaByThread[key]) {
-        const c = m.caseId ? casesDataRef.current.find((k) => k.id === m.caseId) : undefined;
-        const name = c?.client ? `${c.client.firstName} ${c.client.lastName}` : 'Client conversation';
-        metaByThread[key] = {
-          name,
-          caseRef: c?.referenceNumber ?? '—',
-          caseSub: c?.type?.replace(/_/g, ' ') ?? 'General',
-          stage: c?.stage?.replace(/_/g, ' ') ?? 'Enquiry',
-          type: 'client',
-        };
+      const gen = ++messagesListGenRef.current;
+      const rowsByThread: Record<string, MessageRecord[]> = {};
+      const metaByThread: Record<string, { name: string; caseRef: string; caseSub: string; stage: string; type: 'client' | 'system' }> = {};
+      for (const m of all.data) {
+        const key = m.caseId ? `case-${m.caseId}` : `client-${m.clientId ?? 'general'}`;
+        if (!rowsByThread[key]) rowsByThread[key] = [];
+        rowsByThread[key].push(m);
+        if (!metaByThread[key]) {
+          const c = m.caseId ? casesDataRef.current.find((k) => k.id === m.caseId) : undefined;
+          const name = c?.client ? `${c.client.firstName} ${c.client.lastName}` : 'Client conversation';
+          metaByThread[key] = {
+            name,
+            caseRef: c?.referenceNumber ?? '—',
+            caseSub: c?.type?.replace(/_/g, ' ') ?? 'General',
+            stage: c?.stage?.replace(/_/g, ' ') ?? 'Enquiry',
+            type: 'client',
+          };
+        }
       }
-    }
-    Object.values(rowsByThread).forEach((arr) => arr.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()));
-    hubMessagesRef.current = rowsByThread;
-    hubMetaRef.current = metaByThread;
-    const tbody = idoc.querySelector<HTMLTableSectionElement>('#tab-messages .msg-hub-tbl tbody');
-    if (!tbody) return;
-    const keys = Object.keys(rowsByThread).sort((a, b) => {
-      const am = rowsByThread[a][rowsByThread[a].length - 1];
-      const bm = rowsByThread[b][rowsByThread[b].length - 1];
-      return new Date(bm.createdAt).getTime() - new Date(am.createdAt).getTime();
-    });
-    tbody.innerHTML = keys.map((k) => {
-      const msgs = rowsByThread[k];
-      const grouped = groupMessagesForDisplay(msgs);
-      const last = grouped[grouped.length - 1];
-      const meta = metaByThread[k];
-      const initials = meta.name.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase() || 'CL';
-      const t = tlTime(last.createdAt);
-      const typeLabel = meta.type === 'system' ? 'System' : 'Client';
-      return `<tr class="msg-hub-row ko-msg-hub-row" data-thread-key="${k}">
+      Object.values(rowsByThread).forEach((arr) =>
+        arr.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()),
+      );
+      if (gen !== messagesListGenRef.current) return;
+
+      // Merge — never wipe in-flight optimistic sends.
+      const next: Record<string, MessageRecord[]> = {};
+      const keys = new Set([
+        ...Object.keys(rowsByThread),
+        ...Object.keys(pendingMessagesRef.current),
+        ...Object.keys(hubMessagesRef.current),
+      ]);
+      for (const key of keys) {
+        next[key] = mergeThreadMessages(key, rowsByThread[key] ?? []);
+      }
+      hubMessagesRef.current = next;
+      hubMetaRef.current = { ...hubMetaRef.current, ...metaByThread };
+      const tbody = idoc.querySelector<HTMLTableSectionElement>('#tab-messages .msg-hub-tbl tbody');
+      if (!tbody) return;
+      const tableKeys = Object.keys(next)
+        .filter((k) => (next[k]?.length ?? 0) > 0)
+        .sort((a, b) => {
+          const am = next[a][next[a].length - 1];
+          const bm = next[b][next[b].length - 1];
+          return new Date(bm.createdAt).getTime() - new Date(am.createdAt).getTime();
+        });
+      if (!tableKeys.length) {
+        tbody.innerHTML =
+          '<tr class="msg-hub-empty-row"><td colspan="6" style="padding:48px 24px;text-align:center;color:#71717a;font-size:13px;font-family:\'DM Sans\',sans-serif">No messages yet.</td></tr>';
+        const footer = idoc.querySelector('#tab-messages .msg-hub-footer');
+        if (footer) footer.innerHTML = '<span>0 messages</span>';
+        const statVals = idoc.querySelectorAll<HTMLElement>('#tab-messages .msg-hub-stats .msg-stat-card .msg-stat-val');
+        const statSubs = idoc.querySelectorAll<HTMLElement>('#tab-messages .msg-hub-stats .msg-stat-card .msg-stat-sub');
+        if (statVals[0]) statVals[0].textContent = '0';
+        if (statVals[1]) statVals[1].textContent = '0';
+        if (statVals[2]) statVals[2].textContent = '0';
+        if (statVals[3]) statVals[3].textContent = '—';
+        if (statSubs[3]) statSubs[3].textContent = 'No reply pairs yet';
+        return;
+      }
+      tbody.innerHTML = tableKeys.map((k) => {
+        const msgs = next[k];
+        const grouped = groupMessagesForDisplay(msgs);
+        const last = grouped[grouped.length - 1];
+        const meta = hubMetaRef.current[k] ?? metaByThread[k];
+        if (!meta || !last) return '';
+        const initials = meta.name.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase() || 'CL';
+        const t = tlTime(last.createdAt);
+        const typeLabel = meta.type === 'system' ? 'System' : 'Client';
+        return `<tr class="msg-hub-row ko-msg-hub-row" data-thread-key="${k}">
         <td><div class="msg-contact"><div class="msg-contact-av" style="background:#0F6E56">${initials}</div><div><div class="msg-contact-name">${meta.name}</div><div class="msg-contact-adviser">Live API</div></div></div></td>
         <td><div class="msg-subject-line"><span class="msg-subject-dot ${last.isRead ? 'msg-subject-dot--read' : 'msg-subject-dot--unread'}"></span>${last.subject ?? 'Message update'}</div><div class="msg-subject-preview">${last.body}</div></td>
         <td><div class="msg-case-ref">${meta.caseRef}</div><div class="msg-case-type">${meta.caseSub}</div></td>
@@ -2023,30 +2775,30 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
         <td><div class="msg-type-cell">${typeLabel}</div></td>
         <td><div class="msg-time-val">${t}</div></td>
       </tr>`;
-    }).join('');
-    const footer = idoc.querySelector('#tab-messages .msg-hub-footer');
-    if (footer) footer.innerHTML = `<span>${keys.length} of ${keys.length} messages</span><span class="msg-hub-footer-unread">${all.data.filter((m) => !m.isRead).length} unread</span>`;
+      }).join('');
+      const footer = idoc.querySelector('#tab-messages .msg-hub-footer');
+      if (footer) footer.innerHTML = `<span>${tableKeys.length} of ${tableKeys.length} messages</span><span class="msg-hub-footer-unread">${all.data.filter((m) => !m.isRead).length} unread</span>`;
 
-    // Update the four Messages Hub KPI cards with live aggregates.
-    const totalMessages = all.data.length;
-    const unreadMessages = all.data.filter((m) => !m.isRead).length;
-    const actionRequired = all.data.filter(
-      (m) => !m.isRead && (m.direction === 'INBOUND' || m.direction === 'SYSTEM'),
-    ).length;
-    // Average response time: inbound -> next outbound in same thread.
-    const responseMinutes: number[] = [];
-    Object.values(rowsByThread).forEach((thread) => {
-      for (let i = 0; i < thread.length; i += 1) {
-        const current = thread[i];
-        if (current.direction !== 'INBOUND') continue;
-        const inboundAt = new Date(current.createdAt).getTime();
-        const nextOutbound = thread.slice(i + 1).find((m) => m.direction === 'OUTBOUND');
-        if (!nextOutbound) continue;
-        const outboundAt = new Date(nextOutbound.createdAt).getTime();
-        if (outboundAt <= inboundAt) continue;
-        responseMinutes.push(Math.round((outboundAt - inboundAt) / 60000));
-      }
-    });
+      // Update the four Messages Hub KPI cards with live aggregates.
+      const totalMessages = all.data.length;
+      const unreadMessages = all.data.filter((m) => !m.isRead).length;
+      const actionRequired = all.data.filter(
+        (m) => !m.isRead && (m.direction === 'INBOUND' || m.direction === 'SYSTEM'),
+      ).length;
+      // Average response time: inbound -> next outbound in same thread.
+      const responseMinutes: number[] = [];
+      Object.values(next).forEach((thread) => {
+        for (let i = 0; i < thread.length; i += 1) {
+          const current = thread[i];
+          if (current.direction !== 'INBOUND') continue;
+          const inboundAt = new Date(current.createdAt).getTime();
+          const nextOutbound = thread.slice(i + 1).find((m) => m.direction === 'OUTBOUND');
+          if (!nextOutbound) continue;
+          const outboundAt = new Date(nextOutbound.createdAt).getTime();
+          if (outboundAt <= inboundAt) continue;
+          responseMinutes.push(Math.round((outboundAt - inboundAt) / 60000));
+        }
+      });
     const avgMins = responseMinutes.length
       ? Math.round(responseMinutes.reduce((sum, n) => sum + n, 0) / responseMinutes.length)
       : 0;
@@ -2064,6 +2816,10 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
     if (statSubs[1]) statSubs[1].textContent = 'Requires attention';
     if (statSubs[2]) statSubs[2].textContent = 'Unread inbound/system';
     if (statSubs[3]) statSubs[3].textContent = responseMinutes.length ? 'Based on replies' : 'No reply pairs yet';
+      // Keep open hub thread in sync with merged messages.
+      const openInput = idoc.querySelector<HTMLInputElement>('.msg-hub-composer-input[data-thread-key]');
+      const openKey = openInput?.getAttribute('data-thread-key');
+      if (openKey) renderHubThreadPanel(idoc, openKey);
     } catch (err) {
       if (isApiErrorCode(err, API_ERROR_CODES.PLAN_LIMIT_EXCEEDED)) {
         renderMessagesHubPlanLocked(idoc);
@@ -2315,13 +3071,37 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
       try {
         const token = await getTokenRef.current();
         if (!token) throw new Error('Not authenticated');
-        await complianceApi.advanceStage(token, { caseId, targetStage: next.toStage });
-        const updated = await casesApi.get(token, caseId);
+
+        const advanced = await complianceApi.advanceStage(token, {
+          caseId,
+          targetStage: next.toStage,
+        });
+        applyUpdatedCaseToCache(queryClient, advanced.data);
+        softInvalidateDashboardLists(queryClient);
+
+        const bootstrap = queryClient.getQueryData<{
+          data: { cases: CaseSummary[] };
+        }>(dashboardBootstrapQueryKey);
+        if (bootstrap?.data.cases) {
+          casesDataRef.current = bootstrap.data.cases;
+          syncLiveDataToIframe();
+        }
+
+        // Paint the new stage immediately from the advance response.
+        updateCompliancePanel(compCard.ownerDocument, caseId, advanced.data.stage);
+
+        const [updated, freshTl] = await Promise.all([
+          casesApi.get(token, caseId).catch(() => ({ data: advanced.data })),
+          casesApi.timeline(token, caseId).catch(() => null),
+        ]);
+        if (freshTl) {
+          queryClient.setQueryData(['cases', caseId, 'timeline'], freshTl);
+        }
+
         iframeRef.current?.contentWindow?.postMessage(
           { type: 'ko:case-detail', case: updated.data },
           window.location.origin,
         );
-        const freshTl = await casesApi.timeline(token, caseId).catch(() => null);
         window.setTimeout(() => {
           const freshIdoc = iframeRef.current?.contentDocument;
           if (!freshIdoc) return;
@@ -2696,7 +3476,10 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
       renderAiReportBody(idoc, caseId, result.data);
       void refreshAiHubFromApi(idoc);
       const freshTl = await casesApi.timeline(token, caseId).catch(() => null);
-      if (freshTl) renderTimelineTrack(idoc, freshTl.data);
+      if (freshTl) {
+        queryClient.setQueryData(['cases', caseId, 'timeline'], freshTl);
+        renderTimelineTrack(idoc, freshTl.data);
+      }
     } catch (err) {
       if (rptBody) {
         const message = isApiErrorCode(err, API_ERROR_CODES.PLAN_LIMIT_EXCEEDED)
@@ -2783,7 +3566,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
 
     const exportBtn = report.pdfUrl
       ? `<a href="${escHtml(report.pdfUrl)}" target="_blank" rel="noopener noreferrer" class="cd-rpt-btn-export" style="display:inline-flex;align-items:center;text-decoration:none">Download Final PDF</a>`
-      : `<button type="button" class="cd-rpt-btn-export">Export Draft to PDF</button>`;
+      : `<button type="button" class="cd-rpt-btn-export ko-ai-export-btn" data-report-id="${escHtml(report.id)}" data-case-id="${escHtml(caseId)}">Export Draft to PDF</button>`;
 
     body.innerHTML = `<div class="cd-rpt-generated">
     <div class="cd-rpt-sidebar">
@@ -2839,7 +3622,9 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
   </div>`;
   }
 
-  const iframeLoading = !iframeSrc || !iframeLoaded;
+  const iframeLoading = !iframeSrc;
+  // Show the iframe as soon as src is set — don't wait for onLoad on a large HTML document.
+  const iframeVisible = Boolean(iframeSrc);
 
   return (
     <div
@@ -2930,7 +3715,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
                 <button
                   key={item.id}
                   type="button"
-                  onClick={() => setActiveTab(item.id)}
+                  onClick={() => selectTab(item.id)}
                   className={`flex w-full items-center gap-2 self-stretch rounded-[32px] px-[14px] py-[6px] text-left text-[13px] font-medium transition-colors ${
                     isActive
                       ? 'border border-[#00B8D9] bg-[#E9FCFF] text-[#061F18]'
@@ -3041,7 +3826,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
                 <div className="border-t border-gray-100 px-4 py-3 text-center">
                   <button
                     type="button"
-                    onClick={() => { setActiveTab('messages'); setNotifOpen(false); }}
+                    onClick={() => { selectTab('messages'); setNotifOpen(false); }}
                     className="text-xs font-medium text-brand-teal hover:underline"
                   >
                     View all messages →
@@ -3085,7 +3870,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
           {(activeTab === 'ai' || activeTab === 'calculator') && (
             <button
               type="button"
-              onClick={() => setActiveTab('settings')}
+              onClick={() => selectTab('settings')}
               className="mb-4 flex items-center gap-1.5 px-4 text-sm font-medium text-brand-teal lg:hidden lg:px-0"
               aria-label="Back to Settings"
             >
@@ -3094,15 +3879,19 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
             </button>
           )}
 
-          {activeTab === 'calculator' ? (
+          {/* Keep Calculator/Settings mounted (hidden) after first open — avoids remount reload. */}
+          {calculatorMounted && (
+            <div className={activeTab === 'calculator' ? undefined : 'hidden'} aria-hidden={activeTab !== 'calculator'}>
               <MortgageCalculators />
-          ) : activeTab === 'settings' ? (
-            <>
+            </div>
+          )}
+          {settingsMounted && (
+            <div className={activeTab === 'settings' ? undefined : 'hidden'} aria-hidden={activeTab !== 'settings'}>
               {/* ── Mobile: quick-access cards for non-nav tabs ──────────────── */}
               <div className="mb-5 grid grid-cols-2 gap-3 px-4 lg:hidden lg:px-0">
                 <button
                   type="button"
-                  onClick={() => setActiveTab('ai')}
+                  onClick={() => selectTab('ai')}
                   className="flex items-center gap-3 rounded-xl border border-[#E4E4E4] bg-white px-4 py-3.5 text-left transition-colors hover:border-[#00B8D9] hover:bg-[#E9FCFF]"
                 >
                   <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#f0fafb]">
@@ -3115,7 +3904,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setActiveTab('calculator')}
+                  onClick={() => selectTab('calculator')}
                   className="flex items-center gap-3 rounded-xl border border-[#E4E4E4] bg-white px-4 py-3.5 text-left transition-colors hover:border-[#00B8D9] hover:bg-[#E9FCFF]"
                 >
                   <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#f0fafb]">
@@ -3130,9 +3919,10 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
               <div className="px-4 lg:px-0">
                 <IntegrationsSettingsPanel embedded />
               </div>
-            </>
-          ) : (
-            <>
+            </div>
+          )}
+          {/* Keep iframe mounted across Settings/Calculator so Overview does not reload. */}
+          <div className={showEmbeddedPanel ? 'hidden' : 'relative'}>
               {iframeLoading && (
                 <div
                   className="absolute inset-0 z-10 flex min-h-[min(70vh,560px)] flex-col items-center justify-center gap-4 rounded-lg border border-gray-100 bg-white/95 px-6 backdrop-blur-sm"
@@ -3150,11 +3940,11 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
               )}
               {iframeSrc && (
                 <iframe
-                  key={isPersonalDashboard ? 'dashboard-live' : activeTab}
+                  key={isPersonalDashboard ? 'dashboard-live' : 'demo-shell'}
                   ref={iframeRef}
                   src={iframeSrc}
                   title="KO Platform Live Demo Prototype"
-                  className={`block w-full border-0 transition-opacity duration-200 ${iframeLoaded ? 'opacity-100' : 'opacity-0'} ${
+                  className={`block w-full border-0 transition-opacity duration-150 ${iframeVisible ? 'opacity-100' : 'opacity-0'} ${
                     factFindOpen ? 'rounded-none lg:rounded-xl' : ''
                   }`}
                   style={{ height: `${frameHeight}px` }}
@@ -3171,9 +3961,17 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
                     }
 
                     setIframeLoaded(true);
+
+                    // Sync cached bootstrap data immediately — don't wait for effects/timeouts.
+                    if (isPersonalDashboard) {
+                      postPersonalGreeting();
+                      syncLiveDataToIframe();
+                      postOverviewStats();
+                    }
+
                     window.setTimeout(() => {
                       if (isPersonalDashboard) {
-                        postPersonalGreeting();
+                        // Re-sync in case refs updated between onLoad and this tick.
                         syncLiveDataToIframe();
                         postOverviewStats();
                         const idoc = iframeRef.current?.contentDocument;
@@ -3187,7 +3985,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
                           void refreshAiHubFromApi(idoc);
                         }
                       }
-                    }, 50);
+                    }, 0);
 
                     // ── Iframe augmentation (same-origin, direct DOM) ───────────────
                     // The parent runs in the same origin as the iframe, so we can
@@ -3229,8 +4027,10 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
                           const target = e.target as HTMLElement;
 
                           // ── Messages: case-detail composer send ─────────────────
+                          // Prefer wireMessageComposer (data-ko-wired); skip duplicate path.
                           const caseSendBtn = target.closest('.cd-msg-composer-btn--send') as HTMLElement | null;
                           if (caseSendBtn) {
+                            if (caseSendBtn.getAttribute('data-ko-wired') === '1') return;
                             e.preventDefault();
                             e.stopPropagation();
                             e.stopImmediatePropagation();
@@ -3244,9 +4044,25 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
                             const body = input?.value.trim() ?? '';
                             if (!caseId || !body) return;
                             if (input) input.value = '';
+                            const threadKey = threadKeyForCase(caseId);
+                            const pendingId = `optimistic-${crypto.randomUUID()}`;
+                            addOptimisticMessage(threadKey, {
+                              id: pendingId,
+                              orgId: '',
+                              body,
+                              channel: 'IN_APP',
+                              direction: 'OUTBOUND',
+                              sourceType: 'CASE_UPDATE',
+                              isRead: false,
+                              createdAt: new Date().toISOString(),
+                              caseId,
+                            });
+                            renderMessagesThread(idoc, caseId);
                             try {
                               const token = await getTokenRef.current();
                               if (!token) {
+                                dropOptimisticMessage(threadKey, pendingId);
+                                renderMessagesThread(idoc, caseId);
                                 window.alert('Authentication required. Please sign in and try again.');
                                 return;
                               }
@@ -3256,10 +4072,13 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
                                 sourceType: 'CASE_UPDATE',
                               });
                               notifyDeliveryIssues(result.meta);
-                              const fresh = await messagesApi.list(token, { caseId, perPage: 100 });
-                              renderMessagesThread(idoc, caseId, fresh.data);
-                              await refreshMessagesHubFromApi(idoc);
+                              if (result.data) confirmOptimisticMessage(threadKey, pendingId, result.data);
+                              else dropOptimisticMessage(threadKey, pendingId);
+                              renderMessagesThread(idoc, caseId);
+                              void refreshMessagesHubFromApi(idoc);
                             } catch (err) {
+                              dropOptimisticMessage(threadKey, pendingId);
+                              renderMessagesThread(idoc, caseId);
                               window.alert(formatMessageSendError(err));
                             }
                             return;
@@ -3349,20 +4168,55 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
                             const body = input?.value.trim() ?? '';
                             if (!body) return;
                             if (input) input.value = '';
-                            const threadMsgs = hubMessagesRef.current[threadKey];
-                            const caseId = threadMsgs?.[0]?.caseId;
+                            const threadMsgs = hubMessagesRef.current[threadKey] ?? [];
+                            const caseId = threadMsgs.find((m) => m.caseId)?.caseId;
+                            const pendingId = `optimistic-${crypto.randomUUID()}`;
+                            addOptimisticMessage(threadKey, {
+                              id: pendingId,
+                              orgId: '',
+                              body,
+                              channel: 'IN_APP',
+                              direction: 'OUTBOUND',
+                              sourceType: 'CASE_UPDATE',
+                              isRead: false,
+                              createdAt: new Date().toISOString(),
+                              caseId: caseId ?? undefined,
+                              clientId: threadMsgs[0]?.clientId,
+                            });
+                            // Ensure hub meta exists for render.
+                            if (!hubMetaRef.current[threadKey] && caseId) {
+                              const c = casesDataRef.current.find((k) => k.id === caseId);
+                              hubMetaRef.current[threadKey] = {
+                                name: c?.client
+                                  ? `${c.client.firstName} ${c.client.lastName}`
+                                  : 'Client conversation',
+                                caseRef: c?.referenceNumber ?? '—',
+                                caseSub: c?.type?.replace(/_/g, ' ') ?? 'General',
+                                stage: c?.stage?.replace(/_/g, ' ') ?? 'Enquiry',
+                                type: 'client',
+                              };
+                            }
+                            renderHubThreadPanel(idoc, threadKey);
                             try {
                               const token = await getTokenRef.current();
-                              if (!token) return;
+                              if (!token) {
+                                dropOptimisticMessage(threadKey, pendingId);
+                                renderHubThreadPanel(idoc, threadKey);
+                                return;
+                              }
                               const result = await messagesApi.send(token, {
                                 body,
                                 caseId: caseId ?? undefined,
                                 sourceType: 'CASE_UPDATE',
                               });
                               notifyDeliveryIssues(result.meta);
-                              await refreshMessagesHubFromApi(idoc);
+                              if (result.data) confirmOptimisticMessage(threadKey, pendingId, result.data);
+                              else dropOptimisticMessage(threadKey, pendingId);
                               renderHubThreadPanel(idoc, threadKey);
+                              void refreshMessagesHubFromApi(idoc);
                             } catch (err) {
+                              dropOptimisticMessage(threadKey, pendingId);
+                              renderHubThreadPanel(idoc, threadKey);
                               window.alert(formatMessageSendError(err));
                             }
                             return;
@@ -3448,10 +4302,39 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
                               void refreshAiHubFromApi(idoc);
                               // Update timeline to show the approval event.
                               const freshTl = await casesApi.timeline(token, caseId).catch(() => null);
-                              if (freshTl) renderTimelineTrack(idoc, freshTl.data);
+                              if (freshTl) {
+                                queryClient.setQueryData(['cases', caseId, 'timeline'], freshTl);
+                                renderTimelineTrack(idoc, freshTl.data);
+                              }
                             } catch {
                               approveBtn.textContent = '✓ Approve and Finalise';
                               approveBtn.removeAttribute('disabled');
+                            }
+                          }
+
+                          // ── AI: Export Draft to PDF ─────────────────────────
+                          const exportBtnEl = target.closest('.ko-ai-export-btn') as HTMLElement | null;
+                          if (exportBtnEl) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            const reportId = exportBtnEl.getAttribute('data-report-id');
+                            if (!reportId) return;
+                            const origText = exportBtnEl.textContent ?? 'Export Draft to PDF';
+                            exportBtnEl.textContent = 'Generating PDF…';
+                            exportBtnEl.setAttribute('disabled', 'true');
+                            try {
+                              const token = await getTokenRef.current();
+                              if (!token) {
+                                exportBtnEl.textContent = origText;
+                                exportBtnEl.removeAttribute('disabled');
+                                return;
+                              }
+                              await aiApi.exportDraftPdf(token, reportId);
+                            } catch {
+                              // Restore label; user can retry.
+                            } finally {
+                              exportBtnEl.textContent = origText;
+                              exportBtnEl.removeAttribute('disabled');
                             }
                           }
                         }, true);
@@ -3480,8 +4363,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
                   }}
                 />
               )}
-            </>
-          )}
+          </div>
           </div>
         </section>
 
@@ -3502,7 +4384,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
               <button
                 key={item.id}
                 type="button"
-                onClick={() => setActiveTab(item.id)}
+                onClick={() => selectTab(item.id)}
                 aria-current={isActive ? 'page' : undefined}
                 className={`flex flex-1 flex-col items-center justify-center gap-0.5 py-2 text-[10px] font-medium transition-colors ${
                   isActive ? 'text-[#00B8D9]' : 'text-[#71717a]'

@@ -3,6 +3,10 @@
 import { useAuth } from '@clerk/nextjs';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { complianceApi, requireAuthToken, type AdvanceStageInput } from '@/lib/api/client';
+import {
+  applyUpdatedCaseToCache,
+  softInvalidateDashboardLists,
+} from '@/lib/api/query-cache';
 
 function useToken() {
   const { getToken } = useAuth();
@@ -17,9 +21,9 @@ export function useAdvanceComplianceStage() {
       const token = await requireAuthToken(getToken);
       return complianceApi.advanceStage(token, input);
     },
-    onSuccess: (_data, variables) => {
-      qc.invalidateQueries({ queryKey: ['cases'] });
-      qc.invalidateQueries({ queryKey: ['cases', variables.caseId] });
+    onSuccess: (result) => {
+      applyUpdatedCaseToCache(qc, result.data);
+      softInvalidateDashboardLists(qc);
     },
   });
 }

@@ -36,7 +36,9 @@ export function useMessages(params: ListMessagesParams = {}, options?: { enabled
       return messagesApi.list(token, params);
     },
     enabled: options?.enabled ?? true,
-    refetchInterval: 30_000,
+    staleTime: 10_000,
+    /** Keep unread badge / inbox reasonably fresh without hammering the API. */
+    refetchInterval: 12_000,
     refetchOnWindowFocus: true,
   });
 }
@@ -49,8 +51,28 @@ export function useSendMessage() {
       const token = await requireAuthToken(getToken);
       return messagesApi.send(token, input);
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['messages'] });
+    onSuccess: (response, input) => {
+      // Patch list caches immediately so the bubble appears without waiting on invalidate.
+      if (response?.data) {
+        const entries = qc.getQueriesData<ApiSuccessResponse<MessageRecord[]>>({
+          queryKey: ['messages'],
+        });
+        for (const [key, old] of entries) {
+          if (!old?.data) continue;
+          const caseId = Array.isArray(key) ? key[3] : '';
+          if (input.caseId && caseId && caseId !== input.caseId) continue;
+          if (old.data.some((m) => m.id === response.data.id)) continue;
+          qc.setQueryData(key, {
+            ...old,
+            data: [...old.data, response.data],
+            meta:
+              old.meta?.total != null
+                ? { ...old.meta, total: old.meta.total + 1 }
+                : old.meta,
+          });
+        }
+      }
+      void qc.invalidateQueries({ queryKey: ['messages'] });
     },
   });
 }

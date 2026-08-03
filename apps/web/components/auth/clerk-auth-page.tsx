@@ -28,6 +28,10 @@ type ClerkAuthPageProps = {
   subtitle: string;
 };
 
+/**
+ * Hash routing avoids optional catch-all URL segments (`/sign-in/[[...slug]]`),
+ * which were resolving as 404 under Next.js 16 + Turbopack in this app.
+ */
 export function ClerkAuthPage({ mode, title, subtitle }: ClerkAuthPageProps) {
   const searchParams = useSearchParams();
   const redirectUrl =
@@ -47,8 +51,7 @@ export function ClerkAuthPage({ mode, title, subtitle }: ClerkAuthPageProps) {
 
       {mode === 'sign-in' ? (
         <SignIn
-          routing="path"
-          path="/sign-in"
+          routing="hash"
           signUpUrl="/sign-up"
           fallbackRedirectUrl={redirectUrl}
           forceRedirectUrl={redirectUrl}
@@ -56,8 +59,7 @@ export function ClerkAuthPage({ mode, title, subtitle }: ClerkAuthPageProps) {
         />
       ) : (
         <SignUp
-          routing="path"
-          path="/sign-up"
+          routing="hash"
           signInUrl="/sign-in"
           fallbackRedirectUrl={redirectUrl}
           forceRedirectUrl={redirectUrl}

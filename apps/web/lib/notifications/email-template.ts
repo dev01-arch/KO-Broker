@@ -229,16 +229,17 @@ export function truncateMessagePreview(body: string, maxLen = 80): string {
 
 /**
  * Notification email for messaging — preview only, no full message body.
- * Drives the recipient into the app to read the complete message.
+ * When isPortalInvite, the CTA is a portal setup/invite link (client has no portal yet).
  */
 export function buildMessageNotificationEmail(opts: {
   recipientFirstName?: string;
   messageBody: string;
   subject?: string;
   ctaUrl: string;
+  /** Client has no portal account yet — structure email as message + portal invite. */
+  isPortalInvite?: boolean;
 }): { subject: string; body: string; html: string } {
   const preview = truncateMessagePreview(opts.messageBody);
-  const subject = opts.subject?.trim() || 'You have a new message on KO Broker';
   const greeting = opts.recipientFirstName?.trim()
     ? `Hi ${opts.recipientFirstName.trim()},`
     : 'Hi,';
@@ -247,6 +248,52 @@ export function buildMessageNotificationEmail(opts: {
     : 'Hi,';
   const safePreview = escapeHtml(preview);
   const safeUrl = escapeHtml(opts.ctaUrl);
+  const isInvite =
+    opts.isPortalInvite === true || opts.ctaUrl.includes('/invite?token=');
+
+  if (isInvite) {
+    const subject =
+      opts.subject?.trim() || 'New message from your mortgage adviser — open your client portal';
+    const body = [
+      greeting,
+      '',
+      'Your mortgage adviser has sent you a message on KO Broker.',
+      ...(preview ? ['', `Preview: "${preview}"`] : []),
+      '',
+      'To read the full message — and complete your fact-find securely — open your client portal using the link below.',
+      '',
+      `Set up your client portal: ${opts.ctaUrl}`,
+      '',
+      'This invite link is personal to you. If it expires, ask your adviser to send a new invitation.',
+    ].join('\n');
+
+    const html = `
+      <p style="margin:0 0 16px 0; font-size:15px; line-height:1.5; color:#0D1F1A;">${safeGreeting}</p>
+      <p style="margin:0 0 16px 0; font-size:15px; line-height:1.5; color:#0D1F1A;">
+        Your mortgage adviser has sent you a message on <strong>KO Broker</strong>.
+      </p>
+      ${
+        preview
+          ? `<p style="margin:0 0 20px 0; padding:14px 16px; background-color:#F7FBF9; border-left:3px solid #5DCAA5; font-size:14px; line-height:1.5; color:#0D1F1A; opacity:0.85; font-style:italic;">"${safePreview}"</p>`
+          : ''
+      }
+      <p style="margin:0 0 16px 0; font-size:15px; line-height:1.5; color:#0D1F1A;">
+        To read the full message and complete your fact-find securely, open your <strong>client portal</strong> below.
+      </p>
+      <p style="margin:0 0 8px 0;">
+        <a href="${safeUrl}" style="display:inline-block; background-color:#0F6E56; color:#ffffff; text-decoration:none; font-weight:600; font-size:14px; padding:12px 20px; border-radius:8px;">
+          Open your client portal
+        </a>
+      </p>
+      <p style="margin:16px 0 0 0; font-size:12px; line-height:1.5; color:#0D1F1A; opacity:0.65;">
+        This invite link is personal to you. If it expires, ask your adviser to send a new invitation.
+      </p>
+    `;
+
+    return { subject, body, html };
+  }
+
+  const subject = opts.subject?.trim() || 'You have a new message on KO Broker';
 
   const body = [
     greeting,

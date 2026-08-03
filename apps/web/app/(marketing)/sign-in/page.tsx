@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   title: 'Sign in',
 };
 
-/** Clerk authentication — catch-all route required by @clerk/nextjs. */
+/** Clerk authentication page. */
 export default function SignInPage() {
   return (
     <Suspense fallback={null}>

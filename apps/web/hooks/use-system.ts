@@ -12,6 +12,7 @@ export function useHealth(options?: { enabled?: boolean }) {
     queryFn: () => systemApi.healthUnchecked(),
     refetchInterval: 5 * 60 * 1000,
     staleTime: 60 * 1000,
+    refetchOnMount: false,
     enabled: options?.enabled ?? true,
   });
 }

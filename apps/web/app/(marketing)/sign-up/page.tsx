@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   title: 'Start free trial',
 };
 
-/** Clerk registration — catch-all route required by @clerk/nextjs. */
+/** Clerk registration page. */
 export default function SignUpPage() {
   return (
     <Suspense fallback={null}>

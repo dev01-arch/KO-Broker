@@ -293,6 +293,16 @@ export const devStore = {
       };
       store.orgs.push(org);
       store.users.push(user);
+      store.members.push({
+        id: randomUUID(),
+        orgId: org.id,
+        email: user.email.toLowerCase(),
+        firstName: user.firstName?.trim() || 'Admin',
+        lastName: user.lastName?.trim() || 'User',
+        role: 'ADMIN',
+        isActive: true,
+        createdAt: new Date().toISOString(),
+      });
       return user;
     });
   },
@@ -1221,6 +1231,61 @@ export const devStore = {
         isActive: member.isActive,
         createdAt: member.createdAt,
       }));
+  },
+
+  listAdvisersForAssignment(orgId: string) {
+    return mutateStore((store) => {
+      const advisers = store.members
+        .filter((member) => member.orgId === orgId && member.role !== 'ADMIN')
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+
+      const admins = store.users.filter((user) => user.orgId === orgId && user.role === 'ADMIN');
+      for (const admin of admins) {
+        const email = admin.email.toLowerCase();
+        let member = store.members.find(
+          (row) => row.orgId === orgId && row.email.toLowerCase() === email,
+        );
+        if (!member) {
+          member = {
+            id: randomUUID(),
+            orgId,
+            email,
+            firstName: admin.firstName?.trim() || 'Admin',
+            lastName: admin.lastName?.trim() || 'User',
+            role: 'ADMIN',
+            isActive: true,
+            createdAt: new Date().toISOString(),
+          };
+          store.members.push(member);
+        }
+      }
+
+      const adminMembers = store.members.filter(
+        (member) => member.orgId === orgId && member.role === 'ADMIN' && member.isActive,
+      );
+      const byEmail = new Map<string, DevOrganisationMember>();
+      for (const member of [...advisers, ...adminMembers]) {
+        byEmail.set(member.email.toLowerCase(), member);
+      }
+
+      return Array.from(byEmail.values())
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+        .map((member) => ({
+          id: member.id,
+          email: member.email,
+          firstName: member.firstName,
+          lastName: member.lastName,
+          role: member.role,
+          isActive: member.isActive,
+          invitePending: false,
+          inviteTokenExpiry: null as string | null,
+          canViewAllClients: member.role === 'ADMIN',
+          canViewAccountDetails: member.role === 'ADMIN',
+          canViewAiSummaries: member.role === 'ADMIN',
+          createdAt: member.createdAt,
+          memberId: member.id,
+        }));
+    });
   },
 
   getMember(orgId: string, memberId: string) {

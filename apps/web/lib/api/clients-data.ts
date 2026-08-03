@@ -65,7 +65,7 @@ export async function createUserWithOrg(input: {
         plan: 'STARTER',
       },
     });
-    return await prisma.user.create({
+    const user = await prisma.user.create({
       data: {
         clerkId: input.clerkId,
         email: input.email,
@@ -73,6 +73,16 @@ export async function createUserWithOrg(input: {
         lastName: input.lastName,
         orgId: org.id,
         role: 'ADMIN',
+        organisationMember: {
+          create: {
+            orgId: org.id,
+            email: input.email.toLowerCase(),
+            firstName: input.firstName?.trim() || 'Admin',
+            lastName: input.lastName?.trim() || 'User',
+            role: 'ADMIN',
+            isActive: true,
+          },
+        },
       },
       select: {
         id: true,
@@ -84,6 +94,7 @@ export async function createUserWithOrg(input: {
         role: true,
       },
     });
+    return user;
   } catch (error) {
     if (!shouldUseDevStore(error)) throw error;
     return devStore.ensureUser(input);
@@ -96,6 +107,14 @@ export async function linkExistingUserToNewOrg(
   input: { orgName: string; slug: string },
 ) {
   try {
+    const existingUser = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { email: true, firstName: true, lastName: true },
+    });
+    if (!existingUser) {
+      throw new Error('User not found');
+    }
+
     const org = await prisma.organisation.create({
       data: {
         name: input.orgName,
@@ -105,7 +124,20 @@ export async function linkExistingUserToNewOrg(
     });
     return await prisma.user.update({
       where: { id: userId },
-      data: { orgId: org.id, role: 'ADMIN' },
+      data: {
+        orgId: org.id,
+        role: 'ADMIN',
+        organisationMember: {
+          create: {
+            orgId: org.id,
+            email: existingUser.email.toLowerCase(),
+            firstName: existingUser.firstName?.trim() || 'Admin',
+            lastName: existingUser.lastName?.trim() || 'User',
+            role: 'ADMIN',
+            isActive: true,
+          },
+        },
+      },
       select: {
         id: true,
         orgId: true,

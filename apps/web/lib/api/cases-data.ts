@@ -10,6 +10,19 @@ function shouldUseDevStore(error: unknown) {
   return process.env.NODE_ENV === 'development' && isPrismaConnectionError(error);
 }
 
+async function nextCaseReferenceSequence(orgId: string): Promise<number> {
+  const year = new Date().getFullYear();
+  const prefix = `KOF-${year}-`;
+  const latest = await prisma.case.findFirst({
+    where: { orgId, referenceNumber: { startsWith: prefix } },
+    orderBy: { referenceNumber: 'desc' },
+    select: { referenceNumber: true },
+  });
+  if (!latest?.referenceNumber) return 1;
+  const parsed = Number.parseInt(latest.referenceNumber.slice(prefix.length), 10);
+  return Number.isFinite(parsed) ? parsed + 1 : 1;
+}
+
 const caseListSelect = {
   id: true,
   referenceNumber: true,
@@ -130,17 +143,7 @@ export async function createCaseForOrg(
 
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
-      const year = new Date().getFullYear();
-      const count = await prisma.case.count({
-        where: {
-          orgId,
-          createdAt: {
-            gte: new Date(`${year}-01-01T00:00:00.000Z`),
-            lt: new Date(`${year + 1}-01-01T00:00:00.000Z`),
-          },
-        },
-      });
-      const referenceNumber = generateReference('KOF', count + 1);
+      const referenceNumber = generateReference('KOF', await nextCaseReferenceSequence(orgId));
       const ltv =
         input.propertyValue && input.loanAmount
           ? calculateLTV(input.loanAmount, input.propertyValue)

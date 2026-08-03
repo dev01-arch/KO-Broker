@@ -63,14 +63,16 @@ export default clerkMiddleware(
         );
       }
       // === END FRONTEND ADDITION ===
-      return undefined;
+      return NextResponse.next();
     }
 
     await auth.protect();
-    return isApi ? applyCorsHeaders(req, NextResponse.next()) : undefined;
+    return isApi ? applyCorsHeaders(req, NextResponse.next()) : NextResponse.next();
   },
   {
     authorizedParties: [appOrigin, 'http://localhost:3001'],
+    signInUrl: '/sign-in',
+    signUpUrl: '/sign-up',
   },
 );
 
@@ -78,5 +80,6 @@ export const config = {
   matcher: [
     '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
     '/(api|trpc)(.*)',
+    '/__clerk/(.*)',
   ],
 };

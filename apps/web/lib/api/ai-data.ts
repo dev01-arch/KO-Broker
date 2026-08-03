@@ -392,7 +392,7 @@ export async function approveAiReportForOrg(orgId: string, id: string, approvedB
       pdfUrl = await uploadToR2(pdfBuffer, key, 'application/pdf');
     } catch (err) {
       console.error('[PDF ERROR] Failed to generate/upload PDF:', err);
-      pdfUrl = `https://storage.koplatform.co.uk/reports/${id}/suitability_report.pdf`;
+      // Leave pdfUrl empty — do not substitute a fake URL that 404s on download.
     }
 
     const finalisedReport = await prisma.suitabilityReport.update({
@@ -450,6 +450,79 @@ export async function approveAiReportForOrg(orgId: string, id: string, approvedB
       const devReport = devStore.approveAiReport(orgId, id, approvedBy);
       if (!devReport) return { error: 'NOT_FOUND' as const };
       return { report: devReport };
+    }
+    throw error;
+  }
+}
+
+/**
+ * Generate a downloadable PDF for a draft (or any non-final) report without
+ * approving/finalising or uploading to R2.
+ */
+export async function exportDraftAiReportPdfForOrg(orgId: string, id: string) {
+  try {
+    const report = await prisma.suitabilityReport.findFirst({
+      where: { id, case: { orgId } },
+      include: {
+        case: {
+          include: {
+            client: true,
+          },
+        },
+      },
+    });
+
+    if (!report) return { error: 'NOT_FOUND' as const };
+
+    const sections = coerceReportSections(report.sections);
+    if (sections.length === 0) {
+      return {
+        error: 'BUSINESS_RULE_VIOLATION' as const,
+        message: 'Report has no content to export.',
+      };
+    }
+
+    const pdfBuffer = await generateReportPdfBuffer({
+      ...report,
+      sections,
+    });
+
+    const ref = report.case.referenceNumber.replace(/[^\w-]+/g, '_');
+    const statusLabel = report.status === 'FINALISED' ? 'final' : 'draft';
+    const filename = `suitability_report_${statusLabel}_${ref}.pdf`;
+
+    return { buffer: pdfBuffer, filename };
+  } catch (error) {
+    if (shouldUseDevStore(error)) {
+      const report = devStore.getAiReport(orgId, id);
+      if (!report) return { error: 'NOT_FOUND' as const };
+
+      const caseRecord = devStore.getCase(orgId, report.caseId);
+      const sections = coerceReportSections(report.sections);
+      if (sections.length === 0) {
+        return {
+          error: 'BUSINESS_RULE_VIOLATION' as const,
+          message: 'Report has no content to export.',
+        };
+      }
+
+      const pdfBuffer = await generateReportPdfBuffer({
+        id: report.id,
+        templateType: report.templateType,
+        sections,
+        createdAt: report.createdAt,
+        case: {
+          referenceNumber: caseRecord?.referenceNumber ?? report.caseId,
+          client: {
+            firstName: caseRecord?.client?.firstName ?? 'Client',
+            lastName: caseRecord?.client?.lastName ?? '',
+          },
+        },
+      });
+
+      const ref = (caseRecord?.referenceNumber ?? report.caseId).replace(/[^\w-]+/g, '_');
+      const filename = `suitability_report_draft_${ref}.pdf`;
+      return { buffer: pdfBuffer, filename };
     }
     throw error;
   }

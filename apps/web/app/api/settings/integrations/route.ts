@@ -1,196 +1,80 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { z } from 'zod';
-import { createHandler } from '@/lib/api/handler';
-import { prisma } from '@/lib/db';
+/**
+ * GET  /api/settings/integrations  — org Equifax / Twilio flags
+ * PUT  /api/settings/integrations  — update (ADMIN only)
+ *
+ * Uses settings-data (equifax/twilio) — matches the Settings UI and @ko/types.
+ */
+
+import { NextRequest } from 'next/server';
+import { UpdateIntegrationsSchema } from '@ko/types';
+import { requireApiAuth } from '@/lib/api/require-api-auth';
+import { getOrgIntegrations, updateOrgIntegrations } from '@/lib/api/settings-data';
+import { apiError, apiFromZodError, apiSuccess } from '@/lib/api/responses';
+import { isPrismaConnectionError } from '@/lib/api/prisma-errors';
 import { logAuditEvent } from '@/lib/compliance/audit';
 
-const IntegrationSchema = z.object({
-  onfido: z.object({
-    apiKey: z.string().optional(),
-    enabled: z.boolean().default(false),
-  }).optional(),
-  experian: z.object({
-    apiKey: z.string().optional(),
-    clientId: z.string().optional(),
-    enabled: z.boolean().default(false),
-  }).optional(),
-  twentyci: z.object({
-    apiKey: z.string().optional(),
-    enabled: z.boolean().default(false),
-  }).optional(),
-});
+export async function GET() {
+  try {
+    const authResult = await requireApiAuth();
+    if ('response' in authResult) return authResult.response;
+    const { orgId } = authResult;
 
-type IntegrationSettings = z.infer<typeof IntegrationSchema>;
-
-interface OrgSettings {
-  integrations?: {
-    onfido?: {
-      apiKey?: string;
-      enabled?: boolean;
-    };
-    experian?: {
-      apiKey?: string;
-      clientId?: string;
-      enabled?: boolean;
-    };
-    twentyci?: {
-      apiKey?: string;
-      enabled?: boolean;
-    };
-  };
+    const integrations = await getOrgIntegrations(orgId);
+    return apiSuccess(integrations);
+  } catch (error) {
+    console.error('[GET /api/settings/integrations]', error);
+    if (isPrismaConnectionError(error))
+      return apiError('SERVICE_UNAVAILABLE', 'Database is unavailable', 503);
+    return apiError('INTERNAL_ERROR', 'An unexpected error occurred', 500);
+  }
 }
 
-// Helper to mask a string to protect secrets
-function maskSecret(val?: string): string | undefined {
-  if (!val) return undefined;
-  if (val.length <= 8) return '••••••••';
-  return `${val.slice(0, 4)}••••••••${val.slice(-4)}`;
-}
+export async function PUT(req: NextRequest) {
+  try {
+    const authResult = await requireApiAuth();
+    if ('response' in authResult) return authResult.response;
+    const { orgId, user } = authResult;
 
-// Check if a value is masked
-function isMasked(val?: string): boolean {
-  if (!val) return false;
-  return val.includes('••••');
-}
-
-/**
- * GET /api/settings/integrations
- * 
- * Fetches the organization's integrations settings, returning masked API keys/tokens.
- * Integrations per PRD-12: Onfido (ID/KYC), Experian (credit), TwentyCI (sourcing).
- */
-export const GET = createHandler({
-  method: 'GET',
-  handler: async (req: NextRequest, { orgId }) => {
-    const org = await prisma.organisation.findUnique({
-      where: { id: orgId! },
-      select: { settings: true },
-    });
-
-    const settings = (org?.settings as unknown as OrgSettings) || {};
-    const integrations = settings.integrations || {};
-
-    const responseData: IntegrationSettings = {
-      onfido: {
-        apiKey: integrations.onfido?.apiKey ? maskSecret(integrations.onfido.apiKey) : undefined,
-        enabled: !!integrations.onfido?.enabled,
-      },
-      experian: {
-        apiKey: integrations.experian?.apiKey ? maskSecret(integrations.experian.apiKey) : undefined,
-        clientId: integrations.experian?.clientId,
-        enabled: !!integrations.experian?.enabled,
-      },
-      twentyci: {
-        apiKey: integrations.twentyci?.apiKey ? maskSecret(integrations.twentyci.apiKey) : undefined,
-        enabled: !!integrations.twentyci?.enabled,
-      },
-    };
-
-    return NextResponse.json({ success: true, data: responseData }, { status: 200 });
-  },
-});
-
-/**
- * PUT /api/settings/integrations
- * 
- * Updates the organization's integrations settings. Enforces admin role.
- * Preserves existing secrets if they are passed back masked.
- * Integrations per PRD-12: Onfido (ID/KYC), Experian (credit), TwentyCI (sourcing).
- */
-export const PUT = createHandler({
-  method: 'PUT',
-  schema: IntegrationSchema,
-  requiredRole: 'ADMIN',
-  handler: async (req: NextRequest, { body, user, orgId }) => {
-    const org = await prisma.organisation.findUnique({
-      where: { id: orgId! },
-    });
-
-    if (!org) {
-      return NextResponse.json(
-        { success: false, error: { code: 'NOT_FOUND', message: 'Organisation not found' } },
-        { status: 404 }
-      );
+    if (user.role !== 'ADMIN') {
+      return apiError('FORBIDDEN', 'Admin role required to update integrations', 403);
     }
 
-    const currentSettings = (org.settings as unknown as OrgSettings) || {};
-    const currentIntegrations = currentSettings.integrations || {};
-
-    // Build the updated integrations block, resolving masked fields
-    const updatedIntegrations: OrgSettings['integrations'] = {};
-
-    if (body.onfido) {
-      let apiKey = body.onfido.apiKey;
-      // If client passed back a masked placeholder, keep the original database secret
-      if (isMasked(apiKey)) {
-        apiKey = currentIntegrations.onfido?.apiKey;
-      }
-      updatedIntegrations.onfido = {
-        apiKey,
-        enabled: body.onfido.enabled,
-      };
+    let body: unknown;
+    try {
+      body = await req.json();
+    } catch {
+      return apiError('VALIDATION_ERROR', 'Invalid JSON body', 422);
     }
 
-    if (body.experian) {
-      let apiKey = body.experian.apiKey;
-      // Resolve masked apiKey
-      if (isMasked(apiKey)) {
-        apiKey = currentIntegrations.experian?.apiKey;
-      }
-      updatedIntegrations.experian = {
-        apiKey,
-        clientId: body.experian.clientId,
-        enabled: body.experian.enabled,
-      };
-    }
+    const parsed = UpdateIntegrationsSchema.safeParse(body);
+    if (!parsed.success) return apiFromZodError(parsed.error);
 
-    if (body.twentyci) {
-      let apiKey = body.twentyci.apiKey;
-      // Resolve masked apiKey
-      if (isMasked(apiKey)) {
-        apiKey = currentIntegrations.twentyci?.apiKey;
-      }
-      updatedIntegrations.twentyci = {
-        apiKey,
-        enabled: body.twentyci.enabled,
-      };
-    }
+    const before = await getOrgIntegrations(orgId);
+    const updated = await updateOrgIntegrations(orgId, parsed.data);
 
-    const newSettings = {
-      ...currentSettings,
-      integrations: {
-        ...currentIntegrations,
-        ...updatedIntegrations,
-      },
-    };
-
-    // Update database
-    await prisma.organisation.update({
-      where: { id: org.id },
-      data: { settings: newSettings },
-    });
-
-    // Log audit trail event
     await logAuditEvent({
-      orgId: org.id,
-      userId: user?.id,
+      orgId,
+      userId: user.id,
       entityType: 'Organisation',
-      entityId: org.id,
+      entityId: orgId,
       action: 'INTEGRATION_SETTINGS_UPDATED',
       diff: {
         before: {
-          onfidoEnabled: !!currentIntegrations.onfido?.enabled,
-          experianEnabled: !!currentIntegrations.experian?.enabled,
-          twentyciEnabled: !!currentIntegrations.twentyci?.enabled,
+          equifaxEnabled: Boolean(before.equifax?.enabled),
+          twilioEnabled: Boolean(before.twilio?.enabled),
         },
         after: {
-          onfidoEnabled: !!updatedIntegrations.onfido?.enabled,
-          experianEnabled: !!updatedIntegrations.experian?.enabled,
-          twentyciEnabled: !!updatedIntegrations.twentyci?.enabled,
+          equifaxEnabled: Boolean(updated.equifax?.enabled),
+          twilioEnabled: Boolean(updated.twilio?.enabled),
         },
       },
     });
 
-    return NextResponse.json({ success: true, message: 'Integration settings updated successfully' }, { status: 200 });
-  },
-});
+    return apiSuccess(updated);
+  } catch (error) {
+    console.error('[PUT /api/settings/integrations]', error);
+    if (isPrismaConnectionError(error))
+      return apiError('SERVICE_UNAVAILABLE', 'Database is unavailable', 503);
+    return apiError('INTERNAL_ERROR', 'An unexpected error occurred', 500);
+  }
+}

@@ -1,8 +1,7 @@
 'use client';
 
 import { useAuth } from '@clerk/nextjs';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { canAccessFeature, type Plan, type Role } from '@ko/types';
 import { requireAuthToken, settingsApi, type OrgProfile } from '@/lib/api/client';
 
@@ -17,18 +16,12 @@ function planLimitsEnforced(): boolean {
   return process.env.NEXT_PUBLIC_ENFORCE_PLAN_LIMITS === 'true';
 }
 
-/** Fetches org plan + role once; revalidates on window focus (Stripe webhook side effects, §15). */
+/**
+ * Fetches org plan + role. Prefer bootstrap-seeded cache; avoid aggressive
+ * focus refetching (Stripe plan changes are rare and settings can invalidate).
+ */
 export function useOrgProfile() {
   const getToken = useToken();
-  const qc = useQueryClient();
-
-  useEffect(() => {
-    function onFocus() {
-      void qc.invalidateQueries({ queryKey: orgQueryKey });
-    }
-    window.addEventListener('focus', onFocus);
-    return () => window.removeEventListener('focus', onFocus);
-  }, [qc]);
 
   return useQuery({
     queryKey: orgQueryKey,
@@ -37,7 +30,8 @@ export function useOrgProfile() {
       const response = await settingsApi.getOrg(token);
       return response.data;
     },
-    staleTime: 60 * 1000,
+    staleTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 }
 

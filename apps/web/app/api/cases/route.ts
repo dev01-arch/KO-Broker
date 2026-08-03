@@ -12,6 +12,20 @@ import { generateReference, calculateLTV } from '@ko/utils';
 import { getCurrentUser, maskCaseFinancials } from '@/lib/auth';
 import { caseAssignedToAdviserWhere, isRestrictedAdviser } from '@/lib/auth/adviser-scope';
 
+/** Prefer latest ref over full-table count — much faster as orgs grow. */
+async function nextCaseReferenceSequence(orgId: string): Promise<number> {
+  const year = new Date().getFullYear();
+  const prefix = `KOF-${year}-`;
+  const latest = await prisma.case.findFirst({
+    where: { orgId, referenceNumber: { startsWith: prefix } },
+    orderBy: { referenceNumber: 'desc' },
+    select: { referenceNumber: true },
+  });
+  if (!latest?.referenceNumber) return 1;
+  const parsed = Number.parseInt(latest.referenceNumber.slice(prefix.length), 10);
+  return Number.isFinite(parsed) ? parsed + 1 : 1;
+}
+
 // ── GET /api/cases ────────────────────────────────────────────────────────────
 
 export const GET = createHandler({
@@ -89,9 +103,10 @@ export const POST = createHandler({
     method: 'POST',
     schema: CreateCaseSchema,
     handler: async (_req: NextRequest, { body, user, orgId }) => {
-        // Verify client belongs to same org
+        // Verify client belongs to same org (id only — avoid loading full row).
         const client = await prisma.client.findFirst({
             where: { id: body.clientId, orgId },
+            select: { id: true },
         });
         if (!client) {
             return NextResponse.json(
@@ -100,35 +115,64 @@ export const POST = createHandler({
             );
         }
 
-        // Generate reference number
-        const count = await prisma.case.count({ where: { orgId } });
-        const referenceNumber = generateReference('KOF', count + 1);
-
-        // Calculate LTV if both values provided
         const ltv =
             body.loanAmount && body.propertyValue
                 ? calculateLTV(body.loanAmount, body.propertyValue)
                 : null;
 
-        const newCase = await prisma.case.create({
-            data: {
-                orgId: orgId!,
-                clientId: body.clientId,
-                referenceNumber,
-                type: body.type,
-                stage: 'ENQUIRY',
-                propertyValue: body.propertyValue,
-                loanAmount: body.loanAmount,
-                ltv,
-                termYears: body.termYears,
-                assignedAdviserId: user?.id,
-            },
-            include: {
-                client: { select: { id: true, firstName: true, lastName: true } },
-            },
-        });
+        let newCase = null;
+        for (let attempt = 0; attempt < 3; attempt++) {
+            const referenceNumber = generateReference('KOF', await nextCaseReferenceSequence(orgId!));
+            try {
+                newCase = await prisma.case.create({
+                    data: {
+                        orgId: orgId!,
+                        clientId: body.clientId,
+                        referenceNumber,
+                        type: body.type,
+                        stage: 'ENQUIRY',
+                        propertyValue: body.propertyValue,
+                        loanAmount: body.loanAmount,
+                        ltv,
+                        termYears: body.termYears,
+                        assignedAdviserId: user?.id,
+                    },
+                    include: {
+                        client: {
+                            select: {
+                                id: true,
+                                clientType: true,
+                                companyName: true,
+                                firstName: true,
+                                lastName: true,
+                                email: true,
+                            },
+                        },
+                        adviser: { select: { id: true, firstName: true, lastName: true } },
+                        _count: { select: { messages: true, documents: true } },
+                    },
+                });
+                break;
+            } catch (error) {
+                // Unique ref race — retry with next sequence.
+                const code =
+                    error && typeof error === 'object' && 'code' in error
+                        ? String((error as { code?: string }).code)
+                        : '';
+                if (code === 'P2002' && attempt < 2) continue;
+                throw error;
+            }
+        }
 
-        await logAuditEvent({
+        if (!newCase) {
+            return NextResponse.json(
+                { success: false, error: { code: 'INTERNAL_ERROR', message: 'Could not create case' } },
+                { status: 500 },
+            );
+        }
+
+        // Do not block the API response on audit write.
+        void logAuditEvent({
             orgId: orgId!,
             userId: user?.id,
             entityType: 'Case',

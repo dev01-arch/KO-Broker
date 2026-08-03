@@ -8,6 +8,8 @@ import {
   cancelPendingDigestsIfCaughtUp,
   scheduleMessageEmailDigest,
 } from '@/lib/notifications/message-email-digest';
+import { sendEmail } from '@/lib/notifications/email';
+import { buildMessageNotificationEmail } from '@/lib/notifications/email-template';
 import { sendSMS } from '@/lib/notifications/sms';
 import type { MessageChannel, MessageDirection, MessageSource } from '@ko/types';
 import { messageAssignedToAdviserWhere } from '@/lib/auth/adviser-scope';
@@ -23,9 +25,17 @@ function messageInboxUrl(): string {
   return (process.env.NEXT_PUBLIC_APP_URL ?? 'https://ko-broker.vercel.app').replace(/\/$/, '');
 }
 
+function clientPortalUnsubscribeUrl(): string {
+  const portalUrl = (process.env.NEXT_PUBLIC_CLIENT_PORTAL_URL ?? 'http://localhost:3002').replace(
+    /\/$/,
+    '',
+  );
+  return `${portalUrl}/settings?section=notifications`;
+}
+
 /**
- * LinkedIn-style notification email (preview only, delayed + batched).
- * Schedules a digest: first message preview is locked; later messages do not re-email.
+ * LinkedIn-style notification email (preview only, delayed + batched) for clients
+ * already on the portal. Clients without a portal account get an immediate invite email.
  */
 async function deliverMessageNotificationEmail(opts: {
   orgId: string;
@@ -35,6 +45,7 @@ async function deliverMessageNotificationEmail(opts: {
   subject?: string;
   messageId: string;
   caseId?: string;
+  invitingUserId?: string;
   delivery: MessageDeliveryMeta;
   /** EMAIL channel: missing recipient is an error. IN_APP notify: skip quietly if no client. */
   requireRecipient: boolean;
@@ -73,6 +84,62 @@ async function deliverMessageNotificationEmail(opts: {
     // Fail soft — still try to schedule so in-app send delivery meta stays useful.
   }
 
+  // If the client has no portal yet, invite them via this message email CTA.
+  let ctaUrl = messageInboxUrl();
+  let isPortalInvite = false;
+  try {
+    const { ensurePortalInviteForMessaging } = await import('@/lib/api/portal-data');
+    const portal = await ensurePortalInviteForMessaging(opts.orgId, {
+      clientId: client.id,
+      caseId: opts.caseId,
+      invitingUserId: opts.invitingUserId,
+    });
+    if (portal?.ctaUrl) ctaUrl = portal.ctaUrl;
+    isPortalInvite = portal?.isPortalInvite === true;
+  } catch (error) {
+    console.warn('[messages] portal invite-for-message failed — using default CTA:', error);
+  }
+
+  // New / not-yet-on-platform clients: send the portal invite email immediately
+  // (do not wait for the multi-hour digest delay).
+  if (isPortalInvite) {
+    const notification = buildMessageNotificationEmail({
+      recipientFirstName: client.firstName,
+      messageBody: opts.body,
+      subject: opts.subject,
+      ctaUrl,
+      isPortalInvite: true,
+    });
+    const sendResult = await sendEmail({
+      to: client.email,
+      subject: notification.subject,
+      body: notification.body,
+      html: notification.html,
+      unsubscribeUrl: clientPortalUnsubscribeUrl(),
+    });
+    if (!sendResult.ok) {
+      delivery.email = 'failed';
+      delivery.errors?.push(sendResult.error);
+      // Fall back to digest so they still receive an invite eventually.
+      const scheduled = await scheduleMessageEmailDigest({
+        orgId: opts.orgId,
+        recipientEmail: client.email,
+        recipientName: client.firstName,
+        recipientKind: 'CLIENT',
+        clientId: client.id,
+        caseId: opts.caseId,
+        firstMessageId: opts.messageId,
+        previewBody: opts.body,
+        subject: opts.subject,
+        ctaUrl,
+      });
+      if (scheduled.ok) delivery.email = 'scheduled';
+      return;
+    }
+    delivery.email = 'sent';
+    return;
+  }
+
   const scheduled = await scheduleMessageEmailDigest({
     orgId: opts.orgId,
     recipientEmail: client.email,
@@ -83,7 +150,7 @@ async function deliverMessageNotificationEmail(opts: {
     firstMessageId: opts.messageId,
     previewBody: opts.body,
     subject: opts.subject,
-    ctaUrl: messageInboxUrl(),
+    ctaUrl,
   });
 
   if (!scheduled.ok) {
@@ -101,7 +168,13 @@ type ClientContact = {
   phone: string | null;
   firstName: string;
   lastName: string;
+  /** Present when loaded — null/undefined means not set up on the portal yet. */
+  portalPasswordHash?: string | null;
 };
+
+function clientNeedsImmediatePortalInvite(client: ClientContact | null): boolean {
+  return Boolean(client?.email) && !client?.portalPasswordHash;
+}
 
 export type MessageDeliveryMeta = {
   inApp: 'sent' | 'skipped';
@@ -161,20 +234,27 @@ async function resolveClientContact(
   caseId?: string,
   clientId?: string,
 ): Promise<ClientContact | null> {
+  const contactSelect = {
+    id: true,
+    email: true,
+    phone: true,
+    firstName: true,
+    lastName: true,
+    portalPasswordHash: true,
+  } as const;
+
   try {
     if (clientId) {
       return prisma.client.findFirst({
         where: { id: clientId, orgId },
-        select: { id: true, email: true, phone: true, firstName: true, lastName: true },
+        select: contactSelect,
       });
     }
     if (caseId) {
       const caseRecord = await prisma.case.findFirst({
         where: { id: caseId, orgId },
         include: {
-          client: {
-            select: { id: true, email: true, phone: true, firstName: true, lastName: true },
-          },
+          client: { select: contactSelect },
         },
       });
       return caseRecord?.client ?? null;
@@ -191,6 +271,7 @@ async function resolveClientContact(
           phone: client.phone ?? null,
           firstName: client.firstName,
           lastName: client.lastName,
+          portalPasswordHash: (client as { portalPasswordHash?: string | null }).portalPasswordHash ?? null,
         };
       }
       if (caseId) {
@@ -204,6 +285,7 @@ async function resolveClientContact(
           phone: client.phone ?? null,
           firstName: client.firstName,
           lastName: client.lastName,
+          portalPasswordHash: (client as { portalPasswordHash?: string | null }).portalPasswordHash ?? null,
         };
       }
     }
@@ -289,7 +371,7 @@ export async function broadcastMessageForOrg(
       messages.find((m) => m.channel === 'EMAIL') ??
       messages[0];
     if (primaryForNotify) {
-      await deliverMessageNotificationEmail({
+      const notify = deliverMessageNotificationEmail({
         orgId,
         settings,
         client,
@@ -300,6 +382,12 @@ export async function broadcastMessageForOrg(
         delivery,
         requireRecipient: channels.includes('EMAIL') && !channels.includes('IN_APP'),
       });
+      // Portal invites must complete before the response; digests stay async for IN_APP.
+      if (clientNeedsImmediatePortalInvite(client) || !channels.includes('IN_APP')) {
+        await notify;
+      } else {
+        void notify;
+      }
     }
   }
 
@@ -355,6 +443,7 @@ export async function sendMessageForOrg(
     caseId?: string;
     clientId?: string;
   },
+  options?: { invitingUserId?: string },
 ) {
   const settings = await getOrgMessagingSettings(orgId);
   const integrations = await getOrgIntegrations(orgId);
@@ -385,8 +474,7 @@ export async function sendMessageForOrg(
       delivery.errors?.push('In-app channel is disabled in Settings');
     } else {
       delivery.inApp = 'sent';
-      // Side-notify by delayed digest email (LinkedIn-style: first preview only).
-      await deliverMessageNotificationEmail({
+      const notify = deliverMessageNotificationEmail({
         orgId,
         settings,
         client,
@@ -394,9 +482,13 @@ export async function sendMessageForOrg(
         subject: input.subject,
         messageId: message.id,
         caseId: input.caseId,
+        invitingUserId: options?.invitingUserId,
         delivery,
         requireRecipient: false,
       });
+      // Portal invites must complete before the response (serverless); digests stay async.
+      if (clientNeedsImmediatePortalInvite(client)) await notify;
+      else void notify;
     }
   }
 
@@ -413,6 +505,7 @@ export async function sendMessageForOrg(
         subject: input.subject,
         messageId: message.id,
         caseId: input.caseId,
+        invitingUserId: options?.invitingUserId,
         delivery,
         requireRecipient: true,
       });

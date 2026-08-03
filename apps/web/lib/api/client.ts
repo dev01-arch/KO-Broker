@@ -387,6 +387,74 @@ async function apiFetch<T>(
   return json;
 }
 
+/** Fetch a binary response (e.g. PDF download). Throws ApiError on failure. */
+async function apiFetchBlob(
+  path: string,
+  token: string,
+  options: RequestInit = {},
+): Promise<{ blob: Blob; filename: string | null }> {
+  const res = await fetch(`${BASE_URL}${path}`, {
+    ...options,
+    redirect: 'manual',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      ...(options.headers ?? {}),
+    },
+  });
+
+  if (res.type === 'opaqueredirect' || res.status === 301 || res.status === 302 || res.status === 307 || res.status === 308) {
+    throw new ApiError(
+      'UNAUTHORIZED',
+      'Session expired. Please sign in again.',
+      undefined,
+      res.status,
+    );
+  }
+
+  const contentType = res.headers.get('content-type') ?? '';
+  if (!res.ok) {
+    if (contentType.includes('application/json')) {
+      const json = (await res.json()) as ApiResponse<unknown>;
+      if (!json.success) {
+        throw new ApiError(
+          json.error?.code ?? 'INTERNAL_ERROR',
+          json.error?.message ?? 'An unexpected error occurred',
+          json.error?.fields,
+          res.status,
+          json.error?.details,
+        );
+      }
+    }
+    throw new ApiError('INTERNAL_ERROR', 'Could not download file', undefined, res.status);
+  }
+
+  if (!contentType.includes('application/pdf') && !contentType.includes('octet-stream')) {
+    throw new ApiError(
+      'INVALID_RESPONSE',
+      'Unexpected response from server. Expected a PDF file.',
+      undefined,
+      res.status,
+    );
+  }
+
+  const disposition = res.headers.get('content-disposition') ?? '';
+  const filenameMatch = /filename="?([^";]+)"?/i.exec(disposition);
+  const blob = await res.blob();
+  return { blob, filename: filenameMatch?.[1] ?? null };
+}
+
+function triggerBlobDownload(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.rel = 'noopener';
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 export {
   API_ERROR_CODES,
   formatApiError,
@@ -871,6 +939,15 @@ export const aiApi = {
 
   approveReport(token: string, id: string) {
     return apiFetch<AiReport>(`/api/ai/reports/${id}/approve`, token, { method: 'POST' });
+  },
+
+  /** Download a draft (or current) report PDF without approving/finalising. */
+  async exportDraftPdf(token: string, id: string) {
+    const { blob, filename } = await apiFetchBlob(`/api/ai/reports/${id}/export-pdf`, token, {
+      method: 'POST',
+    });
+    triggerBlobDownload(blob, filename ?? `suitability_report_draft_${id}.pdf`);
+    return { filename: filename ?? `suitability_report_draft_${id}.pdf` };
   },
 
   extractFactFind(token: string, input: ExtractFactFindInput) {

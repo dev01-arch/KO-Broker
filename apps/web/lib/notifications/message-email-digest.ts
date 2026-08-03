@@ -281,6 +281,7 @@ export async function processDueMessageEmailDigests(
         messageBody: digest.previewBody,
         subject: digest.subject ?? undefined,
         ctaUrl: digest.ctaUrl,
+        isPortalInvite: digest.ctaUrl.includes('/invite?token='),
       });
 
       const sendResult = await sendEmail({

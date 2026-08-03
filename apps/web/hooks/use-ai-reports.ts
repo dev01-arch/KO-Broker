@@ -30,6 +30,7 @@ export function useAiReports(
       return aiApi.listReports(token, params);
     },
     enabled: options?.enabled ?? true,
+    staleTime: 5 * 60 * 1000,
   });
 }
 
@@ -71,6 +72,16 @@ export function useApproveReport() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['ai-reports'] });
+    },
+  });
+}
+
+export function useExportDraftPdf() {
+  const getToken = useToken();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const token = await requireAuthToken(getToken);
+      return aiApi.exportDraftPdf(token, id);
     },
   });
 }

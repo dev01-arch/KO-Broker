@@ -5,10 +5,15 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   clientsApi,
   requireAuthToken,
-  type ListClientsParams,
+  type ClientSummary,
   type CreateClientInput,
+  type ListClientsParams,
   type UpdateClientInput,
 } from '@/lib/api/client';
+import {
+  applyCreatedClientToCache,
+  softInvalidateDashboardLists,
+} from '@/lib/api/query-cache';
 
 function useToken() {
   const { getToken } = useAuth();
@@ -30,6 +35,30 @@ export function clientsQueryKey(params: ListClientsParams = {}) {
   ] as const;
 }
 
+function toClientSummary(
+  created: { id: string; referenceNumber: string; firstName: string; lastName: string; email: string },
+  input: CreateClientInput,
+): ClientSummary {
+  return {
+    id: created.id,
+    referenceNumber: created.referenceNumber,
+    clientType: input.clientType ?? 'INDIVIDUAL',
+    companyName: input.companyName,
+    firstName: created.firstName,
+    lastName: created.lastName,
+    email: created.email,
+    employmentStatus: input.employmentStatus ?? 'EMPLOYED',
+    annualIncome: input.annualIncome,
+    isReferred: input.isReferred ?? false,
+    referredToCompany: input.referredToCompany,
+    insurerName: input.insurerName,
+    status: 'PROSPECT',
+    isVulnerable: false,
+    assignedMember: null,
+    _count: { cases: 0, messages: 0 },
+  };
+}
+
 // ─── List clients ─────────────────────────────────────────────────────────────
 
 export function useClients(
@@ -44,6 +73,7 @@ export function useClients(
       return clientsApi.list(token, params);
     },
     enabled: options?.enabled ?? true,
+    staleTime: 5 * 60 * 1000,
   });
 }
 
@@ -58,6 +88,7 @@ export function useClient(id: string) {
       return clientsApi.get(token, id);
     },
     enabled: Boolean(id),
+    staleTime: 5 * 60 * 1000,
   });
 }
 
@@ -71,8 +102,9 @@ export function useCreateClient() {
       const token = await requireAuthToken(getToken);
       return clientsApi.create(token, input);
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['clients'] });
+    onSuccess: (result, input) => {
+      applyCreatedClientToCache(qc, toClientSummary(result.data, input));
+      softInvalidateDashboardLists(qc);
     },
   });
 }
@@ -88,8 +120,8 @@ export function useUpdateClient(id: string) {
       return clientsApi.update(token, id, input);
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['clients'] });
-      qc.invalidateQueries({ queryKey: ['clients', id] });
+      softInvalidateDashboardLists(qc);
+      void qc.invalidateQueries({ queryKey: ['clients', id] });
     },
   });
 }

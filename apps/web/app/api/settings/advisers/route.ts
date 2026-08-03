@@ -13,7 +13,7 @@ import { logAuditEvent } from '@/lib/compliance/audit';
 import { sendAdviserInvite } from '@/lib/notifications/email';
 import { InviteAdviserSchema } from '@ko/types';
 import { isPrismaMissingColumnError } from '@/lib/api/prisma-errors';
-import { listInvitedAdvisersForOrg } from '@/lib/api/settings-data';
+import { listInvitedAdvisersForOrg, ensureOrganisationMemberForAdmin } from '@/lib/api/settings-data';
 import crypto from 'crypto';
 
 // ── GET /api/settings/advisers ────────────────────────────────────────────────
@@ -34,8 +34,11 @@ export const GET = createHandler({
       const advisers = await prisma.user.findMany({
         where: {
           orgId,
-          role: { not: 'ADMIN' },
-          organisationMember: { isNot: null },
+          isActive: true,
+          OR: [
+            { role: { not: 'ADMIN' }, organisationMember: { isNot: null } },
+            { role: 'ADMIN' },
+          ],
         },
         select: {
           id: true,
@@ -52,15 +55,23 @@ export const GET = createHandler({
       return NextResponse.json(
         {
           success: true,
-          data: advisers.map(({ organisationMember, ...a }) => ({
-            ...a,
-            invitePending: false,
-            inviteTokenExpiry: null,
-            canViewAllClients: false,
-            canViewAccountDetails: false,
-            canViewAiSummaries: false,
-            memberId: organisationMember?.id ?? null,
-          })),
+          data: await Promise.all(
+            advisers.map(async ({ organisationMember, ...a }) => {
+              let memberId = organisationMember?.id ?? null;
+              if (!memberId && a.role === 'ADMIN') {
+                memberId = await ensureOrganisationMemberForAdmin(orgId!, a);
+              }
+              return {
+                ...a,
+                invitePending: false,
+                inviteTokenExpiry: null,
+                canViewAllClients: false,
+                canViewAccountDetails: false,
+                canViewAiSummaries: false,
+                memberId,
+              };
+            }),
+          ),
         },
         { status: 200 },
       );

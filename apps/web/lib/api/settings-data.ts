@@ -331,44 +331,102 @@ const SETTINGS_ADVISER_SELECT = {
   organisationMember: { select: { id: true } },
 } as const;
 
+type AdviserUserRow = {
+  id: string;
+  email: string;
+  firstName: string | null;
+  lastName: string | null;
+  role: 'ADMIN' | 'ADVISER' | 'COMPLIANCE' | 'VIEWER';
+  isActive: boolean;
+  invitePending: boolean;
+  inviteTokenExpiry: Date | null;
+  canViewAllClients: boolean;
+  canViewAccountDetails: boolean;
+  canViewAiSummaries: boolean;
+  createdAt: Date;
+  organisationMember: { id: string } | null;
+};
+
+export async function ensureOrganisationMemberForAdmin(
+  orgId: string,
+  user: Pick<AdviserUserRow, 'id' | 'email' | 'firstName' | 'lastName' | 'role'>,
+) {
+  const email = user.email.toLowerCase();
+  const existing = await prisma.organisationMember.findFirst({
+    where: {
+      orgId,
+      OR: [{ userId: user.id }, { email }],
+    },
+    select: { id: true, userId: true },
+  });
+
+  if (existing) {
+    if (!existing.userId) {
+      await prisma.organisationMember.update({
+        where: { id: existing.id },
+        data: { userId: user.id, role: user.role, isActive: true },
+      });
+    }
+    return existing.id;
+  }
+
+  const member = await prisma.organisationMember.create({
+    data: {
+      orgId,
+      userId: user.id,
+      email,
+      firstName: user.firstName?.trim() || 'Admin',
+      lastName: user.lastName?.trim() || 'User',
+      role: user.role,
+      isActive: true,
+    },
+    select: { id: true },
+  });
+  return member.id;
+}
+
+function mapAdviserUserRow({ organisationMember, ...adviser }: AdviserUserRow, memberId: string | null) {
+  return {
+    ...adviser,
+    memberId,
+  };
+}
+
 /**
- * Advisers for settings UI + assignment: User rows that were invited
- * (pending invite or linked OrganisationMember). Excludes Clerk-only
- * users who were never invited via Add adviser.
+ * Advisers for settings UI + assignment: invited advisers plus active admins
+ * (so admins can assign clients to themselves). Excludes Clerk-only users
+ * who were never invited via Add adviser.
  */
 export async function listInvitedAdvisersForOrg(orgId: string) {
   try {
     const advisers = await prisma.user.findMany({
       where: {
         orgId,
-        role: { not: 'ADMIN' },
-        OR: [{ invitePending: true }, { organisationMember: { isNot: null } }],
+        isActive: true,
+        OR: [
+          {
+            role: { not: 'ADMIN' },
+            OR: [{ invitePending: true }, { organisationMember: { isNot: null } }],
+          },
+          { role: 'ADMIN' },
+        ],
       },
       select: SETTINGS_ADVISER_SELECT,
       orderBy: { createdAt: 'desc' },
     });
 
-    return advisers.map(({ organisationMember, ...adviser }) => ({
-      ...adviser,
-      memberId: organisationMember?.id ?? null,
-    }));
+    return Promise.all(
+      advisers.map(async (row) => {
+        let memberId = row.organisationMember?.id ?? null;
+        if (!memberId && row.role === 'ADMIN') {
+          memberId = await ensureOrganisationMemberForAdmin(orgId, row);
+        }
+        return mapAdviserUserRow(row, memberId);
+      }),
+    );
   } catch (error) {
     if (shouldUseDevStore(error)) {
-      return devStore.listAdvisers(orgId).map((member) => ({
-        id: member.id,
-        email: member.email,
-        firstName: member.firstName,
-        lastName: member.lastName,
-        role: member.role,
-        isActive: member.isActive,
-        invitePending: false,
-        inviteTokenExpiry: null as string | null,
-        canViewAllClients: false,
-        canViewAccountDetails: false,
-        canViewAiSummaries: false,
-        createdAt: member.createdAt,
-        memberId: member.id,
-      }));
+      return devStore.listAdvisersForAssignment(orgId);
     }
     throw error;
   }

@@ -120,7 +120,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const result = await sendMessageForOrg(orgId, parsed.data);
+    const result = await sendMessageForOrg(orgId, parsed.data, { invitingUserId: user.id });
 
     if (parsed.data.caseId) {
       try {

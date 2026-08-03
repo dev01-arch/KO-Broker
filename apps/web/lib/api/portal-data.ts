@@ -33,6 +33,131 @@ function clientPortalUrl(token: string): string {
   return `${base}/invite?token=${encodeURIComponent(token)}`;
 }
 
+function clientPortalHomeUrl(): string {
+  return (process.env.NEXT_PUBLIC_CLIENT_PORTAL_URL ?? 'http://localhost:3002').replace(/\/$/, '');
+}
+
+/**
+ * Ensure the client can open the portal from a message email CTA.
+ * - Already set up → portal home (login)
+ * - Invited but not set up → existing invite link
+ * - Never invited → mint invite token + enable portal (no standalone invite email;
+ *   the message notification email carries the invite CTA)
+ */
+export async function ensurePortalInviteForMessaging(
+  orgId: string,
+  opts: {
+    clientId: string;
+    caseId?: string;
+    invitingUserId?: string;
+  },
+): Promise<{ ctaUrl: string; isPortalInvite: boolean } | null> {
+  try {
+    const { orgHasFeature } = await import('@/lib/api/plan-access');
+    if (!(await orgHasFeature(orgId, 'client_portal'))) {
+      return { ctaUrl: clientPortalHomeUrl(), isPortalInvite: false };
+    }
+
+    const client = await prisma.client.findFirst({
+      where: { id: opts.clientId, orgId },
+      select: {
+        id: true,
+        portalEnabled: true,
+        portalAccessToken: true,
+        portalPasswordHash: true,
+      },
+    });
+    if (!client) return null;
+
+    if (client.portalPasswordHash) {
+      return { ctaUrl: clientPortalHomeUrl(), isPortalInvite: false };
+    }
+
+    if (client.portalEnabled && client.portalAccessToken) {
+      return {
+        ctaUrl: clientPortalUrl(client.portalAccessToken),
+        isPortalInvite: true,
+      };
+    }
+
+    const token = randomUUID();
+    await prisma.client.update({
+      where: { id: client.id },
+      data: {
+        portalEnabled: true,
+        portalAccessToken: token,
+        portalPasswordHash: null,
+      },
+    });
+
+    // Seed fact-find / adviser assignment in the background so the invite email
+    // can go out immediately without waiting on compliance writes.
+    if (opts.caseId) {
+      void (async () => {
+        try {
+          let caseRecord = await prisma.case.findFirst({
+            where: { id: opts.caseId!, orgId },
+            include: {
+              client: true,
+              adviser: { select: PORTAL_ADVISER_SELECT },
+            },
+          });
+          if (!caseRecord) return;
+          if (!caseRecord.assignedAdviserId && opts.invitingUserId) {
+            await prisma.case.update({
+              where: { id: opts.caseId! },
+              data: { assignedAdviserId: opts.invitingUserId },
+            });
+            caseRecord = {
+              ...caseRecord,
+              assignedAdviserId: opts.invitingUserId,
+            };
+          }
+          await upsertFactFindWithCompliance(
+            orgId,
+            opts.caseId!,
+            buildInitialFactFind(caseRecord.client, caseRecord),
+            { allowWhenComplete: true },
+          );
+        } catch (error) {
+          console.warn('[ensurePortalInviteForMessaging] fact-find seed failed:', error);
+        }
+      })();
+    }
+
+    void logAuditEvent({
+      orgId,
+      userId: opts.invitingUserId,
+      entityType: 'Client',
+      entityId: client.id,
+      action: 'PORTAL_INVITED',
+      diff: {
+        after: {
+          portalEnabled: true,
+          hasAccessToken: true,
+          via: 'MESSAGE',
+          caseId: opts.caseId ?? null,
+        },
+      },
+    });
+
+    return { ctaUrl: clientPortalUrl(token), isPortalInvite: true };
+  } catch (error) {
+    if (!shouldUseDevStore(error)) {
+      console.error('[ensurePortalInviteForMessaging]', error);
+      return null;
+    }
+    const client = devStore.getClient(orgId, opts.clientId);
+    if (!client) return null;
+    const token = randomUUID();
+    devStore.updateClient(orgId, client.id, {
+      portalEnabled: true,
+      portalAccessToken: token,
+    });
+    return { ctaUrl: clientPortalUrl(token), isPortalInvite: true };
+  }
+}
+
 const PORTAL_ADVISER_SELECT = {
   id: true,
   firstName: true,

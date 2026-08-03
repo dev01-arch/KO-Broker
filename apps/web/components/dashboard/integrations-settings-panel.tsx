@@ -35,7 +35,7 @@ import {
   type MessagingDraft,
 } from '@/hooks/use-settings';
 import { formatApiError } from '@/lib/api/client';
-import { useIsAdmin, useOrgRole } from '@/hooks/use-org';
+import { useOrgRole } from '@/hooks/use-org';
 
 /** Hidden from the UI — code retained for future admin tooling. */
 const SHOW_ARCHIVED_SECTIONS = false;
@@ -137,29 +137,38 @@ export function IntegrationsSettingsPanel({
   const sectionParam = searchParams.get('section');
   const { signOut } = useClerk();
   const { user, isLoaded: userLoaded } = useUser();
-  const isAdmin = useIsAdmin();
   const orgRole = useOrgRole();
+  const roleReady = orgRole !== undefined;
+  const isAdmin = orgRole === 'ADMIN';
   /** While role is loading, allow interaction; API enforces ADMIN. */
-  const canEditMessaging = orgRole === undefined || isAdmin;
+  const canEditMessaging = !roleReady || isAdmin;
   // Advisers only see Messaging + Account. Hide team/billing unless confirmed ADMIN.
+  // While role is unknown, keep admin sections visible if we started on them (avoids flicker).
   const visibleSettingsSections = SETTINGS_SECTIONS.filter((section) => {
     if (section.id === 'organization' || section.id === 'billing') {
-      return isAdmin;
+      return !roleReady || isAdmin;
     }
     return true;
   });
-  const { data: integrationsData, isLoading: integrationsLoading, error: integrationsError } =
-    useIntegrations();
-  const { data: messagingData, isLoading: messagingLoading, error: messagingError } =
-    useMessagingSettings();
+  const { data: integrationsData, error: integrationsError } = useIntegrations();
+  const { data: messagingData, error: messagingError } = useMessagingSettings();
   const { mutateAsync: saveIntegrations, isPending: savingIntegrations } = useUpdateIntegrations();
   const { mutateAsync: saveMessaging, isPending: savingMessaging } = useUpdateMessagingSettings();
   const { data: advisersData, isLoading: advisersLoading, error: advisersError } = useAdvisers();
   const { mutateAsync: createAdviser, isPending: creatingAdviser } = useCreateAdviser();
 
-  const [activeSection, setActiveSection] = useState<SettingsSection>(
-    isAdmin ? initialSection : 'messaging',
-  );
+  const [activeSection, setActiveSection] = useState<SettingsSection>(() => {
+    if (billingNotice) return 'billing';
+    if (
+      sectionParam === 'organization' ||
+      sectionParam === 'messaging' ||
+      sectionParam === 'billing' ||
+      sectionParam === 'account'
+    ) {
+      return sectionParam;
+    }
+    return initialSection;
+  });
   const [integrationsDraft, setIntegrationsDraft] = useState<IntegrationsDraft>(
     emptyIntegrationsDraft(),
   );
@@ -176,35 +185,40 @@ export function IntegrationsSettingsPanel({
   const { mutateAsync: deleteAdviser, isPending: deletingAdviser } = useDeleteAdviser();
   const { mutateAsync: resendAdviserInvite, isPending: resendingInvite } = useResendAdviserInvite();
 
+  // Sync section from URL only — never reset the user's selection when role hydrates.
   useEffect(() => {
-    // Admins only: Stripe return URLs open Billing.
-    if (billingNotice && isAdmin) {
-      setActiveSection('billing');
+    if (billingNotice && (!roleReady || isAdmin)) {
+      if (isAdmin) setActiveSection('billing');
       return;
     }
 
-    const allowed = isAdmin
-      ? SETTINGS_SECTIONS.map((s) => s.id)
-      : (['messaging', 'account'] as SettingsSection[]);
+    if (!sectionParam) return;
 
-    if (sectionParam && allowed.includes(sectionParam as SettingsSection)) {
+    const allowed: SettingsSection[] =
+      !roleReady || isAdmin
+        ? SETTINGS_SECTIONS.map((s) => s.id)
+        : ['messaging', 'account'];
+
+    if (allowed.includes(sectionParam as SettingsSection)) {
       setActiveSection(sectionParam as SettingsSection);
-      return;
     }
+  }, [billingNotice, sectionParam, isAdmin, roleReady]);
 
-    setActiveSection(isAdmin ? initialSection : 'messaging');
-  }, [billingNotice, initialSection, sectionParam, isAdmin]);
-
-  // Hard redirect: advisers never stay on team/billing.
+  // Hard redirect: advisers never stay on team/billing (wait until role is known).
   useEffect(() => {
-    if (isAdmin) return;
+    if (!roleReady || isAdmin) return;
     if (activeSection === 'organization' || activeSection === 'billing') {
       setActiveSection('messaging');
     }
-  }, [isAdmin, activeSection]);
+  }, [roleReady, isAdmin, activeSection]);
 
   function handleBillingNoticeDismiss() {
-    router.replace('/dashboard/settings?section=billing');
+    // Stay on the live dashboard shell when Settings is embedded.
+    router.replace(
+      embedded
+        ? '/dashboard?tab=settings&section=billing'
+        : '/dashboard/settings?section=billing',
+    );
   }
 
   useEffect(() => {
@@ -219,9 +233,11 @@ export function IntegrationsSettingsPanel({
     }
   }, [messagingData]);
 
-  const isLoading = integrationsLoading || messagingLoading;
+  // Never block the whole Settings shell — placeholders/cache paint immediately.
+  // Section bodies hydrate as queries resolve.
   const saving = savingIntegrations || savingMessaging;
-  const advisers = advisersData?.data ?? [];
+  // Team management lists invited advisers only; admins assign via Create Client.
+  const advisers = (advisersData?.data ?? []).filter((adviser) => adviser.role !== 'ADMIN');
   const activeAdviser = activeAdviserId
     ? advisers.find((adviser) => adviser.id === activeAdviserId) ?? null
     : null;
@@ -375,15 +391,6 @@ export function IntegrationsSettingsPanel({
     } catch (err) {
       setError(formatApiError(err, { fallback: 'Failed to delete adviser.' }));
     }
-  }
-
-  if (isLoading) {
-    return (
-      <div className={`flex items-center justify-center text-ink-60 ${embedded ? 'min-h-[50vh]' : 'min-h-[60vh]'}`}>
-        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-        <span className="text-sm">Loading settings…</span>
-      </div>
-    );
   }
 
   const loadMessage =
