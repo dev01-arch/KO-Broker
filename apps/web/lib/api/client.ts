@@ -962,6 +962,129 @@ export const aiApi = {
   },
 };
 
+// ─── Compliance overview / checklist ──────────────────────────────────────────
+
+export type ComplianceItemStatus =
+  | 'complete'
+  | 'accepted'
+  | 'confirmed'
+  | 'sent'
+  | 'pending'
+  | 'advisory';
+
+export interface CompliancePhaseItemView {
+  n: number;
+  itemId: string;
+  name: string;
+  desc: string;
+  status: ComplianceItemStatus;
+  badges: string[];
+  meta?: string;
+  version?: string;
+  detail?: boolean;
+  actions?: Array<'complete' | 'confirm' | 'resend'>;
+  note?: string;
+  audit?: {
+    title: string;
+    sent: string;
+    completed: string;
+    version: string;
+    statusLabel?: string;
+  };
+}
+
+export interface CompliancePhaseView {
+  id: string;
+  num: string;
+  title: string;
+  framework: string;
+  status: 'done' | 'attention' | 'pending';
+  open: boolean;
+  items: CompliancePhaseItemView[];
+}
+
+export interface ComplianceFlagView {
+  title: string;
+  priority: 'low' | 'medium';
+  clientName: string;
+  referenceNumber: string;
+  caseId: string;
+  createdAt: string;
+  timeAgo: string;
+}
+
+export interface ComplianceCaseRow {
+  id: string;
+  clientName: string;
+  adviserName: string;
+  createdAt: string;
+  createdLabel: string;
+  referenceNumber: string;
+  clientReference?: string;
+  type: CaseType;
+  typeLabel: string;
+  stage: CaseStage;
+  stageLabel: string;
+  progressDone: number;
+  progressTotal: number;
+  progressPct: number;
+  flagCount: number;
+}
+
+export interface FirmDocumentRow {
+  id: string;
+  code: string;
+  name: string;
+  fullName: string;
+  uploaded: boolean;
+  version: string | null;
+  statusLabel: string;
+}
+
+export interface ComplianceOverviewKpis {
+  activeCases: number;
+  totalCases: number;
+  checklistDone: number;
+  checklistTotal: number;
+  checklistPct: number;
+  advisoryFlags: number;
+  docsUploaded: number;
+  docsTotal: number;
+  docsProForma: number;
+  platformPct: number;
+}
+
+export interface ComplianceStageBucket {
+  key: string;
+  label: string;
+  count: number;
+}
+
+export interface CaseComplianceSnapshot {
+  caseId: string;
+  stage: CaseStage;
+  stageLabel: string;
+  progressDone: number;
+  progressTotal: number;
+  progressPct: number;
+  flagCount: number;
+  flags: ComplianceFlagView[];
+  phases: CompliancePhaseView[];
+}
+
+export interface ComplianceOverviewPayload {
+  kpis: ComplianceOverviewKpis;
+  stages: ComplianceStageBucket[];
+  cases: ComplianceCaseRow[];
+  flags: ComplianceFlagView[];
+  documents: FirmDocumentRow[];
+}
+
+export interface CompleteComplianceItemInput {
+  caseId: string;
+  itemId: string;
+}
+
 // ─── Compliance endpoints ──────────────────────────────────────────────────────
 
 export const complianceApi = {
@@ -970,6 +1093,21 @@ export const complianceApi = {
     return apiFetch<CaseSummary>('/api/compliance/advance', token, {
       method: 'POST',
       body: JSON.stringify({ caseId: input.caseId, targetStage }),
+    });
+  },
+
+  getOverview(token: string) {
+    return apiFetch<ComplianceOverviewPayload>('/api/compliance', token);
+  },
+
+  getCaseChecklist(token: string, caseId: string) {
+    return apiFetch<CaseComplianceSnapshot>(`/api/compliance/cases/${caseId}`, token);
+  },
+
+  completeItem(token: string, input: CompleteComplianceItemInput) {
+    return apiFetch<CaseComplianceSnapshot>('/api/compliance/items', token, {
+      method: 'POST',
+      body: JSON.stringify(input),
     });
   },
 };

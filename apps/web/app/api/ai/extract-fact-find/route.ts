@@ -1,11 +1,19 @@
 import { NextRequest } from 'next/server';
 import { requireApiAuth } from '@/lib/api/require-api-auth';
-import { extractFactFindFromDocument } from '@/lib/ai/extractFactFindFromDocument';
+import {
+  extractFactFindFromDocument,
+  resolveExtractMimeType,
+} from '@/lib/ai/extractFactFindFromDocument';
 import { isOpenRouterConfigured } from '@/lib/ai/openRouterClient';
 import { apiError, apiSuccess } from '@/lib/api/responses';
 
 const MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024;
-const ALLOWED_MIME_TYPES = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg'];
+const ALLOWED_MIME_TYPES = new Set([
+  'application/pdf',
+  'image/png',
+  'image/jpeg',
+  'image/jpg',
+]);
 
 export async function POST(req: NextRequest) {
   try {
@@ -39,10 +47,13 @@ export async function POST(req: NextRequest) {
       return apiError('VALIDATION_ERROR', 'A file must be attached to the upload', 422);
     }
 
-    if (!ALLOWED_MIME_TYPES.includes(file.type)) {
+    // Some OS/browsers send empty or octet-stream MIME for camera/photo uploads —
+    // resolve from the filename so PNG/JPEG still pass validation.
+    const resolvedMime = resolveExtractMimeType(file.type, file.name);
+    if (!ALLOWED_MIME_TYPES.has(resolvedMime)) {
       return apiError(
         'VALIDATION_ERROR',
-        `File type '${file.type}' is not allowed. Accepted: PDF, PNG, JPEG.`,
+        `File type '${file.type || resolvedMime}' is not allowed. Accepted: PDF, PNG, JPEG.`,
         422,
       );
     }
@@ -57,7 +68,7 @@ export async function POST(req: NextRequest) {
     const result = await extractFactFindFromDocument({
       buffer,
       filename: file.name,
-      mimeType: file.type,
+      mimeType: resolvedMime,
       documentCategory,
     });
 

@@ -29,6 +29,27 @@ const outfit = Outfit({
   preload: false,
 });
 
+/** Outfit digit glyphs inside next/font Syne / DM Sans family names (0–9, %, £, $, €). */
+const DIGIT_UNICODE_RANGE = 'U+0030-0039, U+0025, U+00A3, U+0024, U+20AC';
+const OUTFIT_LATIN_WOFF2 = 'https://fonts.gstatic.com/s/outfit/v15/QGYvz_MVcBeNP4NJtEtq.woff2';
+
+function primaryFontFamily(fontFamily: string): string {
+  return fontFamily.split(',')[0]?.trim().replace(/^['"]|['"]$/g, '') ?? fontFamily;
+}
+
+function digitOverrideFaces(familyName: string, weights: number[]): string {
+  return weights
+    .map(
+      (weight) => `@font-face{font-family:'${familyName}';font-style:normal;font-weight:${weight};font-display:swap;src:url(${OUTFIT_LATIN_WOFF2}) format('woff2');unicode-range:${DIGIT_UNICODE_RANGE}}`,
+    )
+    .join('');
+}
+
+const universalDigitCss = [
+  digitOverrideFaces(primaryFontFamily(syne.style.fontFamily), [400, 500, 600, 700, 800]),
+  digitOverrideFaces(primaryFontFamily(dmSans.style.fontFamily), [300, 400, 500, 600, 700]),
+].join('');
+
 export const metadata: Metadata = {
   metadataBase: new URL(appUrl),
   title: {
@@ -54,6 +75,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${syne.variable} ${dmSans.variable} ${outfit.variable} h-full antialiased`}>
+      <head>
+        <style dangerouslySetInnerHTML={{ __html: universalDigitCss }} />
+      </head>
       <body className="min-h-full flex flex-col">
         <Providers>{children}</Providers>
       </body>

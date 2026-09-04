@@ -17,6 +17,17 @@
 })();
 </script>
 <style>
+/* Universal digits: Outfit glyphs for 0–9 (and %, £, $, €) inside Syne / DM Sans text */
+@font-face{font-family:'Syne';font-style:normal;font-weight:400;font-display:swap;src:url(https://fonts.gstatic.com/s/outfit/v15/QGYvz_MVcBeNP4NJtEtq.woff2) format('woff2');unicode-range:U+0030-0039,U+0025,U+00A3,U+0024,U+20AC}
+@font-face{font-family:'Syne';font-style:normal;font-weight:500;font-display:swap;src:url(https://fonts.gstatic.com/s/outfit/v15/QGYvz_MVcBeNP4NJtEtq.woff2) format('woff2');unicode-range:U+0030-0039,U+0025,U+00A3,U+0024,U+20AC}
+@font-face{font-family:'Syne';font-style:normal;font-weight:600;font-display:swap;src:url(https://fonts.gstatic.com/s/outfit/v15/QGYvz_MVcBeNP4NJtEtq.woff2) format('woff2');unicode-range:U+0030-0039,U+0025,U+00A3,U+0024,U+20AC}
+@font-face{font-family:'Syne';font-style:normal;font-weight:700;font-display:swap;src:url(https://fonts.gstatic.com/s/outfit/v15/QGYvz_MVcBeNP4NJtEtq.woff2) format('woff2');unicode-range:U+0030-0039,U+0025,U+00A3,U+0024,U+20AC}
+@font-face{font-family:'Syne';font-style:normal;font-weight:800;font-display:swap;src:url(https://fonts.gstatic.com/s/outfit/v15/QGYvz_MVcBeNP4NJtEtq.woff2) format('woff2');unicode-range:U+0030-0039,U+0025,U+00A3,U+0024,U+20AC}
+@font-face{font-family:'DM Sans';font-style:normal;font-weight:300;font-display:swap;src:url(https://fonts.gstatic.com/s/outfit/v15/QGYvz_MVcBeNP4NJtEtq.woff2) format('woff2');unicode-range:U+0030-0039,U+0025,U+00A3,U+0024,U+20AC}
+@font-face{font-family:'DM Sans';font-style:normal;font-weight:400;font-display:swap;src:url(https://fonts.gstatic.com/s/outfit/v15/QGYvz_MVcBeNP4NJtEtq.woff2) format('woff2');unicode-range:U+0030-0039,U+0025,U+00A3,U+0024,U+20AC}
+@font-face{font-family:'DM Sans';font-style:normal;font-weight:500;font-display:swap;src:url(https://fonts.gstatic.com/s/outfit/v15/QGYvz_MVcBeNP4NJtEtq.woff2) format('woff2');unicode-range:U+0030-0039,U+0025,U+00A3,U+0024,U+20AC}
+@font-face{font-family:'DM Sans';font-style:normal;font-weight:600;font-display:swap;src:url(https://fonts.gstatic.com/s/outfit/v15/QGYvz_MVcBeNP4NJtEtq.woff2) format('woff2');unicode-range:U+0030-0039,U+0025,U+00A3,U+0024,U+20AC}
+@font-face{font-family:'DM Sans';font-style:normal;font-weight:700;font-display:swap;src:url(https://fonts.gstatic.com/s/outfit/v15/QGYvz_MVcBeNP4NJtEtq.woff2) format('woff2');unicode-range:U+0030-0039,U+0025,U+00A3,U+0024,U+20AC}
 :root {
   --font-numeric:'Outfit',sans-serif;
   --teal-900:#04342C; --teal-800:#085041; --teal-700:#0F6E56; --teal-500:#1D9E75; --teal-400:#5DCAA5; --teal-100:#9FE1CB; --teal-50:#E1F5EE;
@@ -768,14 +779,18 @@ tbody tr:hover td{background:var(--surface)}
 #tab-case-detail .cd-page{padding:28px 32px 40px;display:flex;flex-direction:column;gap:24px;width:100%;box-sizing:border-box}
 #tab-case-detail .cd-back{align-self:flex-start;display:inline-flex;align-items:center;padding:0;border:0;background:transparent;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;color:#52525b;cursor:pointer;margin-bottom:-8px}
 #tab-case-detail .cd-back:hover{color:#18181b;text-decoration:underline}
-#tab-case-detail .cd-header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap}
-#tab-case-detail .cd-header-actions{display:flex;flex-direction:column;align-items:flex-end;gap:10px;flex-shrink:0}
+#tab-case-detail .cd-header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:nowrap}
+#tab-case-detail .cd-header-actions{display:flex;flex-direction:column;align-items:flex-end;gap:10px;flex-shrink:0;margin-left:auto}
 #tab-case-detail .cd-factfind-btn{display:flex;height:43px;padding:4px 20px;justify-content:center;align-items:center;gap:5.637px;border-radius:32px;border:none;background:#D4A017;color:#fff;font-family:'Syne',sans-serif;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap;box-sizing:border-box;transition:background .15s,box-shadow .15s;box-shadow:0 4px 12px rgba(212,160,23,0.28)}
 #tab-case-detail .cd-factfind-btn:hover{background:#c49215}
 #tab-case-detail .cd-factfind-bar{display:flex;justify-content:flex-end;margin-bottom:4px}
+#tab-case-detail .cd-progress-rail{background:#fff;border:1px solid rgba(13,31,26,0.08);border-radius:16px;box-shadow:0 1px 3px rgba(0,0,0,0.04);padding:20px 24px 22px;box-sizing:border-box}
+#tab-case-detail .cd-progress-label{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:#52525b;letter-spacing:0.04em;text-transform:uppercase;margin:0 0 16px}
 #tab-case-detail .cd-comp{display:flex;flex-direction:column;gap:20px;width:100%}
-#tab-case-detail .cd-comp-card{background:#fff;border:1px solid rgba(13,31,26,0.08);border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,0.04);padding:24px 28px 28px;box-sizing:border-box}
-#tab-case-detail .cd-comp-title{font-family:'Syne',sans-serif;font-size:18px;font-weight:700;color:#18181b;margin:0 0 20px;line-height:1.2}
+#tab-case-detail .cd-comp-card{background:#fff;border:1px solid rgba(13,31,26,0.08);border-radius:16px;box-shadow:0 1px 3px rgba(0,0,0,0.04);padding:24px 28px 28px;box-sizing:border-box}
+#tab-case-detail .cd-comp-title{font-family:'Syne',sans-serif;font-size:18px;font-weight:600;color:#18181b;margin:0 0 16px;line-height:1.2}
+#tab-case-detail .cd-comp-title-accent{color:#0F6E56}
+#tab-case-detail .cd-comp-archive,#tab-case-detail .cd-comp-bridge{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;pointer-events:none}
 #tab-case-detail .cd-comp-steps{display:flex;align-items:flex-start;width:100%;gap:0}
 #tab-case-detail .cd-comp-step{flex:1;display:flex;flex-direction:column;align-items:center;min-width:0}
 #tab-case-detail .cd-comp-dot-row{display:flex;align-items:center;width:100%;margin-bottom:12px}
@@ -787,21 +802,144 @@ tbody tr:hover td{background:var(--surface)}
 #tab-case-detail .cd-comp-pill{display:flex;align-items:center;justify-content:center;width:100%;max-width:120px;min-height:36px;padding:8px 12px;border-radius:10px;border:1px solid var(--pill-border,#e4e4e7);background:var(--pill-bg,#fff);font-family:'Syne',sans-serif;font-size:13px;font-weight:600;color:var(--pill-color,#52525b);text-align:center;box-sizing:border-box}
 #tab-case-detail .cd-comp-pill--current{box-shadow:0 0 0 2px var(--pill-border,#0F6E56)}
 #tab-case-detail .cd-comp-pill--pending{background:#f4f4f5;border-color:#e4e4e7;color:#a1a1aa}
-#tab-case-detail .cd-comp-req-title{font-family:'Syne',sans-serif;font-size:16px;font-weight:700;color:#18181b;margin:28px 0 16px;padding-top:24px;border-top:1px solid #f4f4f5;line-height:1.35}
+#tab-case-detail .cd-comp-bar{height:6px;border-radius:100px;background:#E8EEF0;overflow:hidden;margin:0 0 18px}
+#tab-case-detail .cd-comp-bar > span{display:block;height:100%;border-radius:100px;background:#619DB3;transition:width .3s ease}
+#tab-case-detail .cd-comp-bar-row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 8px}
+#tab-case-detail .cd-comp-bar-pct,#tab-case-detail .cd-comp-bar-remain{font-family:var(--font-numeric);font-size:12px;font-weight:500;color:#71717a}
+#tab-case-detail .cd-comp-req-title{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:#18181b;margin:24px 0 12px;padding-top:20px;border-top:1px solid #f4f4f5;line-height:1.35}
 #tab-case-detail .cd-comp-req-stage{color:#0F6E56;font-weight:800}
-#tab-case-detail .cd-comp-checklist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
-#tab-case-detail .cd-comp-check-item{display:flex;align-items:center;gap:14px;padding:16px 0;border-bottom:1px solid #f4f4f5;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;color:#18181b}
-#tab-case-detail .cd-comp-check-item:last-child{border-bottom:none;padding-bottom:0}
-#tab-case-detail .cd-comp-check-item:first-child{padding-top:0}
+#tab-case-detail .cd-comp-checklist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;background:#F9FAFB;border:1px solid #F0F0F2;border-radius:12px;overflow:hidden}
+#tab-case-detail .cd-comp-check-item{display:flex;align-items:center;gap:14px;padding:14px 16px;border-bottom:1px solid #F0F0F2;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;color:#18181b}
+#tab-case-detail .cd-comp-check-item:last-child{border-bottom:none}
 #tab-case-detail .cd-comp-check{appearance:none;width:20px;height:20px;border:1.5px solid #d4d4d8;border-radius:4px;background:#fff;cursor:pointer;flex-shrink:0;margin:0}
 #tab-case-detail .cd-comp-check:checked{background:#00B8D9;border-color:#00B8D9;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' d='M2 6l3 3 5-5'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:center;background-size:12px}
-#tab-case-detail .cd-comp-msg-bar{display:flex;align-items:center;gap:12px;margin-top:8px;padding-top:20px;border-top:1px solid #f4f4f5}
-#tab-case-detail .cd-comp-msg-input{flex:1;padding:12px 16px;border:1px solid #e4e4e7;border-radius:999px;background:#f9fafb;font-family:'DM Sans',sans-serif;font-size:14px;color:#18181b;outline:none}
+#tab-case-detail .cd-comp-msg-bar{display:flex;align-items:center;gap:12px;margin-bottom:20px}
+#tab-case-detail .cd-comp-msg-input{flex:1;padding:12px 16px;border:1px solid #EEEEEE;border-radius:999px;background:#F8F8F8;font-family:'DM Sans',sans-serif;font-size:14px;color:#18181b;outline:none}
 #tab-case-detail .cd-comp-msg-input::placeholder{color:#a1a1aa}
-#tab-case-detail .cd-comp-msg-input:focus{border-color:#00B8D9;box-shadow:0 0 0 2px rgba(0,184,217,0.15)}
-#tab-case-detail .cd-comp-msg-send{display:inline-flex;align-items:center;gap:8px;padding:10px 18px;border:none;border-radius:999px;background:#1D9E75;color:#fff;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0;box-shadow:0 4px 12px rgba(22,133,111,0.2);transition:background .15s}
-#tab-case-detail .cd-comp-msg-send:hover{background:#16856F}
+#tab-case-detail .cd-comp-msg-input:focus{border-color:#1D9E75;box-shadow:0 0 0 2px rgba(29,158,117,0.15)}
+#tab-case-detail .cd-comp-msg-send{display:inline-flex;align-items:center;gap:8px;padding:10px 18px;border:none;border-radius:999px;background:#1D9E75;color:#fff;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0;box-shadow:0 4px 12px rgba(29,158,117,0.2);transition:background .15s}
+#tab-case-detail .cd-comp-msg-send:hover{background:#178a65}
 #tab-case-detail .cd-comp-msg-send svg{width:16px;height:16px;flex-shrink:0}
+#tab-case-detail .cd-comp-phases{display:flex;flex-direction:column;gap:10px}
+#tab-case-detail .cd-phase{border:1px solid #E8E8EA;border-radius:14px;background:#fff;overflow:hidden;transition:border-color .15s,box-shadow .15s}
+#tab-case-detail .cd-phase.is-open{border-color:#D4D4D8;box-shadow:0 2px 8px rgba(0,0,0,0.04)}
+#tab-case-detail .cd-phase-head{display:flex;align-items:center;gap:14px;width:100%;padding:14px 16px;border:none;background:transparent;cursor:pointer;text-align:left;font:inherit;color:inherit;box-sizing:border-box}
+#tab-case-detail .cd-phase-head:hover{background:#FAFAFA}
+#tab-case-detail .cd-phase-num{width:36px;height:36px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;font-family:var(--font-numeric);font-size:13px;font-weight:700;box-sizing:border-box}
+#tab-case-detail .cd-phase-num--done{background:#D0FAE5;color:#009966;border:none;font-size:16px}
+#tab-case-detail .cd-phase-num--attention{background:#FEF3C6;color:#E17100;border:none}
+#tab-case-detail .cd-phase-num--pending{background:#F3F4F6;color:#6A7282;border:none}
+#tab-case-detail .cd-phase-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+#tab-case-detail .cd-phase-title{font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;color:#18181b;line-height:1.3}
+#tab-case-detail .cd-phase-sub{font-family:'DM Sans',sans-serif;font-size:12px;font-weight:400;color:#71717a;line-height:1.35}
+#tab-case-detail .cd-phase-right{display:flex;align-items:center;gap:10px;flex-shrink:0}
+#tab-case-detail .cd-phase-dot{width:8px;height:8px;border-radius:50%;background:#E17100;flex-shrink:0}
+#tab-case-detail .cd-phase-chevron{width:18px;height:18px;color:#A1A1AA;transition:transform .2s;flex-shrink:0}
+#tab-case-detail .cd-phase.is-open .cd-phase-chevron{transform:rotate(180deg)}
+#tab-case-detail .cd-phase-body{display:none;padding:4px 16px 16px;border-top:1px solid #F4F4F5}
+#tab-case-detail .cd-phase.is-open .cd-phase-body{display:flex;flex-direction:column;gap:0}
+#tab-case-detail .cd-phase-item{display:flex;align-items:flex-start;gap:12px;padding:14px 0;border-bottom:1px solid #F4F4F5}
+#tab-case-detail .cd-phase-item:last-of-type{border-bottom:none}
+#tab-case-detail .cd-phase-item-icon{width:28px;height:28px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;font-family:var(--font-numeric);font-size:12px;font-weight:700;box-sizing:border-box;margin-top:1px}
+#tab-case-detail .cd-phase-item-icon--done{background:#D0FAE5;color:#009966;font-size:14px}
+#tab-case-detail .cd-phase-item-icon--pending{background:#F3F4F6;color:#6A7282}
+#tab-case-detail .cd-phase-item-icon--attention{background:#FEF3C6;color:#E17100}
+#tab-case-detail .cd-phase-item-content{flex:1;min-width:0;display:flex;flex-direction:column;gap:8px}
+#tab-case-detail .cd-phase-item-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}
+#tab-case-detail .cd-phase-item-copy{min-width:0;flex:1}
+#tab-case-detail .cd-phase-item-name-row{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:2px}
+#tab-case-detail .cd-phase-item-name{font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;color:#18181b;line-height:1.35}
+#tab-case-detail .cd-phase-item-badges{display:inline-flex;align-items:center;flex-wrap:wrap;gap:6px}
+#tab-case-detail .cd-phase-item-desc{font-family:'DM Sans',sans-serif;font-size:12px;font-weight:400;color:#71717a;line-height:1.45;margin-top:2px}
+#tab-case-detail .cd-phase-item-meta{font-family:'DM Sans',sans-serif;font-size:12px;color:#A1A1AA;margin-top:4px}
+#tab-case-detail .cd-phase-item-meta a,#tab-case-detail .cd-phase-item-ver{color:#2563EB;font-weight:600;text-decoration:none}
+#tab-case-detail .cd-phase-item-ver:hover{text-decoration:underline}
+#tab-case-detail .cd-phase-item-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap;flex-shrink:0}
+#tab-case-detail .cd-status{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;font-family:'DM Sans',sans-serif;font-size:11px;font-weight:600;line-height:1.2;box-sizing:border-box;white-space:nowrap}
+#tab-case-detail .cd-status-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;display:block}
+#tab-case-detail .cd-status-check{width:10px;height:10px;flex-shrink:0;display:block}
+#tab-case-detail .cd-status-auto-icon{width:10px;height:10px;flex-shrink:0;display:block}
+#tab-case-detail .cd-status--complete{background:#00BC7D;color:#fff;border:1px solid transparent}
+#tab-case-detail .cd-status--sent{background:#EDFFFA;color:#0F6E56;border:1px solid #99F6E4}
+#tab-case-detail .cd-status--accepted{background:#EDFFFA;color:#0F6E56;border:1px solid #99F6E4}
+#tab-case-detail .cd-status--confirmed{background:#EDFFFA;color:#0F6E56;border:1px solid #99F6E4}
+#tab-case-detail .cd-status--outstanding{background:#F3F4F6;color:#6A7282;border:1px solid #E5E7EB}
+#tab-case-detail .cd-status--advisory{background:#FEF3C6;color:#E17100;border:1px solid transparent}
+#tab-case-detail .cd-status--critical{background:#FEF3C6;color:#E17100;border:1px solid transparent}
+#tab-case-detail .cd-status--pending{background:#F3F4F6;color:#6A7282;border:1px solid #E5E7EB}
+#tab-case-detail .cd-status--auto{background:#fff;color:#6A7282;border:1px solid #E5E7EB}
+#tab-case-detail .cd-status--complete .cd-status-check{color:#fff}
+#tab-case-detail .cd-status--sent .cd-status-dot,#tab-case-detail .cd-status--accepted .cd-status-dot,#tab-case-detail .cd-status--confirmed .cd-status-dot{background:#00BC7D}
+#tab-case-detail .cd-status--advisory .cd-status-dot,#tab-case-detail .cd-status--critical .cd-status-dot{background:#E17100}
+#tab-case-detail .cd-status--pending .cd-status-dot,#tab-case-detail .cd-status--outstanding .cd-status-dot{background:#6A7282}
+#tab-case-detail .cd-phase-link{appearance:none;display:inline-flex;align-items:center;justify-content:center;padding:7px 12px;border-radius:8px;border:1px solid #E4E4E7;background:#fff;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;color:#52525b;cursor:pointer}
+#tab-case-detail .cd-phase-link:hover{background:#F9FAFB;border-color:#D4D4D8}
+#tab-case-detail .cd-phase-btn{appearance:none;display:inline-flex;align-items:center;justify-content:center;padding:7px 12px;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;box-sizing:border-box;transition:background .15s,border-color .15s}
+#tab-case-detail .cd-phase-btn--ghost{background:#fff;border:1px solid #E4E4E7;color:#52525b}
+#tab-case-detail .cd-phase-btn--ghost:hover{background:#F9FAFB;border-color:#D4D4D8}
+#tab-case-detail .cd-phase-btn--amber{background:#fff;border:1px solid #FDBA74;color:#E17100}
+#tab-case-detail .cd-phase-btn--amber:hover{background:#FFF7ED}
+#tab-case-detail .cd-phase-btn--teal{background:#fff;border:1px solid #E4E4E7;color:#52525b}
+#tab-case-detail .cd-phase-btn--teal:hover{background:#F9FAFB}
+#tab-case-detail .cd-phase-note{display:flex;align-items:flex-start;gap:8px;margin-top:4px;margin-bottom:8px;padding:10px 12px;border-radius:10px;background:#FFFBEB;border:1px solid #FDE68A;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;color:#92400E;line-height:1.45}
+#tab-case-detail .cd-phase-note-icon{flex-shrink:0;width:16px;height:16px;margin-top:1px;color:#E17100}
+#tab-case-detail .cd-tab-count{font-family:var(--font-numeric);font-variant-numeric:tabular-nums;opacity:0.85}
+/* Audit success modal */
+.cd-audit-overlay{position:fixed;inset:0;z-index:720;background:rgba(13,31,26,0.5);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:24px}
+.cd-audit-overlay.nc-hidden{display:none!important}
+.cd-audit-modal{background:#fff;border-radius:24px;width:100%;max-width:420px;padding:28px 28px 24px;box-shadow:0 24px 60px rgba(13,31,26,0.28);display:flex;flex-direction:column;align-items:stretch;position:relative;box-sizing:border-box}
+.cd-audit-illus-wrap{display:flex;align-items:center;justify-content:center;margin:0 0 4px;min-height:168px;padding:8px 0}
+.cd-audit-illus{width:220px;height:auto;max-height:190px;object-fit:contain;display:block}
+.cd-audit-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding-bottom:16px;border-bottom:1px solid #F0F0F2}
+.cd-audit-titles{min-width:0}
+.cd-audit-title{font-family:'Syne',sans-serif;font-size:20px;font-weight:600;color:#18181b;margin:0 0 4px;line-height:1.2}
+.cd-audit-sub{font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;color:#A1A1AA;margin:0}
+.cd-audit-close{appearance:none;border:none;background:transparent;color:#A1A1AA;width:32px;height:32px;border-radius:8px;cursor:pointer;font-size:18px;line-height:1;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center}
+.cd-audit-close:hover{background:#F4F4F5;color:#52525b}
+.cd-audit-rows{display:flex;flex-direction:column;padding:8px 0;border-bottom:1px solid #F0F0F2}
+.cd-audit-row{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 0}
+.cd-audit-label{font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;color:#A1A1AA}
+.cd-audit-val{font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;color:#18181b;text-align:right}
+.cd-audit-link{color:#2563EB;font-weight:600;text-decoration:none;cursor:pointer}
+.cd-audit-link:hover{text-decoration:underline}
+.cd-audit-status{display:inline-flex;align-items:center;gap:5px;padding:4px 12px;border-radius:999px;background:#00BC7D;color:#fff;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600}
+.cd-audit-footer{padding-top:16px}
+.cd-audit-close-btn{display:flex;width:100%;height:48px;align-items:center;justify-content:center;border-radius:999px;border:1.5px solid #E4E4E7;background:#fff;color:#52525b;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:600;cursor:pointer;transition:background .15s}
+.cd-audit-close-btn:hover{background:#F9FAFB}
+/* Confirm handled offline modal */
+.cd-offline-overlay{position:fixed;inset:0;z-index:730;background:rgba(13,31,26,0.5);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:24px}
+.cd-offline-overlay.nc-hidden{display:none!important}
+.cd-offline-modal{background:#fff;border-radius:20px;width:100%;max-width:480px;box-shadow:0 24px 60px rgba(13,31,26,0.28);display:flex;flex-direction:column;position:relative;box-sizing:border-box;overflow:visible}
+.cd-offline-body{padding:24px 24px 8px;display:flex;flex-direction:column;gap:16px}
+.cd-offline-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.cd-offline-title{font-family:'Syne',sans-serif;font-size:18px;font-weight:600;color:#18181b;margin:0 0 4px;line-height:1.25}
+.cd-offline-sub{font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;color:#A1A1AA;margin:0}
+.cd-offline-close{appearance:none;border:none;background:transparent;color:#A1A1AA;width:32px;height:32px;border-radius:8px;cursor:pointer;font-size:18px;line-height:1;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center}
+.cd-offline-close:hover{background:#F4F4F5;color:#52525b}
+.cd-offline-banner{display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border-radius:12px;background:#FEF3C6;border:1px solid #FDE68A;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;color:#E17100;line-height:1.45}
+.cd-offline-banner svg{width:16px;height:16px;flex-shrink:0;margin-top:1px}
+.cd-offline-field{display:flex;flex-direction:column;gap:6px;position:relative}
+.cd-offline-label{font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;color:#3f3f46}
+.cd-offline-req{color:#DC2626}
+.cd-offline-label-row{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.cd-offline-chars{font-family:'DM Sans',sans-serif;font-size:12px;font-weight:400;color:#A1A1AA}
+.cd-offline-input,.cd-offline-select-btn,.cd-offline-textarea{width:100%;padding:11px 14px;border:1px solid #EEEEEE;border-radius:10px;background:#fff;font-family:'DM Sans',sans-serif;font-size:14px;color:#18181b;outline:none;box-sizing:border-box}
+.cd-offline-input:focus,.cd-offline-select-btn:focus,.cd-offline-textarea:focus{border-color:#FDBA74;box-shadow:0 0 0 2px rgba(225,113,0,0.12)}
+.cd-offline-select-btn{display:flex;align-items:center;justify-content:space-between;gap:8px;cursor:pointer;text-align:left;color:#A1A1AA}
+.cd-offline-select-btn.has-value{color:#18181b}
+.cd-offline-select-btn svg{width:16px;height:16px;color:#A1A1AA;flex-shrink:0}
+.cd-offline-menu{display:none;position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:5;background:#fff;border:1px solid #EEEEEE;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,0.08);overflow:hidden}
+.cd-offline-menu.open{display:block}
+.cd-offline-option{display:block;width:100%;padding:12px 14px;border:none;border-bottom:1px solid #F4F4F5;background:#fff;font-family:'DM Sans',sans-serif;font-size:14px;color:#18181b;text-align:left;cursor:pointer}
+.cd-offline-option:last-child{border-bottom:none}
+.cd-offline-option:hover{background:#FAFAFA}
+.cd-offline-textarea{min-height:96px;resize:vertical;line-height:1.45}
+.cd-offline-footer{display:flex;align-items:center;justify-content:flex-end;gap:10px;padding:16px 24px 20px;border-top:1px solid #F0F0F2;margin-top:8px}
+.cd-offline-cancel{appearance:none;padding:10px 18px;border-radius:10px;border:1px solid #EEEEEE;background:#fff;color:#52525b;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer}
+.cd-offline-cancel:hover{background:#F9FAFB}
+.cd-offline-submit{appearance:none;padding:10px 18px;border-radius:10px;border:none;background:#FDBA74;color:#fff;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;opacity:0.55;pointer-events:none}
+.cd-offline-submit.is-ready{background:#E17100;opacity:1;pointer-events:auto}
+.cd-offline-submit.is-ready:hover{background:#C2410C}
 #tab-case-detail .cd-msg{display:flex;flex-direction:column;gap:16px;width:100%}
 #tab-case-detail .cd-msg-title{font-family:'Syne',sans-serif;font-size:18px;font-weight:700;color:#18181b;margin:0;line-height:1.2}
 #tab-case-detail .cd-msg-panel{background:#F2F2F2;border-radius:16px;padding:20px 24px 20px;display:flex;flex-direction:column;min-height:420px;max-height:min(640px, calc(100vh - 220px));overflow:hidden;box-sizing:border-box}
@@ -913,8 +1051,8 @@ tbody tr:hover td{background:var(--surface)}
 #tab-case-detail .cd-rpt-tmpl--wide{max-width:none}
 }
 #tab-case-detail .cd-header-left{display:flex;flex-direction:column;gap:10px;min-width:0}
-#tab-case-detail .cd-name-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
-#tab-case-detail .cd-client-name{font-family:'Syne',sans-serif;font-size:32px;font-weight:800;color:#061F18;line-height:1.1;margin:0;letter-spacing:-0.02em}
+#tab-case-detail .cd-name-row{display:flex;align-items:center;gap:12px;flex-wrap:nowrap}
+#tab-case-detail .cd-client-name{font-family:'Syne',sans-serif;font-size:32px;font-weight:800;color:#061F18;line-height:1.1;margin:0;letter-spacing:-0.02em;white-space:nowrap;min-width:0}
 #tab-case-detail .cd-meta-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
 #tab-case-detail .cd-meta-pill{display:inline-flex;align-items:center;padding:5px 12px;border-radius:999px;background:#f4f4f5;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;color:#52525b;white-space:nowrap}
 #tab-case-detail .cd-stage-badge{display:inline-flex;padding:8px 20px;border-radius:999px;border:1.5px solid #7DD3FC;background:#fff;font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:#0369a1;white-space:nowrap;flex-shrink:0}
@@ -925,10 +1063,10 @@ tbody tr:hover td{background:var(--surface)}
 #tab-case-detail .cd-stage-badge--dip{border-color:#E9D5FF;color:#7E22CE}
 #tab-case-detail .cd-stage-badge--offer{border-color:#86EFAC;color:#0F6E56}
 #tab-case-detail .cd-tabs{display:flex;padding:5px 6px;justify-content:space-between;align-items:center;align-self:stretch;width:100%;box-sizing:border-box;border-radius:12px;background:#F2F2F2;flex-wrap:nowrap;gap:4px}
-#tab-case-detail .cd-tab{display:flex;flex:1 1 0;min-width:0;height:32px;padding:1.543px 6.174px 1.543px 4.63px;justify-content:center;align-items:center;gap:4.63px;border-radius:8px;border:none;background:#FFF;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;color:#52525b;cursor:pointer;transition:background .15s,color .15s;box-sizing:border-box;white-space:nowrap}
+#tab-case-detail .cd-tab{display:flex;flex:1 1 0;min-width:0;height:32px;padding:1.543px 6.174px 1.543px 4.63px;justify-content:center;align-items:center;gap:4.63px;border-radius:8px;border:1px solid transparent;background:transparent;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;color:#52525b;cursor:pointer;transition:background .15s,color .15s,border-color .15s;box-sizing:border-box;white-space:nowrap}
 #tab-case-detail .cd-tab svg{width:16px;height:16px;flex-shrink:0;opacity:0.85}
-#tab-case-detail .cd-tab:hover:not(.active){color:#18181b}
-#tab-case-detail .cd-tab.active{background:#EBF5F3;color:#0F6E56;border:1px solid #0F6E56}
+#tab-case-detail .cd-tab:hover:not(.active){color:#18181b;background:rgba(255,255,255,0.7)}
+#tab-case-detail .cd-tab.active{background:#fff;color:#0F6E56;border:1px solid #0F6E56;font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,0.04)}
 #tab-case-detail .cd-tab.active svg{opacity:1}
 #tab-case-detail .case-body{display:flex;flex-direction:column;gap:20px;width:100%}
 #tab-case-detail .cd-docs{display:flex;flex-direction:column;gap:20px;width:100%}
@@ -1011,7 +1149,12 @@ tbody tr:hover td{background:var(--surface)}
 #tab-cases .cs-client-name{cursor:pointer}
 #tab-cases .cs-client-name:hover{text-decoration:underline}
 body.embedded #tab-case-detail{background:transparent}
-@media(max-width:900px){#tab-case-detail .cd-details-grid{grid-template-columns:1fr}}
+@media(max-width:900px){
+#tab-case-detail .cd-details-grid{grid-template-columns:1fr}
+#tab-case-detail .cd-header{flex-wrap:wrap}
+#tab-case-detail .cd-name-row{flex-wrap:wrap}
+#tab-case-detail .cd-client-name{white-space:normal}
+}
 @media(max-width:560px){#tab-case-detail .cd-timeline-track{height:auto;min-height:360px}#tab-case-detail .cd-timeline-events{grid-auto-flow:row;grid-auto-columns:unset;grid-template-columns:1fr;row-gap:40px}#tab-case-detail .cd-timeline-line{display:none}}
 .case-detail-header{background:var(--white);border-bottom:1px solid var(--ink-20);padding:16px 28px;display:flex;align-items:center;gap:14px}
 .case-back{cursor:pointer;color:var(--ink-60);font-size:13px;display:flex;align-items:center;gap:5px;transition:color .15s}
@@ -1163,7 +1306,7 @@ body.embedded{overflow:hidden}
 body.embedded .dash-layout{height:100vh;overflow:hidden}
 body.embedded .dash-sidebar{display:none}
 body.embedded .dash-main{height:100%;overflow-y:auto}
-body.embedded #dashboard,body.embedded .dash-layout,body.embedded #tab-overview,body.embedded #tab-clients,body.embedded #tab-cases,body.embedded #tab-ai,body.embedded .dash-content{background:transparent}
+body.embedded #dashboard,body.embedded .dash-layout,body.embedded #tab-overview,body.embedded #tab-clients,body.embedded #tab-cases,body.embedded #tab-ai,body.embedded #tab-compliance,body.embedded .dash-content{background:transparent}
 body.embedded .msg-hub-body{min-height:420px;height:min(640px, calc(100vh - 260px));max-height:calc(100vh - 220px)}
 
 /* Compliance / AI report panels (same as v2) */
@@ -1177,6 +1320,210 @@ body.embedded .msg-hub-body{min-height:420px;height:min(640px, calc(100vh - 260p
 .comp-stage.done .comp-stage-label,.comp-stage.current .comp-stage-label{color:var(--teal-700)}
 .comp-stage-date{font-size:10px;color:var(--ink-60)}
 .comp-check-mark{position:absolute;top:10px;right:10px;width:16px;height:16px;border-radius:50%;background:var(--teal-500);display:flex;align-items:center;justify-content:center;font-size:9px;color:white}
+
+/* ══ COMPLIANCE OVERVIEW HUB ══ */
+#tab-compliance .co-page{display:flex;flex-direction:column;gap:14px;width:100%;max-width:1088px;box-sizing:border-box}
+#tab-compliance .co-head{display:flex;align-items:flex-end;justify-content:space-between;gap:6px;width:100%}
+#tab-compliance .co-head-text{display:flex;flex-direction:column;gap:6px;min-width:0;flex:1}
+#tab-compliance .co-title{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;color:#061F18;letter-spacing:-0.02em;line-height:1.15;margin:0}
+#tab-compliance .co-sub{font-family:'DM Sans',sans-serif;font-size:14px;font-weight:400;color:#71717a;line-height:1.45;margin:0}
+#tab-compliance .co-kpi-row{display:inline-flex;flex-wrap:wrap;align-items:center;gap:36px;width:100%;align-self:stretch;margin-top:10px}
+#tab-compliance .co-kpi{display:flex;width:230px;padding:20px 18px;flex-direction:column;align-items:flex-start;gap:12px;flex-shrink:0;border-radius:15.031px;border:0.626px solid #AEC9CE;background:linear-gradient(207deg,#DBFAFF -9.75%,#FFF 38.67%);box-shadow:0 3.758px 6.764px 0 rgba(190,200,202,0.19);box-sizing:border-box;min-height:118px}
+#tab-compliance .co-kpi--checklist{border:0.63px solid #A19BBF;background:linear-gradient(207deg,#E9ECFF -9.75%,#FFF 38.67%);box-shadow:0 6.421px 11.558px 0 #F0F2FF}
+#tab-compliance .co-kpi--flags{border:0.626px solid #AECEC0;background:linear-gradient(207deg,#D5FBEE -9.75%,#FFF 38.67%);box-shadow:0 3.758px 6.764px 0 rgba(190,200,202,0.19)}
+#tab-compliance .co-kpi--docs{border:0.626px solid #CEAEC8;background:linear-gradient(207deg,#F9C5DC -9.75%,#FFF 38.67%);box-shadow:0 3.758px 6.764px 0 rgba(190,200,202,0.19)}
+#tab-compliance .co-kpi-top{display:flex;width:100%;align-items:flex-start;justify-content:space-between;gap:8px}
+#tab-compliance .co-kpi-label{font-family:'Syne',sans-serif;font-size:14px;font-weight:600;color:#000;line-height:normal}
+#tab-compliance .co-kpi-icon{width:26px;height:26px;flex-shrink:0;display:block}
+#tab-compliance .co-kpi-val{font-family:var(--font-numeric);font-size:26px;font-weight:700;color:#061F18;line-height:normal;align-self:stretch}
+#tab-compliance .co-kpi-hint{font-family:'DM Sans',sans-serif;font-size:10px;font-weight:400;color:#535E5B;line-height:normal}
+#tab-compliance .co-kpi-hint--ok{color:#16856F}
+#tab-compliance .co-ring-wrap{display:flex;flex-direction:column;align-items:flex-end;justify-content:center;gap:2px;flex-shrink:0;padding:0}
+#tab-compliance .co-ring-row{display:flex;align-items:center;gap:14px}
+#tab-compliance .co-ring-pct{font-family:var(--font-numeric);font-size:36px;font-weight:700;color:#0F6E56;line-height:1;letter-spacing:-0.02em}
+#tab-compliance .co-ring{width:56px;height:56px;flex-shrink:0}
+#tab-compliance .co-ring-label{font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:#71717a;line-height:1}
+#tab-compliance .co-tabs{display:flex;padding:5px 6px;justify-content:space-between;align-items:center;align-self:flex-start;width:50%;max-width:50%;border-radius:12px;background:#F2F2F2;box-sizing:border-box;gap:8px;margin-top:6px}
+#tab-compliance .co-tabs{margin-bottom:10px}
+#tab-compliance .co-tab{appearance:none;border:none;background:transparent;cursor:pointer;display:flex;width:194px;height:32px;padding:1.543px 6.174px 1.543px 4.63px;justify-content:center;align-items:center;gap:4.63px;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;color:#52525b;transition:background .15s,color .15s,box-shadow .15s;box-sizing:border-box;flex:1 1 0;max-width:194px}
+#tab-compliance .co-tab:hover{color:#18181b}
+#tab-compliance .co-tab.active{background:#FFF;color:#18181b;font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,0.06)}
+#tab-compliance .co-panel{display:none}
+#tab-compliance .co-panel.active{display:block}
+#tab-compliance #co-panel-cases{margin-top:0}
+#tab-compliance #co-panel-cases .co-client-ref{margin-top:0}
+#tab-compliance #co-panel-cases .co-table th{background:#F9FAFB;border-bottom:1px solid #F3F4F6}
+#tab-compliance #co-panel-cases .co-table td{padding:16px 16px}
+#tab-compliance #co-panel-cases .co-prog-track{max-width:240px;height:7px}
+#tab-compliance #co-panel-cases .co-prog-cell{min-width:0}
+
+/* Documents table (Compliance -> Documents) */
+#tab-compliance #co-panel-documents .co-table{table-layout:fixed}
+#tab-compliance #co-panel-documents .co-table th{background:#F9FAFB;border-bottom:1px solid #F3F4F6}
+#tab-compliance #co-panel-documents .co-table td{padding:14px 16px;vertical-align:middle}
+#tab-compliance #co-panel-documents .co-table th:nth-child(1){width:38%}
+#tab-compliance #co-panel-documents .co-table th:nth-child(2){width:18%}
+#tab-compliance #co-panel-documents .co-table th:nth-child(3){width:16%}
+#tab-compliance #co-panel-documents .co-table th:nth-child(4){width:28%}
+
+#tab-compliance #co-panel-documents .co-doc-type-cell{display:flex;align-items:flex-start;gap:10px}
+#tab-compliance #co-panel-documents .co-doc-check{
+  width:18px;height:18px;border-radius:6px;background:#F0FDFA;border:1px solid #CBFBF1;color:#009689;
+  display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;font-size:12px;font-weight:700;line-height:1
+}
+#tab-compliance #co-panel-documents .co-doc-pending{
+  width:18px;height:18px;border-radius:6px;background:#F4F4F5;border:1px solid #EAEAEA;color:#A1A1AA;
+  display:inline-flex;align-items:center;justify-content:center;flex-shrink:0
+}
+#tab-compliance #co-panel-documents .co-doc-pending svg{width:12px;height:12px;display:block}
+
+#tab-compliance #co-panel-documents .co-ver-ok{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:4px 10px;border-radius:999px;background:#F0FDFA;border:1px solid #CBFBF1;
+  color:#009689;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;box-sizing:border-box
+}
+#tab-compliance #co-panel-documents .co-ver-ok .co-dot{width:8px;height:8px;background:#009689;border-radius:50%}
+#tab-compliance #co-panel-documents .co-ver-miss{
+  color:#A1A1AA;font-size:13px;
+  display:inline-flex;align-items:center;
+  padding:4px 10px;border-radius:999px;background:#F4F4F5;
+  font-family:'DM Sans',sans-serif;font-weight:600;box-sizing:border-box
+}
+
+#tab-compliance #co-panel-documents .co-status{display:inline-flex;align-items:center;gap:8px;color:#52525B;font-size:13px;font-weight:500}
+#tab-compliance #co-panel-documents .co-status .co-dot{background:#009689}
+#tab-compliance #co-panel-documents .co-status--miss{color:#A1A1AA}
+#tab-compliance #co-panel-documents .co-status--miss .co-dot{background:#D4D4D8}
+
+#tab-compliance #co-panel-documents .co-actions{
+  display:grid;grid-template-columns:auto auto;gap:14px;
+  align-items:center;justify-content:flex-end
+}
+#tab-compliance #co-panel-documents .co-history-spacer{width:74px;height:34px}
+#tab-compliance #co-panel-documents .co-history-btn{
+  border:1px solid #E4E4E7;color:#71717a;background:#fff
+}
+#tab-compliance #co-panel-documents .co-ghost-btn,
+#tab-compliance #co-panel-documents .co-upload-btn{
+  display:inline-flex;align-items:center;gap:8px;white-space:nowrap;
+  font-family:'DM Sans',sans-serif;font-weight:600
+}
+#tab-compliance #co-panel-documents .co-ghost-btn{
+  border-color:#CBFBF1;color:#009689;background:#fff
+}
+#tab-compliance #co-panel-documents .co-ghost-btn.co-history-btn{
+  border-color:#E4E4E7;color:#71717a;background:#fff
+}
+#tab-compliance #co-panel-documents .co-table th:nth-child(4){text-align:right}
+#tab-compliance #co-panel-documents .co-table td:nth-child(4){text-align:right}
+#tab-compliance #co-panel-documents .co-ghost-btn svg{width:14px;height:14px;display:block}
+#tab-compliance #co-panel-documents .co-upload-btn{
+  background:#F0FDFA;border:1px solid #CBFBF1;color:#009689
+}
+#tab-compliance #co-panel-documents .co-upload-btn svg{width:14px;height:14px;display:block}
+#tab-compliance .co-grid{display:grid;grid-template-columns:1.15fr 0.85fr;gap:16px;align-items:start}
+#tab-compliance .co-card{background:#fff;border:1px solid #E8E8EA;border-radius:16px;padding:18px 18px 16px;box-shadow:0 1px 2px rgba(0,0,0,0.03)}
+#tab-compliance .co-card + .co-card{margin-top:16px}
+#tab-compliance .co-card-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px}
+#tab-compliance .co-card-title{font-family:'Syne',sans-serif;font-size:12px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#52525b;margin:0}
+#tab-compliance .co-card-link{font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;color:#0F6E56;background:none;border:none;cursor:pointer;padding:0}
+#tab-compliance .co-card-link:hover{text-decoration:underline}
+#tab-compliance .co-badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:100px;font-size:11px;font-weight:600;background:#F4F4F5;color:#52525b;border:1px solid transparent;box-sizing:border-box}
+#tab-compliance .co-badge--open{background:#FFFBEB;border-color:#FEE685;color:#E17100}
+#tab-compliance .co-stage-list{display:flex;flex-direction:column;gap:12px}
+#tab-compliance .co-stage-row{display:grid;grid-template-columns:150px 1fr 24px;gap:10px;align-items:center}
+#tab-compliance .co-stage-name{font-size:13px;font-weight:500;color:#3f3f46}
+#tab-compliance .co-bar{height:8px;border-radius:100px;background:#F4F4F5;overflow:hidden}
+#tab-compliance .co-bar > span{display:block;height:100%;border-radius:100px;background:#619DB3}
+#tab-compliance .co-bar > span.done{background:#00D492}
+#tab-compliance .co-stage-count{font-family:var(--font-numeric);font-size:13px;font-weight:600;color:#3f3f46;text-align:right}
+#tab-compliance .co-progress-list{display:flex;flex-direction:column;gap:14px}
+#tab-compliance .co-progress-row{display:grid;grid-template-columns:118px minmax(80px,1fr) 36px 28px;gap:12px;align-items:center}
+#tab-compliance .co-progress-meta{min-width:0}
+#tab-compliance .co-progress-name{font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;color:#3f3f46;line-height:1.25}
+#tab-compliance .co-progress-type{font-family:'DM Sans',sans-serif;font-size:12px;font-weight:400;color:#a1a1aa;margin-top:2px;line-height:1.25}
+#tab-compliance .co-progress-bar{height:8px;border-radius:100px;background:#F4F4F5;overflow:hidden;width:100%}
+#tab-compliance .co-progress-bar > span{display:block;height:100%;border-radius:100px}
+#tab-compliance .co-frac{font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;color:#71717a;text-align:right;white-space:nowrap}
+#tab-compliance .co-warn{display:inline-flex;align-items:center;justify-content:center;gap:3px;min-width:28px;height:20px;padding:0 5px;border-radius:6px;background:#FFFBEB;border:1px solid #FEE685;color:#E17100;font-family:'DM Sans',sans-serif;font-size:11px;font-weight:600;box-sizing:border-box;justify-self:end}
+#tab-compliance .co-warn svg{width:11px;height:11px;flex-shrink:0;display:block}
+#tab-compliance .co-warn-slot{min-width:28px;height:20px}
+#tab-compliance .co-flag-list{display:flex;flex-direction:column;gap:10px}
+#tab-compliance .co-flag-item{display:flex;flex-direction:column;gap:6px;padding:12px 14px;border-radius:12px;border:1px solid #E8E8EA;background:#fff;box-sizing:border-box}
+#tab-compliance .co-flag-item--medium{border-color:#FEE685;background:#FFFBEB}
+#tab-compliance .co-flag-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+#tab-compliance .co-flag-title{font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;color:#3f3f46;line-height:1.3}
+#tab-compliance .co-flag-bottom{display:flex;align-items:center;justify-content:space-between;gap:10px}
+#tab-compliance .co-prio{display:inline-flex;align-items:center;font-family:'DM Sans',sans-serif;font-size:11px;font-weight:600;text-transform:lowercase;padding:2px 8px;border-radius:100px;line-height:1.3;flex-shrink:0;box-sizing:border-box}
+#tab-compliance .co-prio--medium{background:#FFFBEB;border:1px solid #FEE685;color:#E17100}
+#tab-compliance .co-prio--low{background:#F4F4F5;border:1px solid #E4E4E7;color:#71717a}
+#tab-compliance .co-flag-sub{font-family:'DM Sans',sans-serif;font-size:12px;font-weight:400;color:#71717a;min-width:0}
+#tab-compliance .co-flag-time{font-family:'DM Sans',sans-serif;font-size:11px;font-weight:400;color:#a1a1aa;white-space:nowrap;flex-shrink:0}
+#tab-compliance .co-doc-list{display:flex;flex-direction:column;gap:2px}
+#tab-compliance .co-doc-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0}
+#tab-compliance .co-doc-left{display:flex;align-items:center;gap:10px;min-width:0;flex:1}
+#tab-compliance .co-doc-check{width:22px;height:22px;border-radius:6px;background:#F0FDFA;color:#009689;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+#tab-compliance .co-doc-check svg{width:12px;height:12px;display:block}
+#tab-compliance .co-doc-pending{width:22px;height:22px;border-radius:6px;background:#F4F4F5;color:#a1a1aa;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+#tab-compliance .co-doc-pending svg{width:12px;height:12px;display:block}
+#tab-compliance .co-doc-name{font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;color:#3f3f46;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#tab-compliance .co-doc-ver{font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;color:#009689;white-space:nowrap;flex-shrink:0}
+#tab-compliance .co-doc-ver--muted{color:#a1a1aa;font-weight:500}
+#tab-compliance .co-doc-count{font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;color:#009689}
+#tab-compliance .co-doc-foot{margin-top:12px;padding-top:12px;border-top:1px solid #F0F0F2}
+#tab-compliance .co-doc-foot-bar{height:6px;border-radius:100px;background:#F4F4F5;overflow:hidden;margin-bottom:8px}
+#tab-compliance .co-doc-foot-bar > span{display:block;height:100%;width:0;background:#00D5BE;border-radius:100px}
+#tab-compliance .co-doc-foot-txt{font-family:'DM Sans',sans-serif;font-size:12px;font-weight:400;color:#71717a}
+#tab-compliance .co-table-wrap{background:#fff;border:1px solid #E8E8EA;border-radius:16px;overflow:hidden}
+#tab-compliance .co-table{width:100%;border-collapse:collapse}
+#tab-compliance .co-table th{text-align:left;padding:12px 16px;font-size:11px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#71717a;background:#FAFAFA;border-bottom:1px solid #EEEFF1}
+#tab-compliance .co-table td{padding:14px 16px;border-bottom:1px solid #F3F3F5;vertical-align:middle;font-size:13px;color:#3f3f46}
+#tab-compliance .co-table tr:last-child td{border-bottom:none}
+#tab-compliance .co-client-name{font-weight:600;color:#18181b}
+#tab-compliance .co-client-sub{font-size:12px;color:#71717a;margin-top:2px}
+#tab-compliance .co-client-ref{font-size:11px;color:#a1a1aa;margin-top:1px}
+#tab-compliance .co-type{display:inline-flex;padding:3px 10px;border-radius:100px;background:#F4F4F5;font-size:12px;font-weight:500;color:#52525b}
+#tab-compliance .co-prog-cell{display:flex;align-items:center;gap:10px;min-width:140px}
+#tab-compliance .co-prog-track{flex:1;height:8px;border-radius:100px;background:#F4F4F5;overflow:hidden;max-width:110px}
+#tab-compliance .co-prog-track > span{display:block;height:100%;border-radius:100px}
+#tab-compliance .co-flags-cell{display:inline-flex;align-items:center;gap:6px;color:#B45309;font-size:12px;font-weight:500}
+#tab-compliance .co-flags-cell svg{width:14px;height:14px;flex-shrink:0}
+#tab-compliance .co-flags-none{color:#a1a1aa}
+#tab-compliance .co-open-btn{appearance:none;border:1px solid #D4D4D8;background:#fff;color:#0F6E56;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;padding:6px 12px;border-radius:8px;cursor:pointer;white-space:nowrap}
+#tab-compliance .co-open-btn:hover{background:#F0FDFA;border-color:#99F6E4}
+#tab-compliance .co-doc-type-code{font-weight:700;color:#18181b}
+#tab-compliance .co-doc-type-full{font-size:12px;color:#71717a;margin-top:2px}
+#tab-compliance .co-status{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:500}
+#tab-compliance .co-dot{width:7px;height:7px;border-radius:50%;background:#22C55E;flex-shrink:0}
+#tab-compliance .co-status--miss{color:#a1a1aa}
+#tab-compliance .co-status--miss .co-dot{background:#D4D4D8}
+#tab-compliance .co-ver-ok{display:inline-flex;align-items:center;gap:6px;color:#18181b;font-weight:500}
+#tab-compliance .co-ver-miss{color:#a1a1aa}
+#tab-compliance .co-actions{display:flex;align-items:center;gap:8px}
+#tab-compliance .co-ghost-btn{appearance:none;border:1px solid #D4D4D8;background:#fff;color:#0F766E;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;padding:6px 12px;border-radius:8px;cursor:pointer}
+#tab-compliance .co-ghost-btn:hover{background:#F0FDFA}
+#tab-compliance .co-upload-btn{appearance:none;border:none;background:#CCFBF1;color:#0F766E;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;padding:6px 14px;border-radius:8px;cursor:pointer}
+#tab-compliance .co-upload-btn:hover{background:#99F6E4}
+#tab-compliance .co-info{display:flex;align-items:flex-start;gap:10px;margin-top:16px;padding:14px 16px;border-radius:12px;background:#ECFEFF;border:1px solid #A5F3FC;font-size:13px;line-height:1.5;color:#164E63}
+#tab-compliance .co-info strong{font-weight:600}
+#tab-compliance .co-info-icon{width:18px;height:18px;border-radius:50%;background:#0891B2;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;margin-top:1px}
+@media (max-width:980px){
+  #tab-compliance .co-kpi-row{gap:14px}
+  #tab-compliance .co-head{align-items:flex-start}
+  #tab-compliance .co-tab{max-width:none}
+  #tab-compliance .co-grid{grid-template-columns:1fr}
+  #tab-compliance .co-stage-row{grid-template-columns:120px 1fr 24px}
+}
+@media (max-width:640px){
+  #tab-compliance .co-kpi{width:100%}
+  #tab-compliance .co-title{font-size:24px}
+  #tab-compliance .co-head{flex-direction:column;align-items:stretch;gap:16px}
+  #tab-compliance .co-ring-wrap{align-items:flex-start}
+  #tab-compliance .co-tabs{flex-direction:column;align-items:stretch;width:100%;max-width:100%}
+  #tab-compliance .co-tab{width:100%;max-width:none}
+  #tab-compliance .co-table-wrap{overflow-x:auto}
+  #tab-compliance .co-table{min-width:720px}
+}
 .report-section{border:1px solid var(--ink-20);border-radius:8px;overflow:hidden;margin-bottom:10px}
 .report-section-head{display:flex;align-items:center;justify-content:space-between;padding:11px 16px;background:var(--surface);cursor:pointer;border-bottom:1px solid var(--ink-20)}
 .report-section-head:hover{background:rgba(13,31,26,0.04)}
@@ -1428,7 +1775,7 @@ body.ff-open .dash-main{overflow:hidden!important;height:100%!important;max-heig
 .ff-state-banner span{font-size:13px;line-height:1.5}
 .ff-inline-error{display:flex;align-items:center;gap:6px;margin:10px 0 0 26px;font-size:14px;font-weight:600;color:#DC2626}
 .ff-inline-error svg{width:14px;height:14px;flex-shrink:0}
-.ff-floating-alert{position:fixed;right:22px;bottom:18px;z-index:590;display:flex;align-items:center;gap:8px;border-radius:999px;padding:10px 14px;border:1px solid transparent;box-shadow:0 10px 30px rgba(24,24,27,.16);font-size:13px;font-weight:700}
+.ff-floating-alert{position:fixed;right:22px;bottom:18px;z-index:1210;display:flex;align-items:center;gap:8px;border-radius:999px;padding:10px 14px;border:1px solid transparent;box-shadow:0 10px 30px rgba(24,24,27,.16);font-size:13px;font-weight:700}
 .ff-floating-alert svg{width:14px;height:14px;flex-shrink:0}
 .ff-mini-spinner{width:12px;height:12px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;display:inline-block;animation:spin .8s linear infinite}
 .ff-floating-alert.ff-floating-alert--amber{background:#EF9F27;border-color:transparent;color:#fff}
@@ -1531,19 +1878,38 @@ body.ff-open .dash-main{overflow:hidden!important;height:100%!important;max-heig
 /* ── New Case modal */
 .nc-overlay{position:fixed;inset:0;z-index:600;background:rgba(13,31,26,0.5);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:24px}
 .nc-overlay.nc-hidden{display:none!important}
-.nc-modal{background:var(--white);border-radius:16px;width:100%;max-width:460px;box-shadow:0 24px 60px rgba(13,31,26,0.3);overflow:hidden}
-.nc-head{padding:20px 24px 16px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--ink-20)}
-.nc-head-title{font-family:'Syne',sans-serif;font-size:18px;font-weight:700;color:var(--ink)}
-.nc-close{width:30px;height:30px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:var(--ink-08);border:none;cursor:pointer;font-size:15px;color:var(--ink-60);transition:background .15s}
-.nc-close:hover{background:var(--ink-20)}
-.nc-body{padding:22px 24px 28px;display:flex;flex-direction:column;gap:16px}
-.nc-field label{display:block;font-size:12px;font-weight:600;color:var(--ink-60);margin-bottom:7px}
-.nc-select,.nc-input{width:100%;padding:10px 14px;border:1.5px solid var(--ink-20);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:14px;color:var(--ink);background:var(--white);outline:none;transition:border-color .15s;-webkit-appearance:auto;appearance:auto}
-.nc-select:focus,.nc-input:focus{border-color:var(--teal-500)}
+.nc-modal{background:var(--white);border-radius:24px;width:100%;max-width:440px;max-height:calc(100vh - 48px);box-shadow:0 24px 60px rgba(13,31,26,0.28);overflow:hidden;position:relative;display:flex;flex-direction:column}
+.nc-head{padding:22px 24px 14px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #F0F0F2;flex-shrink:0}
+.nc-head-title{font-family:'Syne',sans-serif;font-size:18px;font-weight:700;color:#18181b;line-height:1.2}
+.nc-close{width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:#F4F4F5;border:none;cursor:pointer;font-size:14px;color:#71717a;transition:background .15s,color .15s;flex-shrink:0}
+.nc-close:hover{background:#E4E4E7;color:#3f3f46}
+.nc-body{padding:18px 24px 12px;display:flex;flex-direction:column;gap:14px;overflow-y:auto;flex:1;min-height:0}
+.nc-footer{padding:8px 24px 24px;flex-shrink:0}
+.nc-field label{display:block;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;color:#71717a;margin-bottom:6px}
+.nc-select,.nc-input,.nc-textarea{width:100%;padding:11px 14px;border:1px solid #E4E4E7;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;color:#18181b;background:var(--white);outline:none;transition:border-color .15s,box-shadow .15s;box-sizing:border-box}
+.nc-select{appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='%2371717a' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round' d='M4 6l4 4 4-4'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:36px;cursor:pointer}
+.nc-input[type=number]{-webkit-appearance:auto;appearance:auto}
+.nc-select:focus,.nc-input:focus,.nc-textarea:focus{border-color:var(--teal-500);box-shadow:0 0 0 3px rgba(29,158,117,0.12)}
+.nc-textarea{min-height:72px;resize:none;line-height:1.45}
+.nc-textarea::placeholder,.nc-input::placeholder{color:#A1A1AA;font-weight:400}
 .nc-row-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.nc-ltv-banner{background:rgba(29,158,117,0.08);border:1px solid rgba(29,158,117,0.2);border-radius:8px;padding:12px 16px;font-size:14px;font-weight:500;color:#0F6E56}
-.nc-submit-btn{display:flex;width:100%;height:48px;padding:4px 20px;justify-content:center;align-items:center;gap:8px;border-radius:32px;background:#0F6E56;color:var(--white);font-family:'DM Sans',sans-serif;font-size:15px;font-weight:600;border:none;cursor:pointer;transition:background .2s;margin-top:4px}
+.nc-applicants{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.nc-applicant-btn{height:48px;padding:0 12px;border-radius:10px;border:1px solid #E4E4E7;background:#F4F4F5;color:#18181b;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:border-color .15s,background .15s,box-shadow .15s}
+.nc-applicant-btn:hover{background:#EFEFF0;border-color:#D4D4D8}
+.nc-applicant-btn.is-selected{background:#fff;border-color:#1D9E75;box-shadow:0 0 0 3px rgba(29,158,117,0.12);color:#0F6E56}
+.nc-ltv-banner{background:#E1F5EE;border:none;border-radius:10px;padding:12px 16px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;color:#0F6E56}
+.nc-disclosure{display:flex;flex-direction:column;gap:10px}
+.nc-disclosure-label{font-size:13px;font-weight:500;color:#71717a;line-height:1.45;margin:0}
+.nc-disclosure-btns{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.nc-disclosure-btn{height:44px;padding:0 16px;border-radius:10px;border:1px solid #E4E4E7;background:#F4F4F5;color:#18181b;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:border-color .15s,background .15s,color .15s,box-shadow .15s}
+.nc-disclosure-btn:hover{background:#EFEFF0;border-color:#D4D4D8}
+.nc-disclosure-btn.is-selected{border-color:#1D9E75;background:#fff;color:#0F6E56;box-shadow:0 0 0 3px rgba(29,158,117,0.12)}
+.nc-submit-btn{display:flex;width:100%;height:48px;padding:4px 20px;justify-content:center;align-items:center;gap:8px;border-radius:32px;background:#0F6E56;color:var(--white);font-family:'DM Sans',sans-serif;font-size:15px;font-weight:600;border:none;cursor:pointer;transition:background .2s;margin-top:2px;flex-shrink:0}
 .nc-submit-btn:hover{background:#0a5a44}
+.nc-submit-btn img{width:18px;height:18px;flex-shrink:0;filter:brightness(0) invert(1)}
+@media (max-width:480px){
+  .nc-row-2,.nc-applicants,.nc-disclosure-btns{grid-template-columns:1fr}
+}
 
 /* ── Case Created success modal */
 .nc-success-overlay{position:fixed;inset:0;z-index:700;background:rgba(13,31,26,0.5);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:24px}
@@ -1552,7 +1918,7 @@ body.ff-open .dash-main{overflow:hidden!important;height:100%!important;max-heig
 .nc-success-close{position:absolute;top:16px;right:16px}
 .nc-success-illus{width:148px;height:148px;margin-bottom:4px;object-fit:contain}
 .nc-success-title{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:var(--ink)}
-.nc-success-desc{font-size:15px;color:var(--ink-60);line-height:1.55;max-width:340px}
+.nc-success-desc{font-size:15px;color:var(--ink-60);line-height:1.55;max-width:360px}
 .nc-success-desc strong{color:var(--amber);font-weight:600}
 .nc-success-desc .nc-success-client-name{color:var(--ink);font-weight:600}
 .nc-success-actions{width:100%;display:flex;flex-direction:column;gap:10px;margin-top:10px}
@@ -1694,7 +2060,6 @@ body.ff-open .dash-main{overflow:hidden!important;height:100%!important;max-heig
       <div class="dash-nav-item" onclick="showTab('compliance')">
         <svg viewBox="0 0 16 16" fill="none"><path d="M8 1L1 5v5c0 3 3 5 7 5s7-2 7-5V5L8 1Z" stroke="currentColor" stroke-width="1.5"/><path d="M5.5 8l2 2 3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
         Compliance
-        <span class="badge">3</span>
       </div>
       <div class="dash-nav-item" onclick="showTab('ai')">
         <svg viewBox="0 0 16 16" fill="none"><rect x="2" y="1" width="10" height="14" rx="1.5" stroke="currentColor" stroke-width="1.5"/><path d="M5 5h6M5 7.5h6M5 10h4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><circle cx="12" cy="12" r="3" fill="currentColor" opacity=".5"/><path d="M11 12h2M12 11v2" stroke="white" stroke-width="1" stroke-linecap="round"/></svg>
@@ -1704,10 +2069,6 @@ body.ff-open .dash-main{overflow:hidden!important;height:100%!important;max-heig
         <svg viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M5 5h6M5 8h2M5 11h2M9 8h2v3H9z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
         Calculators
       </div>
-      <div class="dash-nav-item" onclick="openDashboardRoute('/dashboard/settings')">
-        <svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="2.25" stroke="currentColor" stroke-width="1.5"/><path d="M8 1.5v1.6M8 12.9v1.6M1.5 8h1.6M12.9 8h1.6M3.4 3.4l1.1 1.1M11.5 11.5l1.1 1.1M3.4 12.6l1.1-1.1M11.5 4.5l1.1-1.1" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
-        Settings
-      </div>
       <div style="margin-top:auto"></div>
       <div class="sidebar-bottom"><div class="sidebar-plan">Professional</div><div class="sidebar-plan-sub">KO Financials</div></div>
     </aside>
@@ -1715,7 +2076,7 @@ body.ff-open .dash-main{overflow:hidden!important;height:100%!important;max-heig
     <main class="dash-main">
 
       <!-- ── OVERVIEW ── -->
-      <div id="tab-overview" class="">
+      <div id="tab-overview" class="hidden">
         <div class="dash-top-strip" aria-hidden="true"></div>
         <div class="dash-greet-section">
           <div class="dash-greet-date" id="dash-overview-date"></div>
@@ -2569,46 +2930,379 @@ body.ff-open .dash-main{overflow:hidden!important;height:100%!important;max-heig
 
       <!-- ── COMPLIANCE ── -->
       <div id="tab-compliance" class="hidden">
-        <div class="dash-topbar">
-          <div class="dash-topbar-title">Compliance Engine</div>
-        </div>
+        <div class="dash-top-strip" aria-hidden="true"></div>
         <div class="dash-content">
-          <div class="panel" style="border-color:rgba(239,159,39,0.3)">
-            <div class="panel-head" style="background:rgba(239,159,39,0.05)"><span class="panel-title">⚠️ 3 cases need compliance review</span></div>
-          </div>
-          <div class="panel">
-            <div class="panel-head"><span class="panel-title">J. Patel — KOF-0312</span><span class="status s-factfind">Fact-Find</span></div>
-            <div class="panel-body">
-              <div style="font-size:12px;color:var(--ink-60);margin-bottom:16px">Purchase · £320,000 · Adviser: S. Davies</div>
-              <div class="compliance-stages">
-                <div class="comp-stage done"><div class="comp-check-mark">✓</div><div class="comp-stage-label">Initial Disclosure</div><div class="comp-stage-date">12 Mar</div></div>
-                <div class="comp-stage done"><div class="comp-check-mark">✓</div><div class="comp-stage-label">Fact-Find</div><div class="comp-stage-date">15 Mar</div></div>
-                <div class="comp-stage current"><div class="comp-stage-label">Research</div><div class="comp-stage-date">In progress</div></div>
-                <div class="comp-stage"><div class="comp-stage-label">ESIS</div><div class="comp-stage-date">—</div></div>
-                <div class="comp-stage"><div class="comp-stage-label">Suitability Report</div><div class="comp-stage-date">—</div></div>
+          <div class="co-page">
+            <div class="co-head">
+              <div class="co-head-text">
+                <h1 class="co-title">Compliance Overview</h1>
+                <p class="co-sub">Platform-wide compliance health across all active cases. 5 active cases · 4 advisory flags outstanding.</p>
               </div>
-              <div style="display:flex;gap:10px;align-items:center">
-                <button class="btn btn-primary btn-sm">Advance to Research →</button>
-                <button class="btn btn-ghost btn-sm" style="color:var(--ink)">View audit trail</button>
-                <div style="margin-left:auto">
-                  <div class="inline-msg-bar" style="max-width:400px">
-                    <input class="inline-msg-input" placeholder="Send update to client…">
-                    <button class="inline-msg-send" onclick="showTab('messages')">Send ↗</button>
+              <div class="co-ring-wrap" aria-label="Platform compliance 57 percent">
+                <div class="co-ring-row">
+                  <span class="co-ring-pct">57%</span>
+                  <svg class="co-ring" viewBox="0 0 56 56" aria-hidden="true">
+                    <circle cx="28" cy="28" r="22" fill="none" stroke="#E8EEEC" stroke-width="5"/>
+                    <circle cx="28" cy="28" r="22" fill="none" stroke="#1D9E75" stroke-width="5" stroke-linecap="round" stroke-dasharray="78.5 138.2" transform="rotate(-90 28 28)"/>
+                  </svg>
+                </div>
+                <div class="co-ring-label">Platform Compliance</div>
+              </div>
+            </div>
+
+            <div class="co-kpi-row">
+              <div class="co-kpi">
+                <div class="co-kpi-top">
+                  <span class="co-kpi-label">Active cases</span>
+                  <img class="co-kpi-icon" src="assets/people-1.svg" width="26" height="26" alt="" />
+                </div>
+                <div class="co-kpi-val">5</div>
+                <div class="co-kpi-hint">6 total cases</div>
+              </div>
+              <div class="co-kpi co-kpi--checklist">
+                <div class="co-kpi-top">
+                  <span class="co-kpi-label">Checklist items done</span>
+                  <img class="co-kpi-icon" src="assets/checklist.svg" width="26" height="26" alt="" />
+                </div>
+                <div class="co-kpi-val">55/96</div>
+                <div class="co-kpi-hint co-kpi-hint--ok">57% complete across all cases</div>
+              </div>
+              <div class="co-kpi co-kpi--flags">
+                <div class="co-kpi-top">
+                  <span class="co-kpi-label">Advisory flags</span>
+                  <img class="co-kpi-icon" src="assets/person-alert.svg" width="26" height="26" alt="" />
+                </div>
+                <div class="co-kpi-val">4</div>
+                <div class="co-kpi-hint">require adviser attention</div>
+              </div>
+              <div class="co-kpi co-kpi--docs">
+                <div class="co-kpi-top">
+                  <span class="co-kpi-label">Documents Uploaded</span>
+                  <img class="co-kpi-icon" src="assets/description.svg" width="26" height="26" alt="" />
+                </div>
+                <div class="co-kpi-val">4/7</div>
+                <div class="co-kpi-hint">3 using platform pro-forma</div>
+              </div>
+            </div>
+
+            <div class="co-tabs" role="tablist" aria-label="Compliance sections">
+              <button type="button" class="co-tab active" role="tab" aria-selected="true" data-co-tab="overview" onclick="showComplianceSubTab('overview')">Overview</button>
+              <button type="button" class="co-tab" role="tab" aria-selected="false" data-co-tab="cases" onclick="showComplianceSubTab('cases')">Cases (6)</button>
+              <button type="button" class="co-tab" role="tab" aria-selected="false" data-co-tab="documents" onclick="showComplianceSubTab('documents')">Documents</button>
+            </div>
+
+            <!-- Overview sub-tab -->
+            <div class="co-panel active" id="co-panel-overview" role="tabpanel">
+              <div class="co-grid">
+                <div>
+                  <div class="co-card">
+                    <div class="co-card-head"><h2 class="co-card-title">Cases by stage</h2></div>
+                    <div class="co-stage-list">
+                      <div class="co-stage-row"><span class="co-stage-name">Initial Disclosure</span><div class="co-bar"><span style="width:16%"></span></div><span class="co-stage-count">1</span></div>
+                      <div class="co-stage-row"><span class="co-stage-name">Terms of Business</span><div class="co-bar"><span style="width:16%"></span></div><span class="co-stage-count">1</span></div>
+                      <div class="co-stage-row"><span class="co-stage-name">Fact-Find &amp; AML</span><div class="co-bar"><span style="width:16%"></span></div><span class="co-stage-count">1</span></div>
+                      <div class="co-stage-row"><span class="co-stage-name">Research &amp; ESIS</span><div class="co-bar"><span style="width:16%"></span></div><span class="co-stage-count">1</span></div>
+                      <div class="co-stage-row"><span class="co-stage-name">Suitability &amp; AIP</span><div class="co-bar"><span style="width:16%"></span></div><span class="co-stage-count">1</span></div>
+                      <div class="co-stage-row"><span class="co-stage-name">Complete</span><div class="co-bar"><span class="done" style="width:16%"></span></div><span class="co-stage-count">1</span></div>
+                    </div>
+                  </div>
+                  <div class="co-card">
+                    <div class="co-card-head">
+                      <h2 class="co-card-title">Case compliance progress</h2>
+                      <button type="button" class="co-card-link" onclick="showComplianceSubTab('cases')">View all →</button>
+                    </div>
+                    <div class="co-progress-list">
+                      <div class="co-progress-row">
+                        <div class="co-progress-meta"><div class="co-progress-name">Sarah Jones</div><div class="co-progress-type">Remortgage</div></div>
+                        <div class="co-progress-bar"><span style="width:50%;background:#D4A017"></span></div>
+                        <span class="co-frac">8/16</span>
+                        <span class="co-warn" aria-label="2 flags"><svg viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M6 1.2 10.8 10H1.2L6 1.2Z" stroke="#E17100" stroke-width="1.2" stroke-linejoin="round"/><path d="M6 4.5v2.4M6 8.3v.2" stroke="#E17100" stroke-width="1.2" stroke-linecap="round"/></svg>2</span>
+                      </div>
+                      <div class="co-progress-row">
+                        <div class="co-progress-meta"><div class="co-progress-name">James Smith</div><div class="co-progress-type">Purchase</div></div>
+                        <div class="co-progress-bar"><span style="width:12.5%;background:#FFA2A2"></span></div>
+                        <span class="co-frac">2/16</span>
+                        <span class="co-warn-slot" aria-hidden="true"></span>
+                      </div>
+                      <div class="co-progress-row">
+                        <div class="co-progress-meta"><div class="co-progress-name">Priya Patel</div><div class="co-progress-type">BTL Purchase</div></div>
+                        <div class="co-progress-bar"><span style="width:100%;background:#0F6E56"></span></div>
+                        <span class="co-frac">16/16</span>
+                        <span class="co-warn-slot" aria-hidden="true"></span>
+                      </div>
+                      <div class="co-progress-row">
+                        <div class="co-progress-meta"><div class="co-progress-name">Omar Ahmed</div><div class="co-progress-type">Purchase</div></div>
+                        <div class="co-progress-bar"><span style="width:68.75%;background:#00D5BE"></span></div>
+                        <span class="co-frac">11/16</span>
+                        <span class="co-warn" aria-label="1 flag"><svg viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M6 1.2 10.8 10H1.2L6 1.2Z" stroke="#E17100" stroke-width="1.2" stroke-linejoin="round"/><path d="M6 4.5v2.4M6 8.3v.2" stroke="#E17100" stroke-width="1.2" stroke-linecap="round"/></svg>1</span>
+                      </div>
+                      <div class="co-progress-row">
+                        <div class="co-progress-meta"><div class="co-progress-name">Claire Lewis</div><div class="co-progress-type">Remortgage</div></div>
+                        <div class="co-progress-bar"><span style="width:31.25%;background:#FFD230"></span></div>
+                        <span class="co-frac">5/16</span>
+                        <span class="co-warn" aria-label="1 flag"><svg viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M6 1.2 10.8 10H1.2L6 1.2Z" stroke="#E17100" stroke-width="1.2" stroke-linejoin="round"/><path d="M6 4.5v2.4M6 8.3v.2" stroke="#E17100" stroke-width="1.2" stroke-linecap="round"/></svg>1</span>
+                      </div>
+                      <div class="co-progress-row">
+                        <div class="co-progress-meta"><div class="co-progress-name">Harpreet Kaur</div><div class="co-progress-type">BTL</div></div>
+                        <div class="co-progress-bar"><span style="width:81.25%;background:#00D5BE"></span></div>
+                        <span class="co-frac">13/16</span>
+                        <span class="co-warn-slot" aria-hidden="true"></span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <div class="co-card">
+                    <div class="co-card-head">
+                      <h2 class="co-card-title">Advisory flags</h2>
+                      <span class="co-badge co-badge--open">4 open</span>
+                    </div>
+                    <div class="co-flag-list">
+                      <div class="co-flag-item co-flag-item--medium">
+                        <div class="co-flag-top"><span class="co-flag-title">Adverse credit assessed</span><span class="co-prio co-prio--medium">medium</span></div>
+                        <div class="co-flag-bottom"><span class="co-flag-sub">Sarah Jones · KO-2026-001</span><span class="co-flag-time">2 days ago</span></div>
+                      </div>
+                      <div class="co-flag-item">
+                        <div class="co-flag-top"><span class="co-flag-title">TOB accepted by client</span><span class="co-prio co-prio--low">low</span></div>
+                        <div class="co-flag-bottom"><span class="co-flag-sub">Sarah Jones · KO-2026-001</span><span class="co-flag-time">4 days ago</span></div>
+                      </div>
+                      <div class="co-flag-item">
+                        <div class="co-flag-top"><span class="co-flag-title">ESIS received and filed</span><span class="co-prio co-prio--low">low</span></div>
+                        <div class="co-flag-bottom"><span class="co-flag-sub">Omar Ahmed · KO-2026-004</span><span class="co-flag-time">5 days ago</span></div>
+                      </div>
+                      <div class="co-flag-item co-flag-item--medium">
+                        <div class="co-flag-top"><span class="co-flag-title">TOB accepted by client</span><span class="co-prio co-prio--medium">medium</span></div>
+                        <div class="co-flag-bottom"><span class="co-flag-sub">Claire Lewis · KO-2026-005</span><span class="co-flag-time">1 day ago</span></div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="co-card">
+                    <div class="co-card-head">
+                      <h2 class="co-card-title">Document library</h2>
+                      <span class="co-doc-count">4/7 uploaded</span>
+                    </div>
+                    <div class="co-doc-list">
+                      <div class="co-doc-row">
+                        <div class="co-doc-left">
+                          <span class="co-doc-check" aria-hidden="true"><svg viewBox="0 0 12 12" fill="none"><path d="M2.5 6.2 4.8 8.5 9.5 3.5" stroke="#009689" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                          <span class="co-doc-name">IDD</span>
+                        </div>
+                        <span class="co-doc-ver">v2.1</span>
+                      </div>
+                      <div class="co-doc-row">
+                        <div class="co-doc-left">
+                          <span class="co-doc-check" aria-hidden="true"><svg viewBox="0 0 12 12" fill="none"><path d="M2.5 6.2 4.8 8.5 9.5 3.5" stroke="#009689" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                          <span class="co-doc-name">Privacy Notice</span>
+                        </div>
+                        <span class="co-doc-ver">v1.3</span>
+                      </div>
+                      <div class="co-doc-row">
+                        <div class="co-doc-left">
+                          <span class="co-doc-check" aria-hidden="true"><svg viewBox="0 0 12 12" fill="none"><path d="M2.5 6.2 4.8 8.5 9.5 3.5" stroke="#009689" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                          <span class="co-doc-name">Terms of Business</span>
+                        </div>
+                        <span class="co-doc-ver">v3.0</span>
+                      </div>
+                      <div class="co-doc-row">
+                        <div class="co-doc-left">
+                          <span class="co-doc-pending" aria-hidden="true"><svg viewBox="0 0 12 12" fill="none"><path d="M3.5 1.5h3.5L9.5 4v6.5h-6V1.5Z" stroke="currentColor" stroke-width="1.2"/><path d="M7 1.5V4h2.5" stroke="currentColor" stroke-width="1.2"/></svg></span>
+                          <span class="co-doc-name">Consent Capture</span>
+                        </div>
+                        <span class="co-doc-ver co-doc-ver--muted">Pro-forma</span>
+                      </div>
+                      <div class="co-doc-row">
+                        <div class="co-doc-left">
+                          <span class="co-doc-check" aria-hidden="true"><svg viewBox="0 0 12 12" fill="none"><path d="M2.5 6.2 4.8 8.5 9.5 3.5" stroke="#009689" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                          <span class="co-doc-name">TOB Acceptance (Client)</span>
+                        </div>
+                        <span class="co-doc-ver">v2.1</span>
+                      </div>
+                      <div class="co-doc-row">
+                        <div class="co-doc-left">
+                          <span class="co-doc-pending" aria-hidden="true"><svg viewBox="0 0 12 12" fill="none"><path d="M3.5 1.5h3.5L9.5 4v6.5h-6V1.5Z" stroke="currentColor" stroke-width="1.2"/><path d="M7 1.5V4h2.5" stroke="currentColor" stroke-width="1.2"/></svg></span>
+                          <span class="co-doc-name">Case Completion</span>
+                        </div>
+                        <span class="co-doc-ver co-doc-ver--muted">Pro-forma</span>
+                      </div>
+                      <div class="co-doc-row">
+                        <div class="co-doc-left">
+                          <span class="co-doc-pending" aria-hidden="true"><svg viewBox="0 0 12 12" fill="none"><path d="M3.5 1.5h3.5L9.5 4v6.5h-6V1.5Z" stroke="currentColor" stroke-width="1.2"/><path d="M7 1.5V4h2.5" stroke="currentColor" stroke-width="1.2"/></svg></span>
+                          <span class="co-doc-name">Survey Document</span>
+                        </div>
+                        <span class="co-doc-ver co-doc-ver--muted">Pro-forma</span>
+                      </div>
+                    </div>
+                    <div class="co-doc-foot">
+                      <div class="co-doc-foot-bar"><span style="width:57%"></span></div>
+                      <div class="co-doc-foot-txt">3 documents using platform pro-forma fallback</div>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
-          <div class="panel">
-            <div class="panel-head"><span class="panel-title">Audit Trail</span></div>
-            <table>
-              <thead><tr><th>Time</th><th>User</th><th>Action</th><th>Entity</th><th>Notification</th></tr></thead>
-              <tbody>
-                <tr><td style="color:var(--ink-60);font-size:12px">Today 09:41</td><td>S. Davies</td><td><span class="status s-done">Fact-find completed</span></td><td style="color:var(--ink-60)">KOF-0312</td><td><span class="accent accent-blue">Email sent to client</span></td></tr>
-                <tr><td style="color:var(--ink-60);font-size:12px">Today 09:12</td><td>S. Davies</td><td><span class="status s-active">Document uploaded</span></td><td style="color:var(--ink-60)">KOC-0186</td><td style="color:var(--ink-60)">—</td></tr>
-                <tr><td style="color:var(--ink-60);font-size:12px">Yesterday 16:30</td><td>J. Osei</td><td><span class="status s-pending">Stage advanced</span></td><td style="color:var(--ink-60)">KOF-0308</td><td><span class="accent accent-blue">SMS + email sent</span></td></tr>
-              </tbody>
-            </table>
+
+            <!-- Cases sub-tab -->
+            <div class="co-panel" id="co-panel-cases" role="tabpanel" hidden>
+              <div class="co-table-wrap">
+                <table class="co-table">
+                  <thead>
+                    <tr>
+                      <th>Client</th>
+                      <th>Client ID</th>
+                      <th>Type</th>
+                      <th>Compliance progress</th>
+                      <th>Stage</th>
+                      <th>Flags</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>
+                        <div class="co-client-name">Sarah Jones</div>
+                        <div class="co-client-sub">B. Wilson · 09 Jul 2026</div>
+                      </td>
+                      <td><div class="co-client-ref">KO-2026-001</div></td>
+                      <td><span class="co-type">Remortgage</span></td>
+                      <td><div class="co-prog-cell"><div class="co-prog-track"><span class="p-amber" style="width:50%;background:#D4A017"></span></div><span class="co-frac">8/16</span></div></td>
+                      <td>Fact-Find &amp; AML</td>
+                      <td><span class="co-warn" aria-label="2 flags"><svg viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M6 1.2 10.8 10H1.2L6 1.2Z" stroke="#E17100" stroke-width="1.2" stroke-linejoin="round"/><path d="M6 4.5v2.4M6 8.3v.2" stroke="#E17100" stroke-width="1.2" stroke-linecap="round"/></svg>2</span></td>
+                      <td><button type="button" class="co-open-btn" onclick="showTab('cases')">Open →</button></td>
+                    </tr>
+                    <tr>
+                      <td>
+                        <div class="co-client-name">James Smith</div>
+                        <div class="co-client-sub">S. Davies · 02 Jul 2026</div>
+                      </td>
+                      <td><div class="co-client-ref">KO-2026-002</div></td>
+                      <td><span class="co-type">Purchase</span></td>
+                      <td><div class="co-prog-cell"><div class="co-prog-track"><span style="width:12.5%;background:#FFA2A2"></span></div><span class="co-frac">2/16</span></div></td>
+                      <td>Initial Disclosure</td>
+                      <td><span class="co-warn-slot" aria-hidden="true"></span></td>
+                      <td></td>
+                    </tr>
+                    <tr>
+                      <td>
+                        <div class="co-client-name">Priya Patel</div>
+                        <div class="co-client-sub">B. Wilson · 28 Jun 2026</div>
+                      </td>
+                      <td><div class="co-client-ref">KO-2026-003</div></td>
+                      <td><span class="co-type">BTL Purchase</span></td>
+                      <td><div class="co-prog-cell"><div class="co-prog-track"><span style="width:100%;background:#0F6E56"></span></div><span class="co-frac">16/16</span></div></td>
+                      <td>Complete</td>
+                      <td><span class="co-warn-slot" aria-hidden="true"></span></td>
+                      <td></td>
+                    </tr>
+                    <tr>
+                      <td>
+                        <div class="co-client-name">Omar Ahmed</div>
+                        <div class="co-client-sub">J. Osei · 15 Jul 2026</div>
+                      </td>
+                      <td><div class="co-client-ref">KO-2026-004</div></td>
+                      <td><span class="co-type">Purchase</span></td>
+                      <td><div class="co-prog-cell"><div class="co-prog-track"><span style="width:69%;background:#00D5BE"></span></div><span class="co-frac">11/16</span></div></td>
+                      <td>Research &amp; ESIS</td>
+                      <td><span class="co-warn" aria-label="1 flag"><svg viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M6 1.2 10.8 10H1.2L6 1.2Z" stroke="#E17100" stroke-width="1.2" stroke-linejoin="round"/><path d="M6 4.5v2.4M6 8.3v.2" stroke="#E17100" stroke-width="1.2" stroke-linecap="round"/></svg>1</span></td>
+                      <td></td>
+                    </tr>
+                    <tr>
+                      <td>
+                        <div class="co-client-name">Claire Lewis</div>
+                        <div class="co-client-sub">S. Davies · 11 Jul 2026</div>
+                      </td>
+                      <td><div class="co-client-ref">KO-2026-005</div></td>
+                      <td><span class="co-type">Remortgage</span></td>
+                      <td><div class="co-prog-cell"><div class="co-prog-track"><span style="width:31%;background:#FFD230"></span></div><span class="co-frac">5/16</span></div></td>
+                      <td>Terms of Business</td>
+                      <td><span class="co-warn" aria-label="1 flag"><svg viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M6 1.2 10.8 10H1.2L6 1.2Z" stroke="#E17100" stroke-width="1.2" stroke-linejoin="round"/><path d="M6 4.5v2.4M6 8.3v.2" stroke="#E17100" stroke-width="1.2" stroke-linecap="round"/></svg>1</span></td>
+                      <td></td>
+                    </tr>
+                    <tr>
+                      <td>
+                        <div class="co-client-name">Harpreet Kaur</div>
+                        <div class="co-client-sub">B. Wilson · 05 Jul 2026</div>
+                      </td>
+                      <td><div class="co-client-ref">KO-2026-006</div></td>
+                      <td><span class="co-type">BTL</span></td>
+                      <td><div class="co-prog-cell"><div class="co-prog-track"><span style="width:81%;background:#00D5BE"></span></div><span class="co-frac">13/16</span></div></td>
+                      <td>Suitability &amp; AIP</td>
+                      <td><span class="co-warn-slot" aria-hidden="true"></span></td>
+                      <td></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Documents sub-tab -->
+            <div class="co-panel" id="co-panel-documents" role="tabpanel" hidden>
+              <div class="co-table-wrap">
+                <table class="co-table">
+                  <thead>
+                    <tr>
+                      <th>Document type</th>
+                      <th>Current version</th>
+                      <th>Status</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td><div class="co-doc-type-cell"><span class="co-doc-check" aria-hidden="true">✓</span><div><div class="co-doc-type-code">IDD</div><div class="co-doc-type-full">Initial Disclosure Document</div></div></div></td>
+                      <td><span class="co-ver-ok"><span class="co-dot"></span>v2.1</span></td>
+                      <td><span class="co-status"><span class="co-dot"></span>Active</span></td>
+                      <td><div class="co-actions"><button type="button" class="co-ghost-btn"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 16V4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M7 9l5-5 5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Replace</button><button type="button" class="co-ghost-btn co-history-btn"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 12a9 9 0 1 0 18 0a9 9 0 1 0-18 0" stroke="currentColor" stroke-width="2"/><path d="M12 7v5l3 2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>History</button></div></td>
+                    </tr>
+                    <tr>
+                      <td><div class="co-doc-type-cell"><span class="co-doc-check" aria-hidden="true">✓</span><div><div class="co-doc-type-code">PN</div><div class="co-doc-type-full">Privacy Notice</div></div></div></td>
+                      <td><span class="co-ver-ok"><span class="co-dot"></span>v1.3</span></td>
+                      <td><span class="co-status"><span class="co-dot"></span>Active</span></td>
+                      <td><div class="co-actions"><button type="button" class="co-ghost-btn"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 16V4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M7 9l5-5 5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Replace</button><button type="button" class="co-ghost-btn co-history-btn"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 12a9 9 0 1 0 18 0a9 9 0 1 0-18 0" stroke="currentColor" stroke-width="2"/><path d="M12 7v5l3 2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>History</button></div></td>
+                    </tr>
+                    <tr>
+                      <td><div class="co-doc-type-cell"><span class="co-doc-check" aria-hidden="true">✓</span><div><div class="co-doc-type-code">TOB</div><div class="co-doc-type-full">Terms of Business</div></div></div></td>
+                      <td><span class="co-ver-ok"><span class="co-dot"></span>v3.0</span></td>
+                      <td><span class="co-status"><span class="co-dot"></span>Active</span></td>
+                      <td><div class="co-actions"><button type="button" class="co-ghost-btn"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 16V4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M7 9l5-5 5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Replace</button><button type="button" class="co-ghost-btn co-history-btn"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 12a9 9 0 1 0 18 0a9 9 0 1 0-18 0" stroke="currentColor" stroke-width="2"/><path d="M12 7v5l3 2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>History</button></div></td>
+                    </tr>
+                    <tr>
+                      <td><div class="co-doc-type-cell"><span class="co-doc-check" aria-hidden="true">✓</span><div><div class="co-doc-type-code">SLT</div><div class="co-doc-type-full">Suitability Letter Template</div></div></div></td>
+                      <td><span class="co-ver-ok"><span class="co-dot"></span>v1.0</span></td>
+                      <td><span class="co-status"><span class="co-dot"></span>Active</span></td>
+                      <td><div class="co-actions"><button type="button" class="co-ghost-btn"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 16V4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M7 9l5-5 5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Replace</button><button type="button" class="co-ghost-btn co-history-btn"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 12a9 9 0 1 0 18 0a9 9 0 1 0-18 0" stroke="currentColor" stroke-width="2"/><path d="M12 7v5l3 2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>History</button></div></td>
+                    </tr>
+                    <tr>
+                      <td><div class="co-doc-type-cell"><span class="co-doc-pending" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none"><path d="M3 2h6l4 4v8H3V2Z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><path d="M9 2v4h4" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg></span><div><div class="co-doc-type-code">AIP</div><div class="co-doc-type-full">Agreement in Principle</div></div></div></td>
+                      <td><span class="co-ver-miss">No document</span></td>
+                      <td><span class="co-status co-status--miss"><span class="co-dot"></span>Not uploaded</span></td>
+                      <td><div class="co-actions"><button type="button" class="co-upload-btn"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 16V4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M7 9l5-5 5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Upload</button><span class="co-history-spacer" aria-hidden="true"></span></div></td>
+                    </tr>
+                    <tr>
+                      <td><div class="co-doc-type-cell"><span class="co-doc-pending" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none"><path d="M3 2h6l4 4v8H3V2Z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><path d="M9 2v4h4" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg></span><div><div class="co-doc-type-code">Survey Doc</div><div class="co-doc-type-full">Client Satisfaction Survey</div></div></div></td>
+                      <td><span class="co-ver-miss">No document</span></td>
+                      <td><span class="co-status co-status--miss"><span class="co-dot"></span>Not uploaded</span></td>
+                      <td><div class="co-actions"><button type="button" class="co-upload-btn"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 16V4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M7 9l5-5 5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Upload</button><span class="co-history-spacer" aria-hidden="true"></span></div></td>
+                    </tr>
+                    <tr>
+                      <td><div class="co-doc-type-cell"><span class="co-doc-check" aria-hidden="true">✓</span><div><div class="co-doc-type-code">Consent Capture</div><div class="co-doc-type-full">Consent Capture Form</div></div></div></td>
+                      <td><span class="co-ver-ok"><span class="co-dot"></span>v1.0</span></td>
+                      <td><span class="co-status"><span class="co-dot"></span>Active</span></td>
+                      <td><div class="co-actions"><button type="button" class="co-ghost-btn"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 16V4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M7 9l5-5 5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Replace</button><button type="button" class="co-ghost-btn co-history-btn"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 12a9 9 0 1 0 18 0a9 9 0 1 0-18 0" stroke="currentColor" stroke-width="2"/><path d="M12 7v5l3 2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>History</button></div></td>
+                    </tr>
+                    <tr>
+                      <td><div class="co-doc-type-cell"><span class="co-doc-check" aria-hidden="true">✓</span><div><div class="co-doc-type-code">TOB Acceptance (Client)</div><div class="co-doc-type-full">TOB Acceptance — Client Signature</div></div></div></td>
+                      <td><span class="co-ver-ok"><span class="co-dot"></span>v2.1</span></td>
+                      <td><span class="co-status"><span class="co-dot"></span>Active</span></td>
+                      <td><div class="co-actions"><button type="button" class="co-ghost-btn"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 16V4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M7 9l5-5 5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Replace</button><button type="button" class="co-ghost-btn co-history-btn"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 12a9 9 0 1 0 18 0a9 9 0 1 0-18 0" stroke="currentColor" stroke-width="2"/><path d="M12 7v5l3 2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>History</button></div></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="co-info">
+                <span class="co-info-icon" aria-hidden="true">i</span>
+                <div>Pro-forma fallback is always active. For any document type without a firm upload, the platform automatically uses the pro-forma version — populated with your firm name and FRN. Upload your own versions in <strong>Settings → Compliance</strong>.</div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -3592,6 +4286,227 @@ function showTab(t, opts) {
     }
   } catch (e) {}
 }
+function showComplianceSubTab(sub) {
+  var tabs = document.querySelectorAll('#tab-compliance .co-tab');
+  var panels = document.querySelectorAll('#tab-compliance .co-panel');
+  tabs.forEach(function (btn) {
+    var on = btn.getAttribute('data-co-tab') === sub;
+    btn.classList.toggle('active', on);
+    btn.setAttribute('aria-selected', on ? 'true' : 'false');
+  });
+  panels.forEach(function (panel) {
+    var on = panel.id === 'co-panel-' + sub;
+    panel.classList.toggle('active', on);
+    if (on) panel.removeAttribute('hidden');
+    else panel.setAttribute('hidden', '');
+  });
+}
+
+(function () {
+  var isLiveCompliance = new URLSearchParams(window.location.search).get('liveData') === '1';
+  if (!isLiveCompliance) return;
+
+  function coEsc(value) {
+    return String(value == null ? '' : value).replace(/[&<>"']/g, function (ch) {
+      return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch];
+    });
+  }
+  function coBarColor(pct) {
+    if (pct >= 100) return '#0F6E56';
+    if (pct >= 70) return '#00D5BE';
+    if (pct >= 40) return '#D4A017';
+    if (pct >= 20) return '#FFD230';
+    return '#FFA2A2';
+  }
+  function coWarnIcon(count) {
+    if (!count) return '<span class="co-warn-slot" aria-hidden="true"></span>';
+    return '<span class="co-warn" aria-label="' + count + ' flags"><svg viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M6 1.2 10.8 10H1.2L6 1.2Z" stroke="#E17100" stroke-width="1.2" stroke-linejoin="round"/><path d="M6 4.5v2.4M6 8.3v.2" stroke="#E17100" stroke-width="1.2" stroke-linecap="round"/></svg>' + count + '</span>';
+  }
+  function emptyOverview() {
+    return {
+      kpis: {
+        activeCases: 0, totalCases: 0, checklistDone: 0, checklistTotal: 0, checklistPct: 0,
+        advisoryFlags: 0, docsUploaded: 0, docsTotal: 7, docsProForma: 7, platformPct: 0
+      },
+      stages: [
+        { key: 'disclosure', label: 'Initial Disclosure', count: 0 },
+        { key: 'tob', label: 'Terms of Business', count: 0 },
+        { key: 'factfind', label: 'Fact-Find & AML', count: 0 },
+        { key: 'research', label: 'Research & ESIS', count: 0 },
+        { key: 'suitability', label: 'Suitability & AIP', count: 0 },
+        { key: 'complete', label: 'Complete', count: 0 }
+      ],
+      cases: [],
+      flags: [],
+      documents: [
+        { id: 'idd', code: 'IDD', name: 'IDD', fullName: 'Initial Disclosure Document', uploaded: false, version: null, statusLabel: 'Not uploaded' },
+        { id: 'privacy', code: 'PN', name: 'Privacy Notice', fullName: 'Privacy Notice', uploaded: false, version: null, statusLabel: 'Not uploaded' },
+        { id: 'tob', code: 'TOB', name: 'Terms of Business', fullName: 'Terms of Business', uploaded: false, version: null, statusLabel: 'Not uploaded' },
+        { id: 'suitability-template', code: 'SLT', name: 'Suitability Letter Template', fullName: 'Suitability Letter Template', uploaded: false, version: null, statusLabel: 'Not uploaded' },
+        { id: 'aip', code: 'AIP', name: 'AIP', fullName: 'Agreement in Principle', uploaded: false, version: null, statusLabel: 'Not uploaded' },
+        { id: 'survey', code: 'Survey Doc', name: 'Survey Document', fullName: 'Client Satisfaction Survey', uploaded: false, version: null, statusLabel: 'Not uploaded' },
+        { id: 'consent', code: 'Consent Capture', name: 'Consent Capture', fullName: 'Consent Capture Form', uploaded: false, version: null, statusLabel: 'Not uploaded' }
+      ]
+    };
+  }
+
+  window.koRenderComplianceOverview = function (payload) {
+    var data = payload || emptyOverview();
+    var kpis = data.kpis || emptyOverview().kpis;
+    var sub = document.querySelector('#tab-compliance .co-sub');
+    if (sub) {
+      sub.textContent = 'Platform-wide compliance health across all active cases. ' +
+        kpis.activeCases + ' active case' + (kpis.activeCases === 1 ? '' : 's') +
+        ' · ' + kpis.advisoryFlags + ' advisory flag' + (kpis.advisoryFlags === 1 ? '' : 's') + ' outstanding.';
+    }
+    var pct = Math.max(0, Math.min(100, Number(kpis.platformPct) || 0));
+    var ringWrap = document.querySelector('#tab-compliance .co-ring-wrap');
+    if (ringWrap) {
+      ringWrap.setAttribute('aria-label', 'Platform compliance ' + pct + ' percent');
+      var pctEl = ringWrap.querySelector('.co-ring-pct');
+      if (pctEl) pctEl.textContent = pct + '%';
+      var dash = (pct / 100) * 138.2;
+      var circle = ringWrap.querySelector('.co-ring circle:last-child');
+      if (circle) circle.setAttribute('stroke-dasharray', dash.toFixed(1) + ' 138.2');
+    }
+    var kpiVals = document.querySelectorAll('#tab-compliance .co-kpi-val');
+    var kpiHints = document.querySelectorAll('#tab-compliance .co-kpi-hint');
+    if (kpiVals[0]) kpiVals[0].textContent = String(kpis.activeCases);
+    if (kpiHints[0]) kpiHints[0].textContent = kpis.totalCases + ' total cases';
+    if (kpiVals[1]) kpiVals[1].textContent = kpis.checklistDone + '/' + kpis.checklistTotal;
+    if (kpiHints[1]) kpiHints[1].textContent = kpis.checklistPct + '% complete across all cases';
+    if (kpiVals[2]) kpiVals[2].textContent = String(kpis.advisoryFlags);
+    if (kpiHints[2]) kpiHints[2].textContent = kpis.advisoryFlags ? 'require adviser attention' : 'none outstanding';
+    if (kpiVals[3]) kpiVals[3].textContent = kpis.docsUploaded + '/' + kpis.docsTotal;
+    if (kpiHints[3]) kpiHints[3].textContent = kpis.docsProForma + ' using platform pro-forma';
+
+    var casesTab = document.querySelector('#tab-compliance .co-tab[data-co-tab="cases"]');
+    if (casesTab) casesTab.textContent = 'Cases (' + (data.cases ? data.cases.length : 0) + ')';
+
+    var stageList = document.querySelector('#tab-compliance .co-stage-list');
+    if (stageList) {
+      var maxCount = Math.max.apply(null, (data.stages || []).map(function (s) { return s.count; }).concat([1]));
+      stageList.innerHTML = (data.stages || []).map(function (stage) {
+        var width = Math.round((stage.count / maxCount) * 100);
+        var doneCls = stage.key === 'complete' ? ' class="done"' : '';
+        return '<div class="co-stage-row"><span class="co-stage-name">' + coEsc(stage.label) +
+          '</span><div class="co-bar"><span' + doneCls + ' style="width:' + width + '%"></span></div><span class="co-stage-count">' +
+          stage.count + '</span></div>';
+      }).join('');
+    }
+
+    var progressList = document.querySelector('#tab-compliance .co-progress-list');
+    if (progressList) {
+      var progressRows = (data.cases || []).slice(0, 6);
+      progressList.innerHTML = progressRows.length
+        ? progressRows.map(function (row) {
+            return '<div class="co-progress-row">' +
+              '<div class="co-progress-meta"><div class="co-progress-name">' + coEsc(row.clientName) +
+              '</div><div class="co-progress-type">' + coEsc(row.typeLabel) + '</div></div>' +
+              '<div class="co-progress-bar"><span style="width:' + row.progressPct + '%;background:' + coBarColor(row.progressPct) + '"></span></div>' +
+              '<span class="co-frac">' + row.progressDone + '/' + row.progressTotal + '</span>' +
+              coWarnIcon(row.flagCount) + '</div>';
+          }).join('')
+        : '<div class="co-progress-row"><div class="co-progress-meta"><div class="co-progress-name">No cases yet</div><div class="co-progress-type">Create a case to track compliance</div></div></div>';
+    }
+
+    var flagCardHead = document.querySelector('#tab-compliance .co-flag-list');
+    if (flagCardHead) {
+      var flagBadge = flagCardHead.previousElementSibling && flagCardHead.previousElementSibling.querySelector
+        ? flagCardHead.previousElementSibling.querySelector('.co-badge')
+        : document.querySelector('#tab-compliance .co-badge--open');
+      if (flagBadge) {
+        flagBadge.textContent = (data.flags || []).length + ' open';
+      }
+      flagCardHead.innerHTML = (data.flags || []).length
+        ? data.flags.map(function (flag) {
+            var cls = flag.priority === 'medium' ? ' co-flag-item--medium' : '';
+            return '<div class="co-flag-item' + cls + '">' +
+              '<div class="co-flag-top"><span class="co-flag-title">' + coEsc(flag.title) +
+              '</span><span class="co-prio co-prio--' + coEsc(flag.priority) + '">' + coEsc(flag.priority) + '</span></div>' +
+              '<div class="co-flag-bottom"><span class="co-flag-sub">' + coEsc(flag.clientName) + ' · ' + coEsc(flag.referenceNumber) +
+              '</span><span class="co-flag-time">' + coEsc(flag.timeAgo) + '</span></div></div>';
+          }).join('')
+        : '<div class="co-flag-item"><div class="co-flag-top"><span class="co-flag-title">No advisory flags</span></div><div class="co-flag-bottom"><span class="co-flag-sub">All cases are clear</span></div></div>';
+    }
+
+    var docList = document.querySelector('#tab-compliance .co-doc-list');
+    if (docList) {
+      var countEl = document.querySelector('#tab-compliance .co-doc-count');
+      if (countEl) countEl.textContent = kpis.docsUploaded + '/' + kpis.docsTotal + ' uploaded';
+      docList.innerHTML = (data.documents || []).map(function (doc) {
+        var icon = doc.uploaded
+          ? '<span class="co-doc-check" aria-hidden="true"><svg viewBox="0 0 12 12" fill="none"><path d="M2.5 6.2 4.8 8.5 9.5 3.5" stroke="#009689" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>'
+          : '<span class="co-doc-pending" aria-hidden="true"><svg viewBox="0 0 12 12" fill="none"><path d="M3.5 1.5h3.5L9.5 4v6.5h-6V1.5Z" stroke="currentColor" stroke-width="1.2"/><path d="M7 1.5V4h2.5" stroke="currentColor" stroke-width="1.2"/></svg></span>';
+        var verCls = doc.uploaded ? '' : ' co-doc-ver--muted';
+        var ver = doc.uploaded ? coEsc(doc.version || 'v1.0') : 'Pro-forma';
+        return '<div class="co-doc-row"><div class="co-doc-left">' + icon + '<span class="co-doc-name">' +
+          coEsc(doc.name) + '</span></div><span class="co-doc-ver' + verCls + '">' + ver + '</span></div>';
+      }).join('');
+      var footTxt = document.querySelector('#tab-compliance .co-doc-foot-txt');
+      if (footTxt) footTxt.textContent = kpis.docsProForma + ' documents using platform pro-forma fallback';
+      var footFill = document.querySelector('#tab-compliance .co-doc-foot-bar > span');
+      if (footFill) {
+        var uploadedPct = kpis.docsTotal ? Math.round((kpis.docsUploaded / kpis.docsTotal) * 100) : 0;
+        footFill.style.width = uploadedPct + '%';
+      }
+    }
+
+    var casesBody = document.querySelector('#co-panel-cases tbody');
+    if (casesBody) {
+      casesBody.innerHTML = (data.cases || []).length
+        ? data.cases.map(function (row) {
+            return '<tr>' +
+              '<td><div class="co-client-name">' + coEsc(row.clientName) + '</div><div class="co-client-sub">' +
+              coEsc(row.adviserName) + (row.createdLabel ? ' · ' + coEsc(row.createdLabel) : '') + '</div></td>' +
+              '<td><div class="co-client-ref">' + coEsc(row.referenceNumber) + '</div></td>' +
+              '<td><span class="co-type">' + coEsc(row.typeLabel) + '</span></td>' +
+              '<td><div class="co-prog-cell"><div class="co-prog-track"><span style="width:' + row.progressPct +
+              '%;background:' + coBarColor(row.progressPct) + '"></span></div><span class="co-frac">' +
+              row.progressDone + '/' + row.progressTotal + '</span></div></td>' +
+              '<td>' + coEsc(row.stageLabel) + '</td>' +
+              '<td>' + coWarnIcon(row.flagCount) + '</td>' +
+              '<td><button type="button" class="co-open-btn" onclick="openLiveCase(\'' + coEsc(row.id) + '\')">Open →</button></td>' +
+              '</tr>';
+          }).join('')
+        : '<tr><td colspan="7" style="padding:24px 16px;color:#71717a">No cases yet. Create a case to see compliance progress here.</td></tr>';
+    }
+
+    var docsBody = document.querySelector('#co-panel-documents tbody');
+    if (docsBody) {
+      docsBody.innerHTML = (data.documents || []).map(function (doc) {
+        var icon = doc.uploaded
+          ? '<span class="co-doc-check" aria-hidden="true">✓</span>'
+          : '<span class="co-doc-pending" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none"><path d="M3 2h6l4 4v8H3V2Z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><path d="M9 2v4h4" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg></span>';
+        var ver = doc.uploaded
+          ? '<span class="co-ver-ok"><span class="co-dot"></span>' + coEsc(doc.version || 'v1.0') + '</span>'
+          : '<span class="co-ver-miss">No document</span>';
+        var status = doc.uploaded
+          ? '<span class="co-status"><span class="co-dot"></span>Active</span>'
+          : '<span class="co-status co-status--miss"><span class="co-dot"></span>Not uploaded</span>';
+        var actions = doc.uploaded
+          ? '<div class="co-actions"><span class="co-history-spacer" aria-hidden="true"></span></div>'
+          : '<div class="co-actions"><span class="co-history-spacer" aria-hidden="true"></span></div>';
+        return '<tr><td><div class="co-doc-type-cell">' + icon + '<div><div class="co-doc-type-code">' +
+          coEsc(doc.code) + '</div><div class="co-doc-type-full">' + coEsc(doc.fullName) +
+          '</div></div></div></td><td>' + ver + '</td><td>' + status + '</td><td>' + actions + '</td></tr>';
+      }).join('');
+    }
+  };
+
+  window.addEventListener('message', function (event) {
+    if (event.origin !== window.location.origin) return;
+    if (event.data && event.data.type === 'ko:compliance-sync') {
+      window.koRenderComplianceOverview(event.data.overview || null);
+    }
+  });
+
+  window.koRenderComplianceOverview(null);
+  if (window.parent && window.parent !== window) {
+    window.parent.postMessage({ type: 'ko:request-compliance-sync' }, window.location.origin);
+  }
+})();
+
 function openDashboardRoute(path) {
   if (typeof window.closeFactFindWizardIfOpen === 'function') window.closeFactFindWizardIfOpen();
   try {
@@ -3635,6 +4550,8 @@ function switchCasesView(v) {
   var ncCaseCounter = 8; // starting from KOC-2026-0008
   var ncCreateRequestId = 0;
   var ncLastCreatedCaseId = null;
+  var ncDisclosureSent = null;
+  var ncApplicants = 'single';
   var isEmbeddedLive =
     new URLSearchParams(window.location.search).get('liveData') === '1' &&
     document.body.classList.contains('embedded');
@@ -3665,6 +4582,43 @@ function switchCasesView(v) {
     btn.style.opacity = submitting ? '0.7' : '';
   }
 
+  function syncNcDisclosureUi() {
+    var yesBtn = document.getElementById('nc-disclosure-yes');
+    var noBtn = document.getElementById('nc-disclosure-no');
+    if (yesBtn) {
+      yesBtn.classList.toggle('is-selected', ncDisclosureSent === true);
+      yesBtn.setAttribute('aria-pressed', ncDisclosureSent === true ? 'true' : 'false');
+    }
+    if (noBtn) {
+      noBtn.classList.toggle('is-selected', ncDisclosureSent === false);
+      noBtn.setAttribute('aria-pressed', ncDisclosureSent === false ? 'true' : 'false');
+    }
+  }
+
+  window.setNcDisclosure = function(sent) {
+    ncDisclosureSent = !!sent;
+    syncNcDisclosureUi();
+  };
+
+  function syncNcApplicantsUi() {
+    var singleBtn = document.getElementById('nc-applicants-single');
+    var jointBtn = document.getElementById('nc-applicants-joint');
+    var isJoint = ncApplicants === 'joint';
+    if (singleBtn) {
+      singleBtn.classList.toggle('is-selected', !isJoint);
+      singleBtn.setAttribute('aria-pressed', isJoint ? 'false' : 'true');
+    }
+    if (jointBtn) {
+      jointBtn.classList.toggle('is-selected', isJoint);
+      jointBtn.setAttribute('aria-pressed', isJoint ? 'true' : 'false');
+    }
+  }
+
+  window.setNcApplicants = function(mode) {
+    ncApplicants = mode === 'joint' ? 'joint' : 'single';
+    syncNcApplicantsUi();
+  };
+
   window.openNewCaseModal = function() {
     var overlay = document.getElementById('nc-modal-overlay');
     if (!overlay) return;
@@ -3676,6 +4630,10 @@ function switchCasesView(v) {
     document.getElementById('nc-loan-sum').value = '';
     document.getElementById('nc-purpose-note').value = '';
     document.getElementById('nc-ltv-value').textContent = '0%';
+    ncApplicants = 'single';
+    syncNcApplicantsUi();
+    ncDisclosureSent = null;
+    syncNcDisclosureUi();
     setNcSubmitting(false);
     overlay.classList.remove('nc-hidden');
     document.body.style.overflow = 'hidden';
@@ -3728,6 +4686,10 @@ function switchCasesView(v) {
       alert('Please select a case type.');
       return;
     }
+    if (ncDisclosureSent === null) {
+      alert('Please confirm whether the Initial Disclosure Document (IDD) and Customer Privacy Notice have been sent to the client.');
+      return;
+    }
 
     ncCreateRequestId += 1;
     var requestId = ncCreateRequestId;
@@ -3749,6 +4711,10 @@ function switchCasesView(v) {
   }
 
   window.submitNewCase = function() {
+    if (ncDisclosureSent === null) {
+      alert('Please confirm whether the Initial Disclosure Document (IDD) and Customer Privacy Notice have been sent to the client.');
+      return;
+    }
     if (isEmbeddedLive) {
       submitNewCaseLive();
       return;
@@ -4196,6 +5162,153 @@ const CD_COMPLIANCE_DEFAULT_REQS = [
   'Disclosures issued',
 ];
 
+const CD_COMPLIANCE_PHASES = [
+  {
+    id: 'disclosure',
+    num: '01',
+    title: 'Case creation & initial disclosure',
+    framework: 'FCA MCOB 4.4',
+    status: 'done',
+    open: false,
+    items: [
+      {
+        n: 1, itemId: 'idd', name: 'IDD sent to client', desc: 'Initial disclosure document issued to the client.',
+        status: 'complete', badges: ['Complete', 'AUTO'], meta: '09 Jul 2026 at 09:12', version: 'v2.1',
+        detail: true, audit: { title: 'IDD sent to client', sent: '09 Jul 2026 at 09:12', completed: '09 Jul 2026 at 09:12', version: 'v2.1' },
+      },
+      {
+        n: 2, itemId: 'privacy', name: 'Privacy Notice sent to client', desc: 'Privacy notice shared and acknowledged.',
+        status: 'complete', badges: ['Complete', 'AUTO'], meta: '09 Jul 2026 at 09:14', version: 'v1.4',
+        detail: true, audit: { title: 'Privacy Notice sent to client', sent: '09 Jul 2026 at 09:14', completed: '09 Jul 2026 at 09:14', version: 'v1.4' },
+      },
+    ],
+  },
+  {
+    id: 'consent',
+    num: '02',
+    title: 'Client activation & consent',
+    framework: 'UK GDPR',
+    status: 'done',
+    open: false,
+    items: [
+      {
+        n: 3, itemId: 'consent', name: 'Data subject consent captured', desc: 'Client consent recorded for data processing.',
+        status: 'accepted', badges: ['Accepted'], meta: '09 Jul 2026 at 10:02', version: 'v1.0',
+        detail: true, audit: { title: 'Data subject consent captured', sent: '09 Jul 2026 at 10:00', completed: '09 Jul 2026 at 10:02', version: 'v1.0' },
+      },
+      {
+        n: 4, itemId: 'marketing', name: 'Marketing consent recorded', desc: 'Marketing preferences confirmed offline by adviser.',
+        status: 'confirmed', badges: ['Confirmed offline'], meta: 'Alex Morgan · 09 Jul 2026',
+        detail: true, audit: { title: 'Marketing consent recorded', sent: '09 Jul 2026 at 10:05', completed: '09 Jul 2026 at 10:05', version: '—' },
+      },
+    ],
+  },
+  {
+    id: 'tob',
+    num: '03',
+    title: 'Terms of business',
+    framework: 'FCA MCOB 4',
+    status: 'attention',
+    open: false,
+    items: [
+      {
+        n: 5, itemId: 'tob-sent', name: 'TOB sent to client', desc: 'Terms of business issued to the client for review.',
+        status: 'sent', badges: ['Sent', 'AUTO'], actions: ['resend', 'confirm'],
+      },
+      {
+        n: 6, itemId: 'tob-accepted', name: 'TOB accepted by client', desc: 'Client acceptance of terms of business.',
+        status: 'pending', badges: ['Not started'], actions: ['complete', 'confirm'],
+        note: 'Advisory — The case can proceed. Mark complete when this item is handled.',
+      },
+    ],
+  },
+  {
+    id: 'aml',
+    num: '04',
+    title: 'Fact-find & AML',
+    framework: 'CONSUMER DUTY',
+    status: 'attention',
+    open: false,
+    items: [
+      {
+        n: 7, itemId: 'aml', name: 'AML check completed', desc: 'Anti-money laundering checks completed.',
+        status: 'confirmed', badges: ['Confirmed offline'], meta: 'Alex Morgan · 10 Jul 2026',
+        detail: true, audit: { title: 'AML check completed', sent: '10 Jul 2026 at 11:20', completed: '10 Jul 2026 at 11:20', version: 'v3.0' },
+      },
+      {
+        n: 8, itemId: 'adverse-credit', name: 'Adverse credit assessed', desc: 'Adverse credit findings reviewed for this case.',
+        status: 'advisory', badges: ['Advisory'], actions: ['confirm'],
+        note: 'Advisory flag raised. Confirm this has been reviewed — or use “Confirm offline” if handled outside the platform.',
+      },
+      {
+        n: 9, itemId: 'vulnerability', name: 'Vulnerability assessment completed', desc: 'Client vulnerability characteristics assessed.',
+        status: 'complete', badges: ['Complete'],
+        detail: true, audit: { title: 'Vulnerability assessment completed', sent: '10 Jul 2026 at 12:05', completed: '10 Jul 2026 at 12:05', version: 'v1.0' },
+      },
+      {
+        n: 10, itemId: 'fact-find', name: 'Fact-find complete', desc: 'Digital fact-find questionnaire completed.',
+        status: 'complete', badges: ['Complete'],
+        detail: true, audit: { title: 'Fact-find complete', sent: '10 Jul 2026 at 14:20', completed: '10 Jul 2026 at 14:20', version: 'v1.0' },
+      },
+    ],
+  },
+  {
+    id: 'esis',
+    num: '05',
+    title: 'Research & ESIS',
+    framework: 'FCA MCOB 5',
+    status: 'pending',
+    open: false,
+    items: [
+      {
+        n: 11, itemId: 'esis', name: 'ESIS received and filed', desc: 'European Standardised Information Sheet filed on the case.',
+        status: 'pending', badges: ['Not started'], actions: ['complete', 'confirm'],
+      },
+    ],
+  },
+  {
+    id: 'suitability',
+    num: '06',
+    title: 'Suitability letter & AIP',
+    framework: 'FCA MCOB 5',
+    status: 'attention',
+    open: false,
+    items: [
+      {
+        n: 12, itemId: 'suitability', name: 'Suitability letter approved', desc: 'Suitability letter reviewed and approved for issue.',
+        status: 'pending', badges: ['Not started'], actions: ['complete', 'confirm'],
+        note: 'Advisory — The case can proceed. Mark complete when this item is handled.',
+      },
+      {
+        n: 13, itemId: 'aip', name: 'AIP generated and sent to client', desc: 'Agreement in principle generated and sent.',
+        status: 'pending', badges: ['Not started'], actions: ['complete', 'confirm'],
+      },
+    ],
+  },
+  {
+    id: 'completion',
+    num: '07',
+    title: 'Completion & feedback',
+    framework: 'CONSUMER DUTY',
+    status: 'pending',
+    open: false,
+    items: [
+      {
+        n: 14, itemId: 'survey-sent', name: 'Feedback survey sent', desc: 'Client feedback survey issued automatically.',
+        status: 'pending', badges: ['Not started', 'AUTO'],
+      },
+      {
+        n: 15, itemId: 'survey-response', name: 'Survey response received', desc: 'Client survey response captured.',
+        status: 'pending', badges: ['Not started'], actions: ['complete', 'confirm'],
+      },
+      {
+        n: 16, itemId: 'case-complete', name: 'Case marked complete', desc: 'Case closed and marked complete.',
+        status: 'pending', badges: ['Not started'], actions: ['complete', 'confirm'],
+      },
+    ],
+  },
+];
+
 function getComplianceStageIndex(c) {
   if (c.complianceCurrent) {
     const idx = CD_COMPLIANCE_STAGES.findIndex((s) => s.key === c.complianceCurrent);
@@ -4207,14 +5320,31 @@ function getComplianceStageIndex(c) {
 
 const CD_COMPLIANCE_GRAY = { line: '#e4e4e7', dot: '#d4d4d8', bg: '#f4f4f5', border: '#e4e4e7', text: '#a1a1aa' };
 
-function renderCaseCompliance(c, id) {
-  const currentIdx = getComplianceStageIndex(c);
-  const currentStage = CD_COMPLIANCE_STAGES[currentIdx];
-  const stageName = currentStage?.label || 'Offer';
-  const stageColor = currentStage?.text || '#0F6E56';
-  const requirements = c.complianceRequirements || CD_COMPLIANCE_DEFAULT_REQS;
+function getCompliancePhases(c) {
+  return c.compliancePhases || CD_COMPLIANCE_PHASES;
+}
 
-  const stepsHtml = CD_COMPLIANCE_STAGES.map((s, i) => {
+function isComplianceItemDone(item) {
+  return item.status === 'complete' || item.status === 'accepted' || item.status === 'confirmed';
+}
+
+function getComplianceProgressStats(phases) {
+  let done = 0;
+  let total = 0;
+  phases.forEach((phase) => {
+    (phase.items || []).forEach((item) => {
+      total += 1;
+      if (isComplianceItemDone(item)) done += 1;
+    });
+  });
+  const remaining = Math.max(0, total - done);
+  const pct = total ? Math.round((done / total) * 100) : 0;
+  return { done, total, remaining, pct };
+}
+
+function renderCaseProgressSteps(c) {
+  const currentIdx = getComplianceStageIndex(c);
+  return CD_COMPLIANCE_STAGES.map((s, i) => {
     const isComplete = i < currentIdx;
     const isCurrent = i === currentIdx;
     const isPending = i > currentIdx;
@@ -4232,23 +5362,462 @@ function renderCaseCompliance(c, id) {
       <div class="cd-comp-pill ${pillCls}" style="--pill-bg:${theme.bg};--pill-border:${theme.border};--pill-color:${theme.text}">${s.label}</div>
     </div>`;
   }).join('');
+}
+
+function cdStatusClass(status) {
+  const map = {
+    complete: 'cd-status--complete',
+    accepted: 'cd-status--accepted',
+    confirmed: 'cd-status--confirmed',
+    sent: 'cd-status--sent',
+    outstanding: 'cd-status--outstanding',
+    advisory: 'cd-status--advisory',
+    critical: 'cd-status--critical',
+    pending: 'cd-status--pending',
+  };
+  return map[status] || 'cd-status--pending';
+}
+
+function cdPhaseItemIcon(item) {
+  if (isComplianceItemDone(item)) {
+    return `<span class="cd-phase-item-icon cd-phase-item-icon--done" aria-hidden="true">✓</span>`;
+  }
+  return `<span class="cd-phase-item-icon cd-phase-item-icon--pending" aria-hidden="true">${item.n ?? ''}</span>`;
+}
+
+function cdPhaseItemActions(item, phaseId) {
+  const actions = item.actions || [];
+  const parts = [];
+  if (item.detail && item.audit) {
+    const payload = encodeURIComponent(JSON.stringify(item.audit));
+    parts.push(`<button type="button" class="cd-phase-link" onclick="openComplianceAuditModal(JSON.parse(decodeURIComponent('${payload}')))">View details</button>`);
+  }
+  if (actions.includes('resend')) {
+    parts.push('<button type="button" class="cd-phase-btn cd-phase-btn--ghost" onclick="event.stopPropagation()">Resend</button>');
+  }
+  if (actions.includes('complete')) {
+    parts.push(`<button type="button" class="cd-phase-btn cd-phase-btn--teal" onclick="event.stopPropagation();markComplianceItemComplete('${phaseId}',${item.n})">Mark complete</button>`);
+  }
+  if (actions.includes('confirm')) {
+    const encodedName = encodeURIComponent(item.name || '');
+    parts.push(`<button type="button" class="cd-phase-btn cd-phase-btn--amber" onclick="event.stopPropagation();openConfirmOfflineModal('${phaseId}',${item.n},decodeURIComponent('${encodedName}'))">Confirm offline</button>`);
+  }
+  return parts.join('');
+}
+
+function cdPhaseItemNote(text) {
+  if (!text) return '';
+  return `<div class="cd-phase-note"><svg class="cd-phase-note-icon" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.4"/><path d="M8 5v4M8 11.2h.01" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><span>${text}</span></div>`;
+}
+
+function cdStatusBadgeHtml(label, itemStatus) {
+  const isAuto = label === 'AUTO';
+  const cls = isAuto ? 'cd-status--auto' : cdStatusClass(itemStatus);
+  const kind = isAuto
+    ? 'auto'
+    : (label === 'Complete' || itemStatus === 'complete')
+      ? 'complete'
+      : (itemStatus === 'advisory' || itemStatus === 'critical' || label === 'Advisory')
+        ? 'orange'
+        : (itemStatus === 'pending' || itemStatus === 'outstanding' || label === 'Not started')
+          ? 'gray'
+          : 'green';
+
+  let icon = '';
+  if (kind === 'complete') {
+    icon = '<svg class="cd-status-check" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2.5 6.2l2.4 2.4 4.6-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  } else if (kind === 'auto') {
+    icon = '<svg class="cd-status-auto-icon" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M9.5 3.5A4.2 4.2 0 1 0 10 6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M7.8 3.5H9.5V5.2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  } else {
+    icon = '<span class="cd-status-dot" aria-hidden="true"></span>';
+  }
+  return `<span class="cd-status ${cls}">${icon}${label}</span>`;
+}
+
+function renderCompliancePhaseItem(item, phaseId) {
+  const badges = (item.badges || []).map((b) => cdStatusBadgeHtml(b, item.status)).join('');
+  const metaParts = [];
+  if (item.meta) metaParts.push(item.meta);
+  if (item.version && item.version !== '—') {
+    metaParts.push(`<a href="#" class="cd-phase-item-ver" onclick="event.preventDefault()">${item.version}</a>`);
+  }
+  const metaHtml = metaParts.length ? `<div class="cd-phase-item-meta">${metaParts.join(' · ')}</div>` : '';
+  const actions = cdPhaseItemActions(item, phaseId);
+  return `<div class="cd-phase-item" data-item-n="${item.n}">
+    ${cdPhaseItemIcon(item)}
+    <div class="cd-phase-item-content">
+      <div class="cd-phase-item-top">
+        <div class="cd-phase-item-copy">
+          <div class="cd-phase-item-name-row">
+            <span class="cd-phase-item-name">${item.name}</span>
+            ${badges ? `<span class="cd-phase-item-badges">${badges}</span>` : ''}
+          </div>
+          ${item.desc ? `<div class="cd-phase-item-desc">${item.desc}</div>` : ''}
+          ${metaHtml}
+        </div>
+        ${actions ? `<div class="cd-phase-item-right">${actions}</div>` : ''}
+      </div>
+      ${cdPhaseItemNote(item.note)}
+    </div>
+  </div>`;
+}
+
+function syncCompliancePhaseStatus(phase) {
+  if (!phase || !phase.items) return;
+  const items = phase.items;
+  const allDone = items.length > 0 && items.every(isComplianceItemDone);
+  const anyOpen = items.some((i) => !isComplianceItemDone(i));
+  if (allDone) phase.status = 'done';
+  else if (anyOpen && (phase.status === 'done' || !phase.status)) phase.status = 'attention';
+}
+
+function renderCompliancePhase(phase) {
+  syncCompliancePhaseStatus(phase);
+  const items = phase.items || [];
+  const doneCount = items.filter(isComplianceItemDone).length;
+  const numCls = phase.status === 'done' ? 'cd-phase-num--done' : (phase.status === 'attention' ? 'cd-phase-num--attention' : 'cd-phase-num--pending');
+  const numContent = phase.status === 'done' ? '✓' : phase.num;
+  const openCls = phase.open ? ' is-open' : '';
+  const attentionDot = phase.status === 'attention' ? '<span class="cd-phase-dot" aria-hidden="true"></span>' : '';
+  const itemsHtml = items.map((item) => renderCompliancePhaseItem(item, phase.id)).join('');
+  return `<div class="cd-phase${openCls}" data-phase-id="${phase.id}">
+    <button type="button" class="cd-phase-head" onclick="toggleCompliancePhase(this)" aria-expanded="${phase.open ? 'true' : 'false'}">
+      <span class="cd-phase-num ${numCls}">${numContent}</span>
+      <span class="cd-phase-main">
+        <span class="cd-phase-title">${phase.title}</span>
+        <span class="cd-phase-sub">${phase.framework} · ${doneCount}/${items.length} complete</span>
+      </span>
+      <span class="cd-phase-right">${attentionDot}<svg class="cd-phase-chevron" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M5 8l5 5 5-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+    </button>
+    <div class="cd-phase-body">${itemsHtml}</div>
+  </div>`;
+}
+
+function toggleCompliancePhase(btn) {
+  const phase = btn.closest('.cd-phase');
+  if (!phase) return;
+  const open = phase.classList.toggle('is-open');
+  btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  const phaseId = phase.getAttribute('data-phase-id');
+  const data = findCompliancePhase(phaseId);
+  if (data) data.open = open;
+}
+
+function getOpenCaseId() {
+  const el = document.querySelector('#case-detail-content .cd-page[data-open-case-id]');
+  return el ? el.getAttribute('data-open-case-id') : null;
+}
+
+function findCompliancePhase(phaseId) {
+  const caseId = getOpenCaseId();
+  const c = caseId && typeof cases !== 'undefined' ? cases[caseId] : null;
+  const phases = getCompliancePhases(c || {});
+  return phases.find((p) => p.id === phaseId) || null;
+}
+
+function findComplianceItem(phaseId, itemN) {
+  const phase = findCompliancePhase(phaseId);
+  if (!phase) return null;
+  const item = (phase.items || []).find((i) => Number(i.n) === Number(itemN));
+  return item ? { phase, item } : null;
+}
+
+function formatComplianceNow() {
+  const d = new Date();
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const day = String(d.getDate()).padStart(2, '0');
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mm = String(d.getMinutes()).padStart(2, '0');
+  return `${day} ${months[d.getMonth()]} ${d.getFullYear()} at ${hh}:${mm}`;
+}
+
+function refreshOpenCaseComplianceUi(keepPhaseOpenId) {
+  const caseId = getOpenCaseId();
+  if (!caseId || !cases[caseId]) return;
+  const c = cases[caseId];
+  const phases = getCompliancePhases(c);
+  if (keepPhaseOpenId) {
+    phases.forEach((p) => {
+      if (p.id === keepPhaseOpenId) p.open = true;
+    });
+  }
+  const stats = getComplianceProgressStats(phases);
+  const panel = document.getElementById(`caseview-compliance-${caseId}`);
+  if (panel) {
+    const pct = panel.querySelector('[data-comp-pct]');
+    const remain = panel.querySelector('[data-comp-remain]');
+    const bar = panel.querySelector('[data-comp-bar]');
+    if (pct) pct.textContent = `${stats.pct}% complete`;
+    if (remain) remain.textContent = `${stats.remaining} remaining`;
+    if (bar) bar.style.width = `${stats.pct}%`;
+    if (keepPhaseOpenId) {
+      const phaseData = phases.find((p) => p.id === keepPhaseOpenId);
+      const phaseEl = panel.querySelector(`[data-phase-id="${keepPhaseOpenId}"]`);
+      if (phaseData && phaseEl) {
+        const wrap = document.createElement('div');
+        wrap.innerHTML = renderCompliancePhase(phaseData);
+        const next = wrap.firstElementChild;
+        if (next) phaseEl.replaceWith(next);
+      }
+    } else {
+      panel.innerHTML = renderCaseCompliance(c, caseId);
+    }
+  }
+  const tabCount = document.querySelector('#case-detail-content [data-comp-tab-count]');
+  if (tabCount) tabCount.textContent = `${stats.done}/${stats.total}`;
+}
+
+function openComplianceAuditModal(audit) {
+  const overlay = document.getElementById('cd-audit-overlay');
+  if (!overlay || !audit) return;
+  const titleEl = document.getElementById('cd-audit-title');
+  const sentEl = document.getElementById('cd-audit-sent');
+  const completedEl = document.getElementById('cd-audit-completed');
+  const versionEl = document.getElementById('cd-audit-version');
+  const statusEl = document.getElementById('cd-audit-status');
+  if (titleEl) titleEl.textContent = audit.title || 'Audit record';
+  if (sentEl) sentEl.textContent = audit.sent || '—';
+  if (completedEl) completedEl.textContent = audit.completed || '—';
+  if (versionEl) {
+    versionEl.textContent = audit.version || '—';
+    versionEl.style.display = audit.version && audit.version !== '—' ? '' : 'none';
+  }
+  if (statusEl) {
+    const label = audit.statusLabel || 'Complete';
+    statusEl.textContent = label === 'Complete' ? '✓ Complete' : label;
+  }
+  overlay.classList.remove('nc-hidden');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeComplianceAuditModal() {
+  const overlay = document.getElementById('cd-audit-overlay');
+  if (!overlay) return;
+  overlay.classList.add('nc-hidden');
+  const offlineOpen = document.getElementById('cd-offline-overlay') && !document.getElementById('cd-offline-overlay').classList.contains('nc-hidden');
+  const otherOpen =
+    offlineOpen ||
+    (document.getElementById('nc-success-overlay') && !document.getElementById('nc-success-overlay').classList.contains('nc-hidden')) ||
+    (document.getElementById('cl-success-overlay') && !document.getElementById('cl-success-overlay').classList.contains('nc-hidden'));
+  if (!otherOpen) document.body.style.overflow = '';
+}
+
+let cdOfflineState = { phaseId: null, itemN: null, method: '' };
+
+function openConfirmOfflineModal(phaseId, itemN, itemName) {
+  const overlay = document.getElementById('cd-offline-overlay');
+  if (!overlay) return;
+  cdOfflineState = { phaseId, itemN, method: '' };
+  const sub = document.getElementById('cd-offline-sub');
+  if (sub) sub.textContent = itemName || 'Compliance item';
+  const methodBtn = document.getElementById('cd-offline-method-btn');
+  const methodLabel = document.getElementById('cd-offline-method-label');
+  if (methodLabel) methodLabel.textContent = 'Select Method';
+  if (methodBtn) methodBtn.classList.remove('has-value');
+  const dateEl = document.getElementById('cd-offline-date');
+  if (dateEl) {
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const dd = String(today.getDate()).padStart(2, '0');
+    dateEl.value = `${yyyy}-${mm}-${dd}`;
+  }
+  const notes = document.getElementById('cd-offline-notes');
+  if (notes) notes.value = '';
+  const chars = document.getElementById('cd-offline-chars');
+  if (chars) chars.textContent = '0 chars';
+  closeOfflineMethodMenu();
+  validateOfflineForm();
+  overlay.classList.remove('nc-hidden');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeConfirmOfflineModal() {
+  const overlay = document.getElementById('cd-offline-overlay');
+  if (!overlay) return;
+  overlay.classList.add('nc-hidden');
+  closeOfflineMethodMenu();
+  const auditOpen = document.getElementById('cd-audit-overlay') && !document.getElementById('cd-audit-overlay').classList.contains('nc-hidden');
+  if (!auditOpen) document.body.style.overflow = '';
+}
+
+function toggleOfflineMethodMenu(e) {
+  if (e) e.stopPropagation();
+  const menu = document.getElementById('cd-offline-method-menu');
+  if (!menu) return;
+  menu.classList.toggle('open');
+}
+
+function closeOfflineMethodMenu() {
+  const menu = document.getElementById('cd-offline-method-menu');
+  if (menu) menu.classList.remove('open');
+}
+
+function selectOfflineMethod(value, label) {
+  cdOfflineState.method = value;
+  const methodLabel = document.getElementById('cd-offline-method-label');
+  const methodBtn = document.getElementById('cd-offline-method-btn');
+  if (methodLabel) methodLabel.textContent = label;
+  if (methodBtn) methodBtn.classList.add('has-value');
+  closeOfflineMethodMenu();
+  validateOfflineForm();
+}
+
+function onOfflineNotesInput() {
+  const notes = document.getElementById('cd-offline-notes');
+  const chars = document.getElementById('cd-offline-chars');
+  const len = notes ? notes.value.length : 0;
+  if (chars) chars.textContent = `${len} chars`;
+  validateOfflineForm();
+}
+
+function validateOfflineForm() {
+  const dateEl = document.getElementById('cd-offline-date');
+  const notes = document.getElementById('cd-offline-notes');
+  const submit = document.getElementById('cd-offline-submit');
+  const ok = !!(cdOfflineState.method && dateEl && dateEl.value && notes && notes.value.trim().length >= 10);
+  if (submit) submit.classList.toggle('is-ready', ok);
+  return ok;
+}
+
+function submitConfirmOffline() {
+  if (!validateOfflineForm()) return;
+  const found = findComplianceItem(cdOfflineState.phaseId, cdOfflineState.itemN);
+  if (!found) {
+    closeConfirmOfflineModal();
+    return;
+  }
+  const { phase, item } = found;
+  const nowLabel = formatComplianceNow();
+  const dateEl = document.getElementById('cd-offline-date');
+  const notes = document.getElementById('cd-offline-notes');
+  const methodLabel = document.getElementById('cd-offline-method-label');
+  const methodText = methodLabel ? methodLabel.textContent : cdOfflineState.method;
+  const noteText = notes ? notes.value.trim() : '';
+  let dateDisplay = nowLabel;
+  if (dateEl && dateEl.value) {
+    const [y, m, d] = dateEl.value.split('-');
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    dateDisplay = `${d} ${months[Number(m) - 1]} ${y}`;
+  }
+
+  item.status = 'confirmed';
+  item.badges = ['Confirmed offline'];
+  item.actions = undefined;
+  item.note = undefined;
+  item.detail = true;
+  item.meta = `Alex Morgan · ${dateDisplay}`;
+  item.audit = {
+    title: item.name,
+    sent: `${dateDisplay} · ${methodText}`,
+    completed: nowLabel,
+    version: item.version || '—',
+    statusLabel: 'Confirmed offline',
+    notes: noteText,
+    method: methodText,
+  };
+  syncCompliancePhaseStatus(phase);
+  phase.open = true;
+
+  closeConfirmOfflineModal();
+  refreshOpenCaseComplianceUi(phase.id);
+  openComplianceAuditModal(item.audit);
+  persistLiveComplianceItem(item.itemId);
+}
+
+function persistLiveComplianceItem(itemId) {
+  if (!itemId) return;
+  if (new URLSearchParams(window.location.search).get('liveData') !== '1') return;
+  var caseId = getOpenCaseId();
+  if (!caseId || window.parent === window) return;
+  window.parent.postMessage(
+    { type: 'ko:complete-compliance-item', caseId: caseId, itemId: itemId },
+    window.location.origin
+  );
+}
+
+function markComplianceItemComplete(phaseId, itemN) {
+  const found = findComplianceItem(phaseId, itemN);
+  if (!found) return;
+  const { phase, item } = found;
+  const nowLabel = formatComplianceNow();
+  item.status = 'complete';
+  item.badges = ['Complete'];
+  item.actions = undefined;
+  item.note = undefined;
+  item.detail = true;
+  item.meta = nowLabel;
+  item.audit = {
+    title: item.name,
+    sent: nowLabel,
+    completed: nowLabel,
+    version: item.version || '—',
+    statusLabel: 'Complete',
+  };
+  syncCompliancePhaseStatus(phase);
+  phase.open = true;
+  refreshOpenCaseComplianceUi(phase.id);
+  openComplianceAuditModal(item.audit);
+  persistLiveComplianceItem(item.itemId);
+}
+
+document.addEventListener('click', (e) => {
+  const menu = document.getElementById('cd-offline-method-menu');
+  const btn = document.getElementById('cd-offline-method-btn');
+  if (!menu || !menu.classList.contains('open')) return;
+  if (btn && (btn === e.target || btn.contains(e.target))) return;
+  if (menu.contains(e.target)) return;
+  closeOfflineMethodMenu();
+});
+
+window.toggleCompliancePhase = toggleCompliancePhase;
+window.openComplianceAuditModal = openComplianceAuditModal;
+window.closeComplianceAuditModal = closeComplianceAuditModal;
+window.openConfirmOfflineModal = openConfirmOfflineModal;
+window.closeConfirmOfflineModal = closeConfirmOfflineModal;
+window.toggleOfflineMethodMenu = toggleOfflineMethodMenu;
+window.selectOfflineMethod = selectOfflineMethod;
+window.onOfflineNotesInput = onOfflineNotesInput;
+window.validateOfflineForm = validateOfflineForm;
+window.submitConfirmOffline = submitConfirmOffline;
+window.markComplianceItemComplete = markComplianceItemComplete;
+
+function renderCaseCompliance(c, id) {
+  const currentIdx = getComplianceStageIndex(c);
+  const currentStage = CD_COMPLIANCE_STAGES[currentIdx];
+  const stageName = currentStage?.label || 'Offer';
+  const stageColor = currentStage?.text || '#0F6E56';
+  const requirements = c.complianceRequirements || CD_COMPLIANCE_DEFAULT_REQS;
+  const phases = getCompliancePhases(c);
+  const stats = getComplianceProgressStats(phases);
 
   const checklistHtml = requirements.map((label) =>
     `<li class="cd-comp-check-item"><input type="checkbox" class="cd-comp-check" checked aria-label="${label}"><span>${label}</span></li>`
   ).join('');
 
+  const phasesHtml = phases.map(renderCompliancePhase).join('');
+
   return `<div class="cd-comp">
     <div class="cd-comp-card">
-      <h2 class="cd-comp-title">Compliance Progress</h2>
-      <div class="cd-comp-steps">${stepsHtml}</div>
-      <h3 class="cd-comp-req-title">Outstanding Requirements for Stage: <span class="cd-comp-req-stage" style="color:${stageColor}">${stageName}</span></h3>
-      <ul class="cd-comp-checklist">${checklistHtml}</ul>
+      <h2 class="cd-comp-title">Outstanding Requirements for <span class="cd-comp-title-accent">Compliance</span></h2>
+      <div class="cd-comp-bar-row">
+        <span class="cd-comp-bar-pct" data-comp-pct>${stats.pct}% complete</span>
+        <span class="cd-comp-bar-remain" data-comp-remain>${stats.remaining} remaining</span>
+      </div>
+      <div class="cd-comp-bar" aria-hidden="true"><span data-comp-bar style="width:${stats.pct}%"></span></div>
       <div class="cd-comp-msg-bar">
         <input type="text" class="cd-comp-msg-input" placeholder="Send a message to the client" aria-label="Message to client">
         <button type="button" class="cd-comp-msg-send" onclick="switchMsgThread('${id}')">
           <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 4h10v7H5l-2 2V4Z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>
           Send Message
         </button>
+      </div>
+      <div class="cd-comp-phases">${phasesHtml}</div>
+      <!-- Archived: stage checklist + products/advance bridge (kept for live API sync, not shown) -->
+      <div class="cd-comp-archive" aria-hidden="true">
+        <h3 class="cd-comp-req-title">Stage checklist: <span class="cd-comp-req-stage" style="color:${stageColor}">${stageName}</span></h3>
+        <ul class="cd-comp-checklist">${checklistHtml}</ul>
+        <div class="cd-comp-bridge" data-comp-bridge></div>
       </div>
     </div>
   </div>`;
@@ -4258,7 +5827,7 @@ const CD_MSG_TICK_GRAY = '<span class="cd-msg-ticks cd-msg-ticks--gray" aria-hid
 const CD_MSG_TICK_BLUE = '<span class="cd-msg-ticks cd-msg-ticks--blue" aria-hidden="true">✓✓</span>';
 const CD_MSG_ICON_PLUS = '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
 const CD_MSG_ICON_MIC = '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 14a3 3 0 003-3V7a3 3 0 10-6 0v4a3 3 0 003 3z" stroke="currentColor" stroke-width="1.8"/><path d="M19 11a7 7 0 01-14 0M12 18v3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>';
-const CD_MSG_ICON_SEND = '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 12l16-7-4 7 4 7-16-7z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>';
+const CD_MSG_ICON_SEND = '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 12L4 5l4 7-4 7 16-7z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>';
 
 function getCaseChatThread(c) {
   if (c.chatThread && c.chatThread.length) return c.chatThread;
@@ -4724,6 +6293,8 @@ function openCase(id) {
   }).join('');
 
   const detailRow = (label, val) => `<div class="cd-detail-row"><span class="cd-detail-label">${label}</span><span class="cd-detail-val">${val}</span></div>`;
+  const progressStats = getComplianceProgressStats(getCompliancePhases(c));
+  const progressStepsHtml = renderCaseProgressSteps(c);
 
   document.getElementById('case-detail-content').innerHTML = `
     <div class="cd-page" data-open-case-id="${id}">
@@ -4742,8 +6313,12 @@ function openCase(id) {
           </div>
         </div>
         <div class="cd-header-actions">
-          <button type="button" class="cd-factfind-btn" onclick="openFactFindWizard('${id}')">Launch Fact Find form</button>
+          <button type="button" class="cd-factfind-btn" onclick="openFactFindWizard('${id}')">Launch Fact Find Form</button>
         </div>
+      </div>
+      <div class="cd-progress-rail">
+        <p class="cd-progress-label">Case Progress</p>
+        <div class="cd-comp-steps">${progressStepsHtml}</div>
       </div>
       <div class="cd-tabs" role="tablist">
         <button type="button" class="cd-tab active" role="tab" aria-selected="true" onclick="switchCaseTab(this,'overview-${id}')">
@@ -4754,9 +6329,9 @@ function openCase(id) {
           <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M4 2h8l2 2v10H4V2Z" stroke="currentColor" stroke-width="1.3"/><path d="M12 2v3H6V2" stroke="currentColor" stroke-width="1.3"/></svg>
           Documents
         </button>
-        <button type="button" class="cd-tab" role="tab" onclick="switchCaseTab(this,'compliance-${id}')">
+        <button type="button" class="cd-tab" role="tab" data-comp-tab onclick="switchCaseTab(this,'compliance-${id}')">
           <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 1L2 5v6l6 4 6-4V5L8 1Z" stroke="currentColor" stroke-width="1.3"/></svg>
-          Compliance
+          Compliance <span class="cd-tab-count" data-comp-tab-count>${progressStats.done}/${progressStats.total}</span>
         </button>
         <button type="button" class="cd-tab" role="tab" onclick="switchCaseTab(this,'msgs-${id}')">
           <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M2 4h12v7H6l-2 2V4Z" stroke="currentColor" stroke-width="1.3"/></svg>
@@ -5732,6 +7307,40 @@ function calcRun() {
       UNEMPLOYED: 'Unemployed',
     };
 
+    // Compliance UI state must persist across live `ko:case-detail` updates.
+    // Live dashboard uses API-evaluated phases; marketing demo keeps prototype mocks.
+    const existing = (detail && detail.id && cases[detail.id]) ? cases[detail.id] : null;
+    const isLive = new URLSearchParams(window.location.search).get('liveData') === '1';
+    var compliancePhases;
+    if (detail.compliancePhases && detail.compliancePhases.length) {
+      compliancePhases = detail.compliancePhases;
+    } else if (existing && existing.compliancePhases) {
+      compliancePhases = existing.compliancePhases;
+    } else if (isLive) {
+      compliancePhases = typeof structuredClone === 'function'
+        ? structuredClone(CD_COMPLIANCE_PHASES).map(function (phase) {
+            phase.status = 'pending';
+            phase.open = false;
+            phase.items = (phase.items || []).map(function (item) {
+              return Object.assign({}, item, {
+                status: 'pending',
+                badges: ['Not started'],
+                meta: undefined,
+                detail: false,
+                audit: undefined,
+                actions: ['complete', 'confirm'],
+                note: undefined
+              });
+            });
+            return phase;
+          })
+        : JSON.parse(JSON.stringify(CD_COMPLIANCE_PHASES));
+    } else {
+      compliancePhases = typeof structuredClone === 'function'
+        ? structuredClone(CD_COMPLIANCE_PHASES)
+        : JSON.parse(JSON.stringify(CD_COMPLIANCE_PHASES));
+    }
+
     return {
       name: clientName,
       ref: detail.referenceNumber || '—',
@@ -5780,6 +7389,7 @@ function calcRun() {
       ],
       msgs: [],
       documents: [],
+      compliancePhases,
       // Map API/prototype stage → compliance rail key so progress paints correctly on first open.
       complianceCurrent: ({
         enquiry: 'enquiry',
@@ -5994,6 +7604,16 @@ function calcRun() {
         return;
       }
       openCase(data.case.id);
+    }
+    if (data?.type === 'ko:case-compliance' && data.snapshot && data.caseId) {
+      var liveCase = cases[data.caseId];
+      if (liveCase && Array.isArray(data.snapshot.phases)) {
+        liveCase.compliancePhases = data.snapshot.phases;
+        if (typeof refreshOpenCaseComplianceUi === 'function') {
+          var openId = typeof getOpenCaseId === 'function' ? getOpenCaseId() : null;
+          if (openId === data.caseId) refreshOpenCaseComplianceUi();
+        }
+      }
     }
     if (data?.type === 'ko:open-case-error') {
       alert(data.error || 'Could not open case.');
@@ -6298,17 +7918,19 @@ function calcRun() {
   }
 
   function showClientSuccess(displayName, welcomeEmail) {
-    const nameEl = document.getElementById('cl-success-name');
-    if (nameEl) nameEl.textContent = displayName || 'Client';
+    const safeName = displayName || 'Client';
     const descEl = document.querySelector('#cl-success-overlay .nc-success-desc');
     if (descEl) {
-      const safeName = displayName || 'Client';
-      if (welcomeEmail && welcomeEmail.sent) {
-        descEl.textContent = safeName + ' has been created and a welcome email has been sent to the provided address.';
-      } else if (welcomeEmail && welcomeEmail.error) {
-        descEl.textContent = safeName + ' has been created, but the welcome email could not be sent. Verify your Resend sender domain in the broker app.';
+      const nameStrong = document.createElement('strong');
+      nameStrong.id = 'cl-success-name';
+      nameStrong.textContent = safeName;
+      descEl.replaceChildren();
+      if (welcomeEmail && welcomeEmail.error) {
+        descEl.appendChild(nameStrong);
+        descEl.appendChild(document.createTextNode(' has been created, but the terms of business email could not be sent. Verify your Resend sender domain in the broker app.'));
       } else {
-        descEl.textContent = safeName + ' has been created successfully.';
+        descEl.appendChild(nameStrong);
+        descEl.appendChild(document.createTextNode(' has been created and an email containing your terms of business has been sent to the provided address'));
       }
     }
     closeClDrawer();
@@ -6512,6 +8134,9 @@ if (initialTabFromQuery) {
     // fromParent: do not bounce tab-change to React on first paint (URL already owns the tab).
     showTab(initialTabFromQuery, { fromParent: true });
   }
+} else {
+  // Ensure a deterministic first paint when no explicit tab is provided.
+  showTab('overview', { fromParent: true });
 }
 calcRun();
 
@@ -6621,58 +8246,203 @@ calcRun();
     }
   }
 
-  const FF_CREDIT_REPORT_FIELDS = [
-    {
-      section: 'Personal details',
-      fields: [
-        'Full name, date of birth and nationality',
-        'Contact number and email',
-        'Marital status and dependants',
-        'Current and previous addresses',
+  const FF_EXTRACT_PREVIEW_BY_CATEGORY = {
+    'Personal details': {
+      title: 'What we can extract from personal documents',
+      intro: 'Best with passport, driving licence, proof of address, or a clear photo of those. Review anything the AI fills — you can edit or skip fields.',
+      groups: [
+        {
+          section: 'Personal details',
+          fields: [
+            'Full name, date of birth and nationality',
+            'Contact number and email',
+            'Marital status and dependants',
+            'Current and previous addresses',
+          ],
+        },
       ],
     },
-    {
-      section: 'Employment',
-      fields: [
-        'Employment status',
-        'Employer name, address and phone',
-        'Employment start date and contract type',
+    Employment: {
+      title: 'What we can extract from employment documents',
+      intro: 'Best with contracts, offer letters, or employer confirmations (PDF or photo). Income figures are only filled if clearly printed.',
+      groups: [
+        {
+          section: 'Employment',
+          fields: [
+            'Employment status',
+            'Employer name, address and phone',
+            'Employment start date and contract type',
+            'Payslip frequency (where shown)',
+          ],
+        },
       ],
     },
-    {
-      section: 'Income',
-      fields: [
-        'Gross annual salary',
-        'National Insurance number',
-        'Bonus, overtime or rental income (where shown)',
+    Income: {
+      title: 'What we can extract from income documents',
+      intro: 'Best with payslips, P60s, SA302s, or clear photos of those. Check annual vs monthly figures before continuing.',
+      groups: [
+        {
+          section: 'Income',
+          fields: [
+            'Gross annual salary (or stated pay figure)',
+            'National Insurance number',
+            'Bonus, overtime or rental income (where shown)',
+            'Employer name if printed on the document',
+          ],
+        },
       ],
     },
-    {
-      section: 'Financial commitments',
-      fields: [
-        'Credit cards — limit, balance and monthly payment',
-        'Personal or secured loans — balance and monthly payment',
-        'Existing mortgage — lender, balance, monthly payment and rate',
+    'Financial commitments': {
+      title: 'What we can extract from commitment documents',
+      intro: 'Best with loan agreements, card statements, mortgage statements, or photos of those.',
+      groups: [
+        {
+          section: 'Financial commitments',
+          fields: [
+            'Credit cards — limit, balance and monthly payment',
+            'Personal or secured loans — balance and monthly payment',
+            'Existing mortgage — lender, balance, monthly payment and rate',
+          ],
+        },
       ],
     },
-    {
-      section: 'Adverse credit',
-      fields: [
-        'Missed mortgage or loan repayments',
-        'CCJs, defaults, IVAs or bankruptcy markers',
+    'Credit report': {
+      title: 'What we can extract from a credit report',
+      intro: 'Before we analyse this document, here are the fact-find fields our AI will try to fill. Review anything it extracts — you can skip sections and complete them manually if needed.',
+      groups: [
+        {
+          section: 'Personal details',
+          fields: [
+            'Full name, date of birth and nationality',
+            'Contact number and email',
+            'Marital status and dependants',
+            'Current and previous addresses',
+          ],
+        },
+        {
+          section: 'Employment',
+          fields: [
+            'Employment status',
+            'Employer name, address and phone',
+            'Employment start date and contract type',
+          ],
+        },
+        {
+          section: 'Income',
+          fields: [
+            'Gross annual salary',
+            'National Insurance number',
+            'Bonus, overtime or rental income (where shown)',
+          ],
+        },
+        {
+          section: 'Financial commitments',
+          fields: [
+            'Credit cards — limit, balance and monthly payment',
+            'Personal or secured loans — balance and monthly payment',
+            'Existing mortgage — lender, balance, monthly payment and rate',
+          ],
+        },
+        {
+          section: 'Adverse credit',
+          fields: [
+            'Missed mortgage or loan repayments',
+            'CCJs, defaults, IVAs or bankruptcy markers',
+          ],
+        },
+        {
+          section: 'Case hints',
+          fields: [
+            'Remortgage or purchase intent',
+            'Property value and mortgage amount (where stated)',
+          ],
+        },
       ],
     },
-    {
-      section: 'Case hints',
-      fields: [
-        'Remortgage or purchase intent',
-        'Property value and mortgage amount (where stated)',
+    'Property details': {
+      title: 'What we can extract from property documents',
+      intro: 'Best with valuations, ESIS, offers, particulars, or clear photos. LTV is recalculated in the form after extraction.',
+      groups: [
+        {
+          section: 'Property details',
+          fields: [
+            'Property value and mortgage required',
+            'Deposit source (where stated)',
+            'Term required',
+            'Purchase / remortgage intent hints',
+          ],
+        },
       ],
     },
-  ];
+    'Adverse credit': {
+      title: 'What we can extract from adverse credit documents',
+      intro: 'Best with defaults, CCJ certificates, IVA papers, arrears letters, or photos of those.',
+      groups: [
+        {
+          section: 'Adverse credit',
+          fields: [
+            'Missed mortgage or loan repayments',
+            'CCJs, defaults, IVAs or bankruptcy markers',
+            'Related credit cards or loans (where listed)',
+          ],
+        },
+      ],
+    },
+    'Goals & preferences': {
+      title: 'What we can extract from goals documents',
+      intro: 'Best with advice notes, preference summaries, or client emails. Free-text goals only — nothing is invented.',
+      groups: [
+        {
+          section: 'Goals & preferences',
+          fields: [
+            'Goals / what the client wants help with',
+            'What matters most about the mortgage',
+            'Adviser notes (if present on the document)',
+          ],
+        },
+      ],
+    },
+    'Vulnerability assessment': {
+      title: 'What we can extract for vulnerability',
+      intro: 'Only explicit Consumer Duty / vulnerability notes are used. Questionnaire scores are never invented from a document.',
+      groups: [
+        {
+          section: 'Vulnerability',
+          fields: [
+            'Explicit vulnerability or support needs mentioned in writing',
+            'Adviser notes that clearly relate to vulnerability',
+          ],
+        },
+      ],
+    },
+    'Other / general': {
+      title: 'What we can extract from this document',
+      intro: 'We will read any clearly stated fact-find fields (PDF or photo). Uncertain values are left blank for you to complete.',
+      groups: [
+        {
+          section: 'Possible fields',
+          fields: [
+            'Personal details (name, DOB, address, contact)',
+            'Employment and income figures',
+            'Commitments, property values, or adverse markers',
+          ],
+        },
+      ],
+    },
+  };
 
-  function ffIsCreditReportCategory(category) {
-    return String(category || '').trim().toLowerCase() === 'credit report';
+  function ffExtractPreviewConfig(category) {
+    const key = String(category || '').trim();
+    return FF_EXTRACT_PREVIEW_BY_CATEGORY[key] || FF_EXTRACT_PREVIEW_BY_CATEGORY['Other / general'];
+  }
+
+  function ffGuessUploadMime(file) {
+    if (file && file.type && file.type !== 'application/octet-stream') return file.type;
+    const ext = ((file && file.name ? file.name.split('.').pop() : '') || '').toLowerCase();
+    if (ext === 'pdf') return 'application/pdf';
+    if (ext === 'png') return 'image/png';
+    if (ext === 'jpg' || ext === 'jpeg') return 'image/jpeg';
+    return (file && file.type) || 'application/octet-stream';
   }
 
   function ffClearPendingAutofill() {
@@ -6759,7 +8529,7 @@ calcRun();
           caseId: ff.caseId,
           file: {
             name: file.name,
-            mimeType: file.type || 'application/octet-stream',
+            mimeType: ffGuessUploadMime(file),
             base64,
             documentCategory: documentCategory || 'Other / general',
           },
@@ -7100,7 +8870,10 @@ calcRun();
     let el = document.getElementById('ff-upload-float');
     const overlayHidden = document.getElementById('ff-overlay')?.classList.contains('ff-hidden');
     const modalOpen = !!(ff.showUploadModal || ff.showCreditReportPreview || ff.done);
-    const show = !overlayHidden && !modalOpen;
+    // Hide the upload pill while AI is analysing so "Reading document…" is not
+    // stacked underneath the same bottom-right slot.
+    const analysing = !!(ff.simulatedAutoFill.stalled || ff.simulatedAutoFill.paused);
+    const show = !overlayHidden && !modalOpen && !analysing;
     // Remount once if an older toast markup is still in the DOM
     if (el && el.dataset.ffPill !== '1') {
       el.remove();
@@ -7461,23 +9234,25 @@ calcRun();
   }
 
   function ffCreditReportPreviewHTML() {
-    const groups = FF_CREDIT_REPORT_FIELDS.map(function (group) {
+    const category = ff.pendingAutofillCategory || 'Other / general';
+    const config = ffExtractPreviewConfig(category);
+    const groups = config.groups.map(function (group) {
       const items = group.fields.map(function (field) {
         return '<li>' + field + '</li>';
       }).join('');
       return '<div class="ff-credit-preview-group"><h4>' + group.section + '</h4><ul class="ff-credit-preview-list">' + items + '</ul></div>';
     }).join('');
-    const fileName = ff.pendingAutofillFile ? ff.pendingAutofillFile.name : 'your credit report';
+    const fileName = ff.pendingAutofillFile ? ff.pendingAutofillFile.name : 'your document';
     return `<div class="ff-credit-preview-wrap"><div class="ff-credit-preview" role="dialog" aria-modal="true" aria-labelledby="ff-credit-preview-title">
       <div class="ff-credit-preview-head">
         <div>
-          <h3 id="ff-credit-preview-title">What we can extract from a credit report</h3>
+          <h3 id="ff-credit-preview-title">${config.title}</h3>
           <p>${fileName}</p>
         </div>
         <button type="button" class="ff-close-btn" style="position:static" data-ff-credit-preview-cancel aria-label="Close">✕</button>
       </div>
       <div class="ff-credit-preview-body">
-        <p class="ff-credit-preview-intro">Before we analyse this document, here are the fact-find fields our AI will try to fill. Review anything it extracts — you can skip sections and complete them manually if needed.</p>
+        <p class="ff-credit-preview-intro">${config.intro}</p>
         ${groups}
       </div>
       <div class="ff-credit-preview-foot">
@@ -7511,7 +9286,7 @@ calcRun();
     if (continueBtn) {
       continueBtn.addEventListener('click', () => {
         const file = ff.pendingAutofillFile;
-        const documentCategory = ff.pendingAutofillCategory || 'Credit report';
+        const documentCategory = ff.pendingAutofillCategory || 'Other / general';
         ffClearPendingAutofill();
         if (file) ffStartAutoFillFromDocument(file, documentCategory);
         else ffRender();
@@ -7559,16 +9334,12 @@ calcRun();
       ff.uploadError = '';
       const categorySelect = scope.querySelector('.ff-upload-select');
       const documentCategory = categorySelect && categorySelect.value ? categorySelect.value : 'Other / general';
-      if (ffIsCreditReportCategory(documentCategory)) {
-        ff.pendingAutofillFile = file;
-        ff.pendingAutofillCategory = documentCategory;
-        ff.showCreditReportPreview = true;
-        ff.showUploadModal = false;
-        ffRender();
-        return;
-      }
+      // Every category gets a field-preview step (same UX as credit report), then extraction.
+      ff.pendingAutofillFile = file;
+      ff.pendingAutofillCategory = documentCategory;
+      ff.showCreditReportPreview = true;
       ff.showUploadModal = false;
-      ffStartAutoFillFromDocument(file, documentCategory);
+      ffRender();
     };
 
     if (fileInput) {
@@ -7652,7 +9423,7 @@ calcRun();
           <h4>${title}</h4>
           <p>${desc}</p>
           ${actionBtn}
-          <input type="file" id="ff-upload-file-input" class="sr-only" style="position:absolute;width:1px;height:1px;opacity:0">
+          <input type="file" id="ff-upload-file-input" class="sr-only" accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg" style="position:absolute;width:1px;height:1px;opacity:0">
         </div>
         <div class="ff-upload-actions"><span class="ff-upload-empty">No documents uploaded yet</span><button type="button" class="ff-upload-skip" data-ff-upload-close>Skip for now</button></div>
       </div>
@@ -8110,6 +9881,13 @@ calcRun();
           <input type="number" class="nc-input" id="nc-term" min="1" max="40" value="0" placeholder="0">
         </div>
       </div>
+      <div class="nc-field">
+        <label id="nc-applicants-label">Applicants</label>
+        <div class="nc-applicants" role="group" aria-labelledby="nc-applicants-label">
+          <button type="button" class="nc-applicant-btn is-selected" id="nc-applicants-single" aria-pressed="true" onclick="setNcApplicants('single')">Single</button>
+          <button type="button" class="nc-applicant-btn" id="nc-applicants-joint" aria-pressed="false" onclick="setNcApplicants('joint')">Joint</button>
+        </div>
+      </div>
       <div class="nc-row-2">
         <div class="nc-field">
           <label for="nc-asset-value">Asset Value (£)</label>
@@ -8123,11 +9901,20 @@ calcRun();
       <div class="nc-ltv-banner" id="nc-ltv-banner">Auto-calculated LTV: <span id="nc-ltv-value">0%</span></div>
       <div class="nc-field">
         <label for="nc-purpose-note">Property Purpose Note</label>
-        <input type="text" class="nc-input" id="nc-purpose-note" placeholder="Primary Residence purchase">
+        <textarea class="nc-textarea" id="nc-purpose-note" rows="2" placeholder="Primary Residence purchase"></textarea>
       </div>
+      <div class="nc-disclosure">
+        <p class="nc-disclosure-label" id="nc-disclosure-label">Have the Initial Disclosure Document (IDD) and Customer Privacy Notice (UK GDPR) been sent to the client</p>
+        <div class="nc-disclosure-btns" role="group" aria-labelledby="nc-disclosure-label">
+          <button type="button" class="nc-disclosure-btn" id="nc-disclosure-yes" aria-pressed="false" onclick="setNcDisclosure(true)">Yes</button>
+          <button type="button" class="nc-disclosure-btn" id="nc-disclosure-no" aria-pressed="false" onclick="setNcDisclosure(false)">No</button>
+        </div>
+      </div>
+    </div>
+    <div class="nc-footer">
       <button type="button" class="nc-submit-btn" onclick="submitNewCase()">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 12l2 2 4-4" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="9" stroke="white" stroke-width="2"/></svg>
         Establish Case
+        <img src="/assets/smart_toy.svg" width="18" height="18" alt="" aria-hidden="true">
       </button>
     </div>
   </div>
@@ -8139,7 +9926,7 @@ calcRun();
     <button type="button" class="nc-close nc-success-close" onclick="closeSuccessModal()" aria-label="Close">✕</button>
     <img src="/marketing/SuceSS%20%20Screen.png" class="nc-success-illus" alt="Success illustration" aria-hidden="true">
     <h2 class="nc-success-title" id="nc-success-title">Case Created Successfully!</h2>
-    <p class="nc-success-desc">Case <strong id="nc-success-ref">KOC-2026-0008</strong> has been registered for <span class="nc-success-client-name" id="nc-success-client">Sasha Lindqvist</span></p>
+    <p class="nc-success-desc">Case <strong id="nc-success-ref">KOC-2026-0008</strong> has been registered for <span class="nc-success-client-name" id="nc-success-client">Sasha Lindqvist</span> and your Initial Disclosure Document (IDD) and Customer Privacy Notice (UK GDPR) have been sent to the client</p>
     <div class="nc-success-actions">
       <button type="button" class="nc-success-primary" onclick="launchFactFind()">
         <img src="/assets/smart_toy.svg" width="18" height="18" alt="" aria-hidden="true" style="filter:brightness(0) invert(1)">
@@ -8159,7 +9946,7 @@ calcRun();
     <button type="button" class="nc-close nc-success-close" onclick="closeClientSuccessModal()" aria-label="Close">✕</button>
     <img src="/marketing/SuceSS%20%20Screen.png" class="nc-success-illus" alt="Success illustration" aria-hidden="true">
     <h2 class="nc-success-title" id="cl-success-title">Client Added Successfully!</h2>
-    <p class="nc-success-desc"><strong id="cl-success-name">Sasha Lindqvist</strong> has been created and an email has been sent to the provided address</p>
+    <p class="nc-success-desc"><strong id="cl-success-name">Sasha Lindqvist</strong> has been created and an email containing your terms of business has been sent to the provided address</p>
     <div class="nc-success-actions">
       <button type="button" class="nc-success-primary" onclick="openCreateCaseFromClientSuccess()">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 7h14M5 12h14M5 17h9" stroke="white" stroke-width="1.8" stroke-linecap="round"/><path d="M17 15v6M14 18h6" stroke="white" stroke-width="1.8" stroke-linecap="round"/></svg>
@@ -8168,6 +9955,91 @@ calcRun();
       <button type="button" class="nc-success-secondary" onclick="backToClientsFromSuccess()">
         Back to Clients
       </button>
+    </div>
+  </div>
+</div>
+
+<!-- ── COMPLIANCE AUDIT SUCCESS MODAL ──────────────────────────────────── -->
+<div id="cd-audit-overlay" class="cd-audit-overlay nc-hidden" role="dialog" aria-modal="true" aria-labelledby="cd-audit-title" onclick="if(event.target===this)closeComplianceAuditModal()">
+  <div class="cd-audit-modal">
+    <div class="cd-audit-illus-wrap">
+      <img src="/assets/audit-success-illustration.png" class="cd-audit-illus" alt="" aria-hidden="true">
+    </div>
+    <div class="cd-audit-head">
+      <div class="cd-audit-titles">
+        <h2 class="cd-audit-title" id="cd-audit-title">IDD sent to client</h2>
+        <p class="cd-audit-sub">Audit record</p>
+      </div>
+      <button type="button" class="cd-audit-close" onclick="closeComplianceAuditModal()" aria-label="Close">✕</button>
+    </div>
+    <div class="cd-audit-rows">
+      <div class="cd-audit-row">
+        <span class="cd-audit-label">Status</span>
+        <span class="cd-audit-status" id="cd-audit-status">✓ Complete</span>
+      </div>
+      <div class="cd-audit-row">
+        <span class="cd-audit-label">Sent</span>
+        <span class="cd-audit-val" id="cd-audit-sent">09 Jul 2026 at 09:12</span>
+      </div>
+      <div class="cd-audit-row">
+        <span class="cd-audit-label">Completed</span>
+        <span class="cd-audit-val" id="cd-audit-completed">09 Jul 2026 at 09:12</span>
+      </div>
+      <div class="cd-audit-row">
+        <span class="cd-audit-label">Document version</span>
+        <a href="#" class="cd-audit-link" id="cd-audit-version" onclick="event.preventDefault()">v2.1</a>
+      </div>
+    </div>
+    <div class="cd-audit-footer">
+      <button type="button" class="cd-audit-close-btn" onclick="closeComplianceAuditModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── CONFIRM HANDLED OFFLINE MODAL ───────────────────────────────────── -->
+<div id="cd-offline-overlay" class="cd-offline-overlay nc-hidden" role="dialog" aria-modal="true" aria-labelledby="cd-offline-title" onclick="if(event.target===this)closeConfirmOfflineModal()">
+  <div class="cd-offline-modal" onclick="event.stopPropagation()">
+    <div class="cd-offline-body">
+      <div class="cd-offline-head">
+        <div>
+          <h2 class="cd-offline-title" id="cd-offline-title">Confirm handled offline</h2>
+          <p class="cd-offline-sub" id="cd-offline-sub">TOB sent to client</p>
+        </div>
+        <button type="button" class="cd-offline-close" onclick="closeConfirmOfflineModal()" aria-label="Close">✕</button>
+      </div>
+      <div class="cd-offline-banner" role="note">
+        <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.4"/><path d="M8 5v4M8 11.2h.01" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <span>This logs that the compliance item was handled outside the platform. Your name, role, and a timestamp will be recorded automatically in the audit trail.</span>
+      </div>
+      <div class="cd-offline-field">
+        <label class="cd-offline-label" for="cd-offline-method-btn">Method used <span class="cd-offline-req">*</span></label>
+        <button type="button" id="cd-offline-method-btn" class="cd-offline-select-btn" onclick="toggleOfflineMethodMenu(event)" aria-haspopup="listbox" aria-expanded="false">
+          <span id="cd-offline-method-label">Select Method</span>
+          <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <div id="cd-offline-method-menu" class="cd-offline-menu" role="listbox">
+          <button type="button" class="cd-offline-option" role="option" onclick="selectOfflineMethod('in_person','In person')">In person</button>
+          <button type="button" class="cd-offline-option" role="option" onclick="selectOfflineMethod('email','By email')">By email</button>
+          <button type="button" class="cd-offline-option" role="option" onclick="selectOfflineMethod('phone','By Phone')">By Phone</button>
+          <button type="button" class="cd-offline-option" role="option" onclick="selectOfflineMethod('post','By Post')">By Post</button>
+          <button type="button" class="cd-offline-option" role="option" onclick="selectOfflineMethod('verbal','Verbal')">Verbal</button>
+        </div>
+      </div>
+      <div class="cd-offline-field">
+        <label class="cd-offline-label" for="cd-offline-date">Date confirmed <span class="cd-offline-req">*</span></label>
+        <input type="date" id="cd-offline-date" class="cd-offline-input" oninput="validateOfflineForm()" onchange="validateOfflineForm()">
+      </div>
+      <div class="cd-offline-field">
+        <div class="cd-offline-label-row">
+          <label class="cd-offline-label" for="cd-offline-notes">Notes (min. 10 characters) <span class="cd-offline-req">*</span></label>
+          <span class="cd-offline-chars" id="cd-offline-chars">0 chars</span>
+        </div>
+        <textarea id="cd-offline-notes" class="cd-offline-textarea" rows="3" placeholder="Describe how this compliance item was handled outside the platform..." oninput="onOfflineNotesInput()"></textarea>
+      </div>
+    </div>
+    <div class="cd-offline-footer">
+      <button type="button" class="cd-offline-cancel" onclick="closeConfirmOfflineModal()">Cancel</button>
+      <button type="button" class="cd-offline-submit" id="cd-offline-submit" onclick="submitConfirmOffline()">Confirm offline</button>
     </div>
   </div>
 </div>

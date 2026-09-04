@@ -256,6 +256,7 @@ export function applyDeletedClientsToCache(qc: QueryClient, clientIds: string[])
 export function softInvalidateDashboardLists(qc: QueryClient) {
   void qc.invalidateQueries({ queryKey: ['clients'], refetchType: 'active' });
   void qc.invalidateQueries({ queryKey: ['cases'], refetchType: 'active' });
+  void qc.invalidateQueries({ queryKey: ['compliance'], refetchType: 'active' });
   void qc.invalidateQueries({
     queryKey: dashboardBootstrapQueryKey,
     refetchType: 'none',

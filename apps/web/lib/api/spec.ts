@@ -625,6 +625,61 @@ export const ENDPOINTS: EndpointDef[] = [
             { status: 422, description: 'Business rule violation / Checklist validation failed', example: { success: false, error: { code: 'BUSINESS_RULE_VIOLATION', message: 'Compliance checklist verification failed for current stage.', details: ['A document of type COMPLIANCE is required to complete INITIAL_DISCLOSURE stage.'] } } },
         ],
     },
+    {
+        method: 'GET',
+        path: '/api/compliance',
+        summary: 'Compliance overview',
+        description: 'Returns organisation-wide compliance KPIs, stage distribution, per-case checklist progress, advisory flags, and the firm document library. Derived from live cases, documents, fact-finds, and compliance records — does not mutate pipeline state.',
+        auth: true,
+        tags: ['Compliance'],
+        responses: [
+            {
+                status: 200,
+                description: 'Compliance overview',
+                example: {
+                    success: true,
+                    data: {
+                        kpis: { activeCases: 3, totalCases: 4, checklistDone: 22, checklistTotal: 64, checklistPct: 34, advisoryFlags: 1, docsUploaded: 0, docsTotal: 7, docsProForma: 7, platformPct: 34 },
+                        stages: [{ key: 'disclosure', label: 'Initial Disclosure', count: 2 }],
+                        cases: [],
+                        flags: [],
+                        documents: [],
+                    },
+                },
+            },
+        ],
+    },
+    {
+        method: 'GET',
+        path: '/api/compliance/cases/[id]',
+        summary: 'Case compliance checklist',
+        description: 'Returns the evaluated 16-item compliance checklist for a single case, derived from documents, fact-find, products, reports, and adviser-confirmed checklist records.',
+        auth: true,
+        tags: ['Compliance'],
+        params: [
+            { name: 'id', in: 'path', required: true, type: 'string', description: 'Case CUID', example: 'clf2xyz' },
+        ],
+        responses: [
+            { status: 200, description: 'Case checklist', example: { success: true, data: { caseId: 'clf2xyz', progressDone: 4, progressTotal: 16, phases: [] } } },
+            { status: 404, description: 'Case not found', example: { success: false, error: { code: 'NOT_FOUND', message: 'Case not found' } } },
+        ],
+    },
+    {
+        method: 'POST',
+        path: '/api/compliance/items',
+        summary: 'Complete checklist item',
+        description: 'Marks a non-gate checklist item complete by writing a CHECKLIST:<itemId> ComplianceRecord. Does not change Case.stage or run stage-advance notifications.',
+        auth: true,
+        tags: ['Compliance'],
+        params: [
+            { name: 'caseId', in: 'body', required: true, type: 'string', description: 'Case CUID', example: 'clf2xyz' },
+            { name: 'itemId', in: 'body', required: true, type: 'string', description: 'Checklist item id (e.g. tob-accepted)', example: 'tob-accepted' },
+        ],
+        responses: [
+            { status: 200, description: 'Updated case checklist', example: { success: true, data: { caseId: 'clf2xyz', progressDone: 5, progressTotal: 16, phases: [] } } },
+            { status: 404, description: 'Case not found', example: { success: false, error: { code: 'NOT_FOUND', message: 'Case not found' } } },
+        ],
+    },
 
     // ── Fact-Find ───────────────────────────────────────────────────────────────
     {

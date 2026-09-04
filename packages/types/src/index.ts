@@ -180,6 +180,12 @@ export const AdvanceComplianceStageSchema = z.object({
 });
 export type AdvanceComplianceStageInput = z.infer<typeof AdvanceComplianceStageSchema>;
 
+export const CompleteComplianceItemSchema = z.object({
+  caseId: z.string().min(1, 'Case ID is required'),
+  itemId: z.string().min(1, 'Checklist item ID is required'),
+});
+export type CompleteComplianceItemInput = z.infer<typeof CompleteComplianceItemSchema>;
+
 export const CheckoutSchema = z.object({
   plan: z.enum(['PROFESSIONAL', 'ENTERPRISE']),
   successUrl: z.string().url().optional(),

@@ -124,6 +124,23 @@ h1, h2, h3, h4, h5, h6 {
   line-height: 1;
 }
 
+/*
+ * Universal digit glyphs: Outfit for 0–9 (and %, £, $, €) inside Syne / DM Sans.
+ * Declared after next/font faces so digits always match overview KPI numbers.
+ * Family names 'Syne' / 'DM Sans' cover CSS fallbacks; next/font hashed names
+ * are injected from layout.tsx.
+ */
+@font-face{font-family:'Syne';font-style:normal;font-weight:400;font-display:swap;src:url(https://fonts.gstatic.com/s/outfit/v15/QGYvz_MVcBeNP4NJtEtq.woff2) format('woff2');unicode-range:U+0030-0039,U+0025,U+00A3,U+0024,U+20AC}
+@font-face{font-family:'Syne';font-style:normal;font-weight:500;font-display:swap;src:url(https://fonts.gstatic.com/s/outfit/v15/QGYvz_MVcBeNP4NJtEtq.woff2) format('woff2');unicode-range:U+0030-0039,U+0025,U+00A3,U+0024,U+20AC}
+@font-face{font-family:'Syne';font-style:normal;font-weight:600;font-display:swap;src:url(https://fonts.gstatic.com/s/outfit/v15/QGYvz_MVcBeNP4NJtEtq.woff2) format('woff2');unicode-range:U+0030-0039,U+0025,U+00A3,U+0024,U+20AC}
+@font-face{font-family:'Syne';font-style:normal;font-weight:700;font-display:swap;src:url(https://fonts.gstatic.com/s/outfit/v15/QGYvz_MVcBeNP4NJtEtq.woff2) format('woff2');unicode-range:U+0030-0039,U+0025,U+00A3,U+0024,U+20AC}
+@font-face{font-family:'Syne';font-style:normal;font-weight:800;font-display:swap;src:url(https://fonts.gstatic.com/s/outfit/v15/QGYvz_MVcBeNP4NJtEtq.woff2) format('woff2');unicode-range:U+0030-0039,U+0025,U+00A3,U+0024,U+20AC}
+@font-face{font-family:'DM Sans';font-style:normal;font-weight:300;font-display:swap;src:url(https://fonts.gstatic.com/s/outfit/v15/QGYvz_MVcBeNP4NJtEtq.woff2) format('woff2');unicode-range:U+0030-0039,U+0025,U+00A3,U+0024,U+20AC}
+@font-face{font-family:'DM Sans';font-style:normal;font-weight:400;font-display:swap;src:url(https://fonts.gstatic.com/s/outfit/v15/QGYvz_MVcBeNP4NJtEtq.woff2) format('woff2');unicode-range:U+0030-0039,U+0025,U+00A3,U+0024,U+20AC}
+@font-face{font-family:'DM Sans';font-style:normal;font-weight:500;font-display:swap;src:url(https://fonts.gstatic.com/s/outfit/v15/QGYvz_MVcBeNP4NJtEtq.woff2) format('woff2');unicode-range:U+0030-0039,U+0025,U+00A3,U+0024,U+20AC}
+@font-face{font-family:'DM Sans';font-style:normal;font-weight:600;font-display:swap;src:url(https://fonts.gstatic.com/s/outfit/v15/QGYvz_MVcBeNP4NJtEtq.woff2) format('woff2');unicode-range:U+0030-0039,U+0025,U+00A3,U+0024,U+20AC}
+@font-face{font-family:'DM Sans';font-style:normal;font-weight:700;font-display:swap;src:url(https://fonts.gstatic.com/s/outfit/v15/QGYvz_MVcBeNP4NJtEtq.woff2) format('woff2');unicode-range:U+0030-0039,U+0025,U+00A3,U+0024,U+20AC}
+
 /* Calculator borders — match kanban overview case cards (border-ink-08) */
 .mortgage-calculators {
   --color-border: rgba(13, 31, 26, 0.06);

@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { useAuth, useUser } from '@clerk/nextjs';
 import { useQueryClient } from '@tanstack/react-query';
-import { Bell, Building2, Calculator as CalculatorIcon, FileText, Loader2, Settings, Upload, type LucideIcon } from 'lucide-react';
+import { Bell, Briefcase, Building2, Calculator as CalculatorIcon, FileText, Loader2, LogOut, Settings, ShieldCheck, Upload, type LucideIcon } from 'lucide-react';
 import MortgageCalculators from '@/components/marketing/demo-calculator/MortgageCalculators';
 import { IntegrationsSettingsPanel } from '@/components/dashboard/integrations-settings-panel';
 import { clientsQueryKey, useClients, useCreateClient } from '@/hooks/use-clients';
@@ -18,7 +18,7 @@ import {
 } from '@/hooks/use-dashboard-bootstrap';
 import { usePortalInvite } from '@/hooks/use-portal-invite';
 import { casesQueryKey, useCases, useCreateCase } from '@/hooks/use-cases';
-import { useAdviserVisibility, useIsAdmin, usePlanFeature } from '@/hooks/use-org';
+import { useAdviserVisibility, useIsAdmin, useOrgProfile, usePlanFeature } from '@/hooks/use-org';
 import { useUploadDocument } from '@/hooks/use-documents';
 import { useMarkMessageRead, useMessages, applyMessagesReadToCache } from '@/hooks/use-messages';
 import { clearAuthenticated, getSessionUsername } from '@/lib/auth/demo-session';
@@ -52,6 +52,8 @@ import {
   type ProductConsidered,
   type UpsertFactFindInput,
   type ApiSuccessResponse,
+  type CaseComplianceSnapshot,
+  type ComplianceOverviewPayload,
 } from '@/lib/api/client';
 import { formatClientName, formatClientInitials } from '@/lib/api/client-display';
 import {
@@ -178,7 +180,7 @@ function IframeUploadModal({
 const LIVE_CLIENTS_QUERY_DEMO = { page: 1, perPage: 100 } as const;
 const LIVE_CASES_QUERY_DEMO = { page: 1, perPage: 100 } as const;
 
-type DemoTab = 'overview' | 'clients' | 'cases' | 'messages' | 'ai' | 'calculator' | 'settings';
+type DemoTab = 'overview' | 'clients' | 'cases' | 'messages' | 'ai' | 'compliance' | 'calculator' | 'settings';
 
 const DEMO_TABS: readonly DemoTab[] = [
   'overview',
@@ -186,6 +188,7 @@ const DEMO_TABS: readonly DemoTab[] = [
   'cases',
   'messages',
   'ai',
+  'compliance',
   'calculator',
   'settings',
 ] as const;
@@ -194,8 +197,6 @@ const DEMO_TABS: readonly DemoTab[] = [
 function demoTabFromParam(raw: string | null | undefined): DemoTab | null {
   if (!raw) return null;
   if (raw === 'calculators') return 'calculator';
-  // Iframe-only nav item — keep the iframe visible (not an embedded React panel).
-  if (raw === 'compliance') return 'overview';
   if ((DEMO_TABS as readonly string[]).includes(raw)) return raw as DemoTab;
   return null;
 }
@@ -243,9 +244,13 @@ const navItems: NavItem[] = [
   { id: 'cases', label: 'Cases', iconUrl: '/assets/cases.svg' },
   { id: 'messages', label: 'Messages', iconUrl: '/assets/chat.svg' },
   { id: 'ai', label: 'Reports', iconUrl: '/assets/smart_toy.svg' },
+  { id: 'compliance', label: 'Compliance', icon: ShieldCheck },
   { id: 'calculator', label: 'Calculator', icon: CalculatorIcon },
   { id: 'settings', label: 'Settings', icon: Settings },
 ];
+
+// Desktop sidebar — Settings lives in the profile menu, not the nav list.
+const sidebarNavItems = navItems.filter((item) => item.id !== 'settings');
 
 // Bottom nav shows 5 primary tabs on mobile; AI Reports + Calculator live under Settings.
 const MOBILE_NAV_IDS: DemoTab[] = ['overview', 'clients', 'cases', 'messages', 'settings'];
@@ -346,7 +351,6 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
   const initialIframeTabRef = useRef<string>(
     (() => {
       const raw = searchParams.get('tab');
-      if (raw === 'compliance') return 'compliance';
       if (raw === 'calculators') return 'calculators';
       return demoTabToIframeParam(resolveDemoTabFromSearch(searchParams));
     })(),
@@ -357,7 +361,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
    * Tab we just wrote to the address bar via history API.
    * Ignores stale Next `useSearchParams` until the router catches up (or the user goes back).
    */
-  const pendingTabUrlRef = useRef<DemoTab | 'compliance' | null>(null);
+  const pendingTabUrlRef = useRef<DemoTab | null>(null);
   /** Once opened, keep Settings/Calculator mounted (hidden) so return visits don't remount. */
   const [settingsMounted, setSettingsMounted] = useState(false);
   const [calculatorMounted, setCalculatorMounted] = useState(false);
@@ -432,7 +436,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
   const queryClient = useQueryClient();
 
   const writeTabHref = useCallback(
-    (href: string, tabKey: DemoTab | 'compliance', options?: { replace?: boolean }) => {
+    (href: string, tabKey: DemoTab, options?: { replace?: boolean }) => {
       const currentHref =
         typeof window !== 'undefined'
           ? `${window.location.pathname}${window.location.search}`
@@ -469,21 +473,10 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
   const applyTabFromLocation = useCallback(() => {
     const sp = readLocationSearchParams(searchParams);
     const raw = sp.get('tab');
-    if (raw === 'compliance') {
-      pendingTabUrlRef.current = null;
-      // Iframe-only section: restore iframe tab without flipping parent to Settings/Calculator.
-      setActiveTab((prev) => (isEmbeddedPanelTab(prev) ? 'overview' : prev));
-      skipNextIframeTabSyncRef.current = true;
-      iframeRef.current?.contentWindow?.postMessage(
-        { type: 'ko:switch-tab', tab: 'compliance' },
-        window.location.origin,
-      );
-      return;
-    }
     const next = resolveDemoTabFromSearch(sp);
     if (pendingTabUrlRef.current !== null) {
       const pending = pendingTabUrlRef.current;
-      if (pending !== 'compliance' && next === pending) {
+      if (next === pending) {
         pendingTabUrlRef.current = null;
       } else if (searchParams.get('tab') !== raw) {
         // Next soft-nav still on the old ?tab= — don't snap activeTab backward.
@@ -583,7 +576,28 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
   const hasMessages = usePlanFeature('messages');
   const hasAiReports = usePlanFeature('ai_reports');
   const isAdmin = useIsAdmin();
+  const { data: orgProfile } = useOrgProfile();
   const { canViewAiSummaries } = useAdviserVisibility();
+  const currentPlanLabel = useMemo(() => {
+    if (isMockDemo) return 'Starter';
+    const plan = orgProfile?.plan ?? 'STARTER';
+    if (plan === 'PROFESSIONAL') return 'Professional';
+    if (plan === 'ENTERPRISE') return 'Enterprise';
+    return 'Starter';
+  }, [isMockDemo, orgProfile?.plan]);
+  const showPlanUpgrade = currentPlanLabel === 'Starter';
+  const sidebarUserEmail = useMemo(() => {
+    if (isMockDemo) return 'alex@koplatform.demo';
+    return user?.primaryEmailAddress?.emailAddress ?? demoUsername ?? '';
+  }, [demoUsername, isMockDemo, user?.primaryEmailAddress?.emailAddress]);
+  const openBillingSettings = useCallback(() => {
+    setActiveTab('settings');
+    setSettingsMounted(true);
+    const params = readLocationSearchParams(searchParams);
+    params.set('tab', 'settings');
+    params.set('section', 'billing');
+    writeTabHref(locationHref(pathname, params), 'settings');
+  }, [pathname, searchParams, writeTabHref]);
   const canFetchUnreadNotifs = isPersonalDashboard && hasMessages;
   const clerkEmail = user?.primaryEmailAddress?.emailAddress?.toLowerCase() ?? '';
   const { data: unreadMessagesResponse } = useMessages(
@@ -1052,6 +1066,10 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
       if (statTotal) statTotal.textContent = '0';
       if (statFlags) statFlags.textContent = '0';
       clearMessagesHubDemo(idoc);
+      const iwinComp = idoc.defaultView as Window & {
+        koRenderComplianceOverview?: (data: ComplianceOverviewPayload | null) => void;
+      };
+      iwinComp.koRenderComplianceOverview?.(null);
     },
     [displayName, isPersonalDashboard],
   );
@@ -1258,6 +1276,12 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
 
   useEffect(() => {
     if (!iframeLoaded || !isPersonalDashboard) return;
+    const idoc = iframeRef.current?.contentDocument;
+    if (idoc) void refreshComplianceFromApi(idoc);
+  }, [iframeLoaded, isPersonalDashboard]);
+
+  useEffect(() => {
+    if (!iframeLoaded || !isPersonalDashboard) return;
     postOverviewStats();
   }, [
     iframeLoaded,
@@ -1333,15 +1357,16 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
       const idoc = iframeRef.current?.contentDocument;
       if (idoc) void refreshAiHubFromApi(idoc);
     }
+    if (activeTab === 'compliance') {
+      const idoc = iframeRef.current?.contentDocument;
+      if (idoc) void refreshComplianceFromApi(idoc);
+    }
     if (skipNextIframeTabSyncRef.current) {
       skipNextIframeTabSyncRef.current = false;
       const painted = initialIframeTabRef.current;
       // Only skip when the iframe already painted the same tab as the URL.
       // If the user switched tabs before load finished, still sync.
-      if (
-        painted === demoTabToIframeParam(activeTab) ||
-        (painted === 'compliance' && activeTab === 'overview')
-      ) {
+      if (painted === demoTabToIframeParam(activeTab)) {
         return;
       }
     }
@@ -1365,6 +1390,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
         type?: string;
         requestId?: number;
         caseId?: string;
+        itemId?: string;
         clientIds?: string[];
         path?: string;
         tab?: string;
@@ -1388,12 +1414,6 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
 
       if (data?.type === 'ko:tab-change' && typeof data.tab === 'string') {
         const raw = data.tab;
-        if (raw === 'compliance') {
-          const params = readLocationSearchParams(searchParams);
-          params.set('tab', 'compliance');
-          writeTabHref(locationHref(pathname, params), 'compliance');
-          return;
-        }
         const tab = demoTabFromParam(raw === 'calculators' ? 'calculator' : raw);
         if (tab) selectTab(tab);
         return;
@@ -1427,6 +1447,38 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
 
       if (data?.type === 'ko:request-advisers-sync') {
         postAdvisersSync();
+        return;
+      }
+
+      if (data?.type === 'ko:request-compliance-sync') {
+        const idoc = iframeRef.current?.contentDocument;
+        if (idoc) void refreshComplianceFromApi(idoc);
+        return;
+      }
+
+      if (
+        data?.type === 'ko:complete-compliance-item' &&
+        typeof data.caseId === 'string' &&
+        typeof data.itemId === 'string'
+      ) {
+        const itemId = data.itemId;
+        const caseId = data.caseId;
+        try {
+          const token = await getToken();
+          if (!token) return;
+          const updated = await complianceApi.completeItem(token, { caseId, itemId });
+          queryClient.setQueryData(['compliance', 'case', caseId], updated);
+          iframeWindow.postMessage(
+            { type: 'ko:case-compliance', caseId, snapshot: updated.data },
+            window.location.origin,
+          );
+          const idoc = iframeRef.current?.contentDocument;
+          if (idoc) void refreshComplianceFromApi(idoc);
+        } catch (err) {
+          window.alert(
+            formatApiError(err, { fallback: 'Could not update the compliance checklist item.' }),
+          );
+        }
         return;
       }
 
@@ -1632,6 +1684,13 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
           const msgsPromise = hasMessagesRef.current
             ? messagesApi.list(token, { caseId: openedCaseId, perPage: 100 }).catch(() => null)
             : Promise.resolve(null);
+          const compliancePromise = complianceApi
+            .getCaseChecklist(token, openedCaseId)
+            .then((result) => {
+              queryClient.setQueryData(['compliance', 'case', openedCaseId], result);
+              return result;
+            })
+            .catch(() => null);
 
           void docsPromise.then((docsResult) => {
             if (activeCaseIdRef.current !== openedCaseId || !docsResult) return;
@@ -1685,11 +1744,25 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
             });
           });
 
+          void compliancePromise.then((compResult) => {
+            if (activeCaseIdRef.current !== openedCaseId || !compResult) return;
+            iframeWindow.postMessage(
+              { type: 'ko:case-compliance', caseId: openedCaseId, snapshot: compResult.data },
+              window.location.origin,
+            );
+          });
+
           const caseResult = await casePromise;
           if (activeCaseIdRef.current !== openedCaseId) return;
 
+          const cachedCompliance = queryClient.getQueryData<
+            ApiSuccessResponse<CaseComplianceSnapshot>
+          >(['compliance', 'case', openedCaseId]);
           // Refresh with full detail (soft-updates if already open) + correct progress.
-          postCaseDetail(caseResult.data);
+          postCaseDetail({
+            ...caseResult.data,
+            ...(cachedCompliance?.data ? { compliancePhases: cachedCompliance.data.phases } : {}),
+          } as Case);
         } catch (err) {
           iframeWindow.postMessage(
             {
@@ -1731,6 +1804,8 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
           selectTab('cases');
           postCasesSync(nextCases);
           postClientsSync();
+          const idoc = iframeRef.current?.contentDocument;
+          if (idoc) void refreshComplianceFromApi(idoc);
         } catch (err) {
           replyCase({ success: false, error: formatApiError(err, { fallback: 'Could not create case. Please try again.' }) });
         }
@@ -1891,7 +1966,20 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
           for (let i = 0; i < binary.length; i += 1) {
             bytes[i] = binary.charCodeAt(i);
           }
-          const file = new File([bytes], filePayload.name, { type: filePayload.mimeType });
+          // Some photo uploads arrive with empty MIME; infer from extension so
+          // image/png|jpeg still reach the extractor (PDFs unchanged).
+          const ext = filePayload.name.split('.').pop()?.toLowerCase() ?? '';
+          const inferredMime =
+            !filePayload.mimeType || filePayload.mimeType === 'application/octet-stream'
+              ? ext === 'pdf'
+                ? 'application/pdf'
+                : ext === 'png'
+                  ? 'image/png'
+                  : ext === 'jpg' || ext === 'jpeg'
+                    ? 'image/jpeg'
+                    : filePayload.mimeType
+              : filePayload.mimeType;
+          const file = new File([bytes], filePayload.name, { type: inferredMime || filePayload.mimeType });
 
           const result = await aiApi.extractFactFind(token, {
             file,
@@ -2950,6 +3038,27 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
     }
   }
 
+  async function refreshComplianceFromApi(idoc: Document) {
+    if (!isPersonalDashboard) return;
+    const iwin = idoc.defaultView as Window & {
+      koRenderComplianceOverview?: (data: ComplianceOverviewPayload | null) => void;
+    };
+    try {
+      const token = await getTokenRef.current();
+      if (!token) return;
+      const res = await complianceApi.getOverview(token);
+      queryClient.setQueryData(['compliance', 'overview'], res);
+      iwin.koRenderComplianceOverview?.(res.data);
+      iframeRef.current?.contentWindow?.postMessage(
+        { type: 'ko:compliance-sync', overview: res.data },
+        window.location.origin,
+      );
+    } catch (err) {
+      console.warn('[refreshComplianceFromApi]', err);
+      iwin.koRenderComplianceOverview?.(null);
+    }
+  }
+
   // ── Inject "Advance Stage" button into the compliance tab ────────────────────
   // Direct listener on the button (not delegated) avoids any iframe click-handler
   // interference and is simpler to reason about for async flows.
@@ -2964,9 +3073,17 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
   function updateCompliancePanel(idoc: Document, caseId: string, apiStage: string) {
     const compCard = idoc.querySelector<HTMLElement>('.cd-comp-card');
     if (!compCard) return;
-    compCard
+    const bridge =
+      compCard.querySelector<HTMLElement>('[data-comp-bridge]') ?? compCard;
+    bridge
       .querySelectorAll('.ko-comp-advance-btn, .ko-comp-stage-info, .ko-products-panel')
       .forEach((el) => el.remove());
+    // Also clear any leftovers previously appended directly on the card.
+    if (bridge !== compCard) {
+      compCard
+        .querySelectorAll(':scope > .ko-comp-advance-btn, :scope > .ko-comp-stage-info, :scope > .ko-products-panel')
+        .forEach((el) => el.remove());
+    }
 
     // Force the compliance progress rail to reflect the real API stage.
     // The prototype defaults some API-loaded cases to enquiry; we correct the
@@ -2988,7 +3105,11 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
       { line: '#9fe2cf', dot: '#0F6E56', bg: '#EDFFFA', border: '#8fd7c2', text: '#0F6E56', label: 'Offer' },
     ];
     const gray = { line: '#e4e4e7', dot: '#d4d4d8', bg: '#f4f4f5', border: '#e4e4e7', text: '#a1a1aa' };
-    const steps = Array.from(compCard.querySelectorAll<HTMLElement>('.cd-comp-step'));
+    // Progress stepper lives above tabs (`.cd-progress-rail`); fall back to card for older markup.
+    const stepsRoot =
+      idoc.querySelector<HTMLElement>('.cd-progress-rail') ??
+      compCard;
+    const steps = Array.from(stepsRoot.querySelectorAll<HTMLElement>('.cd-comp-step'));
     steps.forEach((stepEl, i) => {
       const isComplete = i < idx;
       const isCurrent = i === idx;
@@ -3025,25 +3146,29 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
     }
 
     const next = NEXT_STAGE[apiStage as CaseStage];
+    // Products panel + advance controls stay mounted in the archived bridge
+    // (visually hidden) so stage sync still works without showing the old UI.
+    const mountTarget =
+      compCard.querySelector<HTMLElement>('[data-comp-bridge]') ?? compCard;
 
     // Record products during Fact-Find / Research so RESEARCH → DIP can pass checklist.
     if (apiStage === 'FACT_FIND' || apiStage === 'RESEARCH') {
-      void mountResearchProductsPanel(compCard, caseId, apiStage).then(() => {
-        appendAdvanceControls(compCard, caseId, apiStage, next);
+      void mountResearchProductsPanel(mountTarget, caseId, apiStage).then(() => {
+        appendAdvanceControls(mountTarget, caseId, apiStage, next);
       });
       return;
     }
 
-    appendAdvanceControls(compCard, caseId, apiStage, next);
+    appendAdvanceControls(mountTarget, caseId, apiStage, next);
   }
 
   function appendAdvanceControls(
-    compCard: HTMLElement,
+    mountTarget: HTMLElement,
     caseId: string,
     apiStage: string,
     next: { toStage: CaseStage; label: string } | undefined,
   ) {
-    compCard.querySelectorAll('.ko-comp-advance-btn, .ko-comp-stage-info').forEach((el) => el.remove());
+    mountTarget.querySelectorAll('.ko-comp-advance-btn, .ko-comp-stage-info').forEach((el) => el.remove());
 
     const info = document.createElement('p');
     info.className = 'ko-comp-stage-info';
@@ -3052,7 +3177,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
     info.textContent = next
       ? `Current stage: ${apiStage.replace(/_/g, ' ')}`
       : 'Case is at the final stage (Completion).';
-    compCard.appendChild(info);
+    mountTarget.appendChild(info);
     if (!next) return;
 
     const btn = document.createElement('button');
@@ -3089,20 +3214,38 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
         }
 
         // Paint the new stage immediately from the advance response.
-        updateCompliancePanel(compCard.ownerDocument, caseId, advanced.data.stage);
+        updateCompliancePanel(mountTarget.ownerDocument, caseId, advanced.data.stage);
 
-        const [updated, freshTl] = await Promise.all([
+        const [updated, freshTl, freshCompliance] = await Promise.all([
           casesApi.get(token, caseId).catch(() => ({ data: advanced.data })),
           casesApi.timeline(token, caseId).catch(() => null),
+          complianceApi.getCaseChecklist(token, caseId).catch(() => null),
         ]);
         if (freshTl) {
           queryClient.setQueryData(['cases', caseId, 'timeline'], freshTl);
         }
+        if (freshCompliance) {
+          queryClient.setQueryData(['compliance', 'case', caseId], freshCompliance);
+        }
 
         iframeRef.current?.contentWindow?.postMessage(
-          { type: 'ko:case-detail', case: updated.data },
+          {
+            type: 'ko:case-detail',
+            case: {
+              ...updated.data,
+              ...(freshCompliance?.data ? { compliancePhases: freshCompliance.data.phases } : {}),
+            },
+          },
           window.location.origin,
         );
+        if (freshCompliance) {
+          iframeRef.current?.contentWindow?.postMessage(
+            { type: 'ko:case-compliance', caseId, snapshot: freshCompliance.data },
+            window.location.origin,
+          );
+        }
+        const overviewDoc = iframeRef.current?.contentDocument;
+        if (overviewDoc) void refreshComplianceFromApi(overviewDoc);
         window.setTimeout(() => {
           const freshIdoc = iframeRef.current?.contentDocument;
           if (!freshIdoc) return;
@@ -3131,11 +3274,11 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
       }
     });
 
-    compCard.appendChild(btn);
+    mountTarget.appendChild(btn);
   }
 
   async function mountResearchProductsPanel(
-    compCard: HTMLElement,
+    mountTarget: HTMLElement,
     caseId: string,
     apiStage: string,
   ) {
@@ -3144,7 +3287,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
     panel.style.cssText =
       'margin-top:20px;padding-top:20px;border-top:1px solid #f4f4f5;font-family:\'DM Sans\',sans-serif';
     panel.innerHTML = `<p style="margin:0;font-size:13px;color:#71717a">Loading products…</p>`;
-    compCard.appendChild(panel);
+    mountTarget.appendChild(panel);
 
     const esc = (s: string) =>
       s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -3172,7 +3315,9 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
           stage: caseRes.data.stage,
         };
 
-        const checklist = compCard.querySelector('.cd-comp-checklist');
+        const checklist =
+          mountTarget.closest('.cd-comp-card')?.querySelector('.cd-comp-checklist') ??
+          mountTarget.querySelector('.cd-comp-checklist');
         if (checklist && (apiStage === 'FACT_FIND' || apiStage === 'RESEARCH')) {
           const items = [
             {
@@ -3698,18 +3843,18 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
       </div>
 
         <aside
-          className="hidden w-full shrink-0 flex-col items-start gap-[136px] border-b border-[#E4E4E4] bg-white py-[27px] pr-[14px] pl-[14px] lg:flex lg:sticky lg:top-0 lg:min-h-dvh lg:w-[254px] lg:self-start lg:border-r lg:border-b-0"
+          className="hidden w-full shrink-0 flex-col border-b border-[#E4E4E4] bg-white py-[27px] pr-[14px] pl-[14px] lg:flex lg:sticky lg:top-0 lg:h-dvh lg:w-[254px] lg:self-start lg:border-r lg:border-b-0"
           aria-label="Demo navigation"
         >
-          <Link href="/" className="flex cursor-pointer items-center gap-2 text-left" aria-label="Go to home">
+          <Link href={homeHref} className="flex shrink-0 cursor-pointer items-center gap-2 text-left" aria-label="Go to home">
             <div className="rounded-md bg-brand-teal p-1.5">
               <Building2 className="h-5 w-5 text-white" />
             </div>
             <span className="font-display text-xl font-bold tracking-tight text-brand-teal">KO Platform</span>
           </Link>
 
-          <nav className="flex w-full flex-col items-start gap-[19px] self-stretch">
-            {navItems.map((item) => {
+          <nav className="mt-10 flex w-full flex-col items-start gap-[19px] self-stretch">
+            {sidebarNavItems.map((item) => {
               const isActive = activeTab === item.id;
               const Icon = 'icon' in item ? item.icon : null;
               return (
@@ -3749,6 +3894,73 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
               );
             })}
           </nav>
+
+          <div className="mt-auto flex w-full flex-col gap-3 pt-8">
+            <div
+              className="rounded-2xl p-3.5"
+              style={
+                currentPlanLabel === 'Professional'
+                  ? {
+                      border: '1px solid #EEC25A',
+                      background: 'linear-gradient(207deg, #FEE3A5 -9.75%, #FFF 38.67%)',
+                    }
+                  : currentPlanLabel === 'Enterprise'
+                    ? {
+                        border: '1px solid #D9F3FF',
+                        background: 'linear-gradient(207deg, #B8E8FD -9.75%, #FFF 38.67%)',
+                      }
+                    : {
+                        border: '1px solid #A19BBF',
+                        background: 'linear-gradient(207deg, #E9ECFF -9.75%, #FFF 38.67%)',
+                      }
+              }
+            >
+              <div className="flex items-start gap-2.5">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/90 text-[#A1A1AA] shadow-sm">
+                  <Briefcase className="h-3.5 w-3.5" aria-hidden />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-[11px] font-medium leading-none text-[#A1A1AA]">Current plan</p>
+                  <p className="mt-1 text-[13px] font-bold leading-tight text-[#061F18]">{currentPlanLabel}</p>
+                </div>
+              </div>
+              {showPlanUpgrade ? (
+                <>
+                  <p className="mt-3 text-[11px] leading-snug text-[#71717A]">
+                    Upgrade to Professional to get exclusive features
+                  </p>
+                  <button
+                    type="button"
+                    onClick={openBillingSettings}
+                    className="mt-3 flex w-full items-center justify-center rounded-xl bg-[#F3E5D0] px-3 py-2.5 text-[12px] font-semibold text-[#5C3D1E] transition-colors hover:bg-[#EED9BD]"
+                  >
+                    Upgrade to pro
+                  </button>
+                </>
+              ) : null}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => selectTab('settings')}
+              className="flex w-full items-center gap-2.5 rounded-2xl border border-[#E4E4E4] bg-white p-2.5 text-left transition-colors hover:bg-[#FAFAFA]"
+              aria-label="Open settings"
+            >
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[#E4E4E4] bg-[#F4F4F5] text-[13px] font-bold text-[#061F18]">
+                {profileInitial}
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-[13px] font-semibold leading-tight text-[#061F18]">
+                  {displayName}
+                </span>
+                {sidebarUserEmail ? (
+                  <span className="mt-0.5 block truncate text-[11px] leading-tight text-[#A1A1AA]">
+                    {sidebarUserEmail}
+                  </span>
+                ) : null}
+              </span>
+            </button>
+          </div>
         </aside>
 
         <section className={`min-w-0 flex-1 ${factFindOpen ? 'min-h-0 overflow-hidden' : ''}`}>
@@ -3848,18 +4060,27 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
             </button>
 
             {profileOpen && (
-              <div className="absolute right-0 top-12 w-[180px] overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-2xl">
-                <div className="border-b border-gray-100 px-4 py-3 text-xs font-medium text-gray-500">
-                  Account
-                </div>
+              <div className="absolute right-0 top-12 w-[200px] overflow-hidden rounded-2xl border border-gray-100 bg-white py-1 shadow-2xl">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setProfileOpen(false);
+                    selectTab('settings');
+                  }}
+                  className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+                >
+                  <Settings className="h-4 w-4 shrink-0 text-gray-500" aria-hidden />
+                  Settings
+                </button>
                 <button
                   type="button"
                   onClick={() => {
                     setProfileOpen(false);
                     setLogoutConfirmOpen(true);
                   }}
-                  className="block w-full px-4 py-3 text-left text-sm font-medium text-red-600 transition-colors hover:bg-red-50"
+                  className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm font-medium text-red-600 transition-colors hover:bg-red-50"
                 >
+                  <LogOut className="h-4 w-4 shrink-0" aria-hidden />
                   Log out
                 </button>
               </div>
