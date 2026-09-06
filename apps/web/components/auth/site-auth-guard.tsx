@@ -40,7 +40,7 @@ type MarketingAuthLayoutProps = {
 };
 
 /** Routes that skip the demo gate (Clerk sign-in/up from nav). */
-const PUBLIC_PATHS = new Set(['/sign-in', '/sign-up', '/gate']);
+const PUBLIC_PATHS = new Set(['/sign-in', '/sign-up', '/gate', '/api-docs']);
 
 export function MarketingAuthLayout({ children }: MarketingAuthLayoutProps) {
   const pathname = usePathname();

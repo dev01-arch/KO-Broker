@@ -15,6 +15,8 @@ const isPublicRoute = createRouteMatcher([
   '/portal(.*)',
   // Adviser invite landing — page handles sign-in/up then accept-invite.
   '/adviser/invite(.*)',
+  // API docs — public reference, no auth required.
+  '/api-docs(.*)',
   // Handlers enforce auth — never redirect /api to sign-in (cross-origin SPA).
   '/api/(.*)',
 ]);

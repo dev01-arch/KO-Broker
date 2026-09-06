@@ -499,11 +499,12 @@ export type ApiResponse<T> = ApiSuccessResponse<T> | ApiErrorResponse;
 // ── Plan feature gating ──
 
 export const PLAN_FEATURES: Record<Plan, string[]> = {
-  STARTER: ['core_crm', 'compliance_engine', 'calculators'],
+  STARTER: ['core_crm', 'compliance_engine', 'calculators', 'mortgage_intelligence'],
   PROFESSIONAL: [
     'core_crm',
     'compliance_engine',
     'calculators',
+    'mortgage_intelligence',
     'messages',
     'ai_reports',
     'client_portal',
@@ -512,6 +513,7 @@ export const PLAN_FEATURES: Record<Plan, string[]> = {
     'core_crm',
     'compliance_engine',
     'calculators',
+    'mortgage_intelligence',
     'messages',
     'ai_reports',
     'client_portal',
@@ -522,4 +524,139 @@ export const PLAN_FEATURES: Record<Plan, string[]> = {
 
 export function canAccessFeature(plan: Plan, feature: string): boolean {
   return PLAN_FEATURES[plan]?.includes(feature) ?? false;
+}
+
+// ── PRD-15: Mortgage Intelligence schemas ─────────────────────────────────────
+
+export const IntelligenceSourceSchema = z.enum(['MANUAL', 'CONFIRMED_FROM_CASE']);
+export type IntelligenceSource = z.infer<typeof IntelligenceSourceSchema>;
+
+export const MarketSignalSchema = z.enum(['IMPROVING', 'STABLE', 'WORSENING']);
+export type MarketSignal = z.infer<typeof MarketSignalSchema>;
+
+// ── POST /api/intelligence/snapshots — request body ──────────────────────────
+
+export const CreateSnapshotSchema = z
+  .object({
+    postcode: z
+      .string()
+      .min(2, 'Postcode is required')
+      .max(10)
+      .transform((v) => v.trim().toUpperCase()),
+    propertyValue: z.number().positive('Property value must be positive'),
+    mortgageAmount: z.number().positive('Mortgage amount must be positive'),
+    termYears: z.number().int().min(1).max(40),
+    deposit: z.number().nonnegative().optional(),
+    grossIncome: z.number().nonnegative().optional(),
+    secondIncome: z.number().nonnegative().optional(),
+    monthlyCommitments: z.number().nonnegative().optional(),
+    caseId: z.string().optional(),
+    source: IntelligenceSourceSchema,
+    confirmedAt: z.string().datetime().optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.source === 'CONFIRMED_FROM_CASE') {
+      if (!data.caseId) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'caseId is required when source is CONFIRMED_FROM_CASE',
+          path: ['caseId'],
+        });
+      }
+      if (!data.confirmedAt) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'confirmedAt is required when source is CONFIRMED_FROM_CASE',
+          path: ['confirmedAt'],
+        });
+      }
+    }
+  });
+export type CreateSnapshotInput = z.infer<typeof CreateSnapshotSchema>;
+
+// ── Snapshot response shape — fully rendered, no client-side maths needed ─────
+
+export interface SnapshotGeography {
+  region: string | null;
+  adminDistrict: string | null;
+  constituency: string | null;
+}
+
+export interface SnapshotResponse {
+  id: string;
+  orgId: string;
+  caseId: string | null;
+  source: IntelligenceSource;
+  confirmedAt: string | null;
+  generatedAt: string;
+  postcode: string;
+  outwardCode: string;
+  propertyValue: number;
+  deposit: number | null;
+  mortgageAmount: number;
+  termYears: number;
+  grossIncome: number | null;
+  secondIncome: number | null;
+  monthlyCommitments: number | null;
+  ltv: number | null;
+  lti: number | null;
+  dti: number | null;
+  dtiBand: string | null;
+  monthlyPayment: number | null;
+  marketSignal: MarketSignal | null;
+  insightText: string;
+  watchText: string | null;
+  outputsJson: unknown;
+  sourcesJson: unknown;
+  geography: SnapshotGeography;
+}
+
+// ── GET /api/intelligence/cases/:caseId/preview — response ───────────────────
+
+export interface PresenceField<T> {
+  value: T | null;
+  present: boolean;
+}
+
+export interface CasePreviewResponse {
+  caseLabel: string;
+  postcode: PresenceField<string>;
+  propertyValue: PresenceField<number>;
+  deposit: PresenceField<number>;
+  mortgageAmount: PresenceField<number>;
+  termYears: PresenceField<number>;
+  grossIncome: PresenceField<number>;
+  monthlyCommitments: PresenceField<number>;
+}
+
+// ── GET /api/intelligence/overview — response ─────────────────────────────────
+
+export interface RateCard {
+  seriesId: string;
+  label: string;
+  value: number;
+  change12mBps: number | null;
+  asAt: string;
+}
+
+export interface FeedStatusCard {
+  feedId: string;
+  lastSuccessAt: string | null;
+  lastAttemptAt: string | null;
+  lastError: string | null;
+  isStale: boolean;
+}
+
+export interface OverviewResponse {
+  rates: RateCard[];
+  marketSignal: MarketSignal | null;
+  feedStatuses: FeedStatusCard[];
+}
+
+// ── GET /api/intelligence/rates/current — response ───────────────────────────
+
+export interface CurrentRatesResponse {
+  fixed2yr: { value: number; asAt: string } | null;
+  fixed5yr: { value: number; asAt: string } | null;
+  variable75: { value: number; asAt: string } | null;
 }

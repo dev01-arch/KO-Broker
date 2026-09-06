@@ -112,6 +112,19 @@ enum DocumentType {
   OTHER
 }
 
+// ── PRD-15: Mortgage Intelligence enums ────────────────────────────────────────
+
+enum IntelligenceSource {
+  MANUAL
+  CONFIRMED_FROM_CASE
+}
+
+enum MarketSignal {
+  IMPROVING
+  STABLE
+  WORSENING
+}
+
 // ── Models ─────────────────────────────────────
 
 model Organisation {
@@ -124,10 +137,11 @@ model Organisation {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
-  users   User[]
-  members OrganisationMember[]
-  clients Client[]
-  cases   Case[]
+  users                    User[]
+  members                  OrganisationMember[]
+  clients                  Client[]
+  cases                    Case[]
+  caseIntelligenceSnapshots CaseIntelligenceSnapshot[]
 
   @@map("organisations")
 }
@@ -256,6 +270,7 @@ model Case {
   suitabilityReports SuitabilityReport[]
   messages           Message[]
   documents          Document[]
+  intelligenceSnapshots CaseIntelligenceSnapshot[]
 
   @@unique([orgId, referenceNumber])
   @@map("cases")
@@ -428,4 +443,120 @@ model LenderCriteria {
   // NOTE: Global reference data — no orgId
 
   @@map("lender_criteria")
+}
+
+// ── PRD-15: Mortgage Intelligence models ──────────────────────────────────────
+
+/// One data point for a BoE statistical series (e.g. 2yr fixed quoted rate).
+/// Rows are insert-only with open-ended validTo (closed when superseded).
+/// Global reference data — no orgId.
+model RateSeriesPoint {
+  id          String    @id @default(cuid())
+  seriesId    String
+  label       String
+  value       Float
+  validFrom   DateTime
+  validTo     DateTime?
+  retrievedAt DateTime
+  source      String
+  rawRef      String?
+  createdAt   DateTime  @default(now())
+
+  @@index([seriesId, validFrom])
+  @@map("rate_series_points")
+}
+
+/// Permanent cache of Postcodes.io lookup results keyed by (full or outward) postcode.
+/// Never expires — stale only when address reorganisation happens (rare).
+/// Global reference data — no orgId.
+model PostcodeGeography {
+  id            String   @id @default(cuid())
+  postcode      String   @unique
+  outwardCode   String
+  lat           Float?
+  lng           Float?
+  region        String?
+  adminDistrict String?
+  lsoa          String?
+  msoa          String?
+  constituency  String?
+  cachedAt      DateTime
+  createdAt     DateTime @default(now())
+
+  @@index([outwardCode])
+  @@map("postcode_geography")
+}
+
+/// Outward-code level aggregated price stats from HMLR Price Paid Data.
+/// Unique on (outwardCode, asOf) — the cron job upserts by that key.
+/// Global reference data — no orgId.
+model LocalPriceStat {
+  id               String   @id @default(cuid())
+  outwardCode      String
+  asOf             DateTime
+  medianPrice      Float
+  medianPrice12m   Float?
+  change12mPct     Float?
+  txnCount12m      Int
+  retrievedAt      DateTime
+  source           String   @default("HMLR_PPD")
+
+  @@unique([outwardCode, asOf])
+  @@index([outwardCode])
+  @@map("local_price_stats")
+}
+
+/// Status of each background data feed — updated by cron jobs on every run.
+/// Keyed by feedId: 'BOE_RATES' | 'HMLR_PRICES'.
+/// Global reference data — no orgId.
+model DataFeedStatus {
+  id            String    @id @default(cuid())
+  feedId        String    @unique
+  lastSuccessAt DateTime?
+  lastAttemptAt DateTime?
+  lastError     String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@map("data_feed_status")
+}
+
+/// INSERT-ONLY record of a single "Mortgage Intelligence" generation run.
+/// Two generates = two rows — never PATCH.
+/// Scoped per org; caseId is optional (null for MANUAL snapshots).
+model CaseIntelligenceSnapshot {
+  id                 String            @id @default(cuid())
+  orgId              String
+  caseId             String?
+  source             IntelligenceSource
+  confirmedAt        DateTime?
+  generatedAt        DateTime          @default(now())
+  postcode           String
+  outwardCode        String
+  propertyValue      Float
+  deposit            Float?
+  mortgageAmount     Float
+  termYears          Int
+  grossIncome        Float?
+  secondIncome       Float?
+  monthlyCommitments Float?
+  ltv                Float?
+  lti                Float?
+  dti                Float?
+  dtiBand            String?
+  monthlyPayment     Float?
+  marketSignal       MarketSignal?
+  insightText        String
+  watchText          String?
+  inputsJson         Json
+  outputsJson        Json
+  sourcesJson        Json
+  createdAt          DateTime          @default(now())
+
+  organisation Organisation @relation(fields: [orgId], references: [id])
+  case         Case?        @relation(fields: [caseId], references: [id])
+
+  @@index([orgId, generatedAt])
+  @@index([orgId, caseId])
+  @@map("case_intelligence_snapshots")
 }

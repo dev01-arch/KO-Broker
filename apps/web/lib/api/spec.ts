@@ -53,6 +53,7 @@ export const TAG_GROUPS: TagGroup[] = [
     { tag: 'Settings', color: '#F59E0B', description: 'Organization configuration and third-party integrations.' },
     { tag: 'Portal', color: '#F43F5E', description: 'Client portal onboarding, authentication, fact-find, and messaging.' },
     { tag: 'System', color: '#6B7280', description: 'Health checks and infrastructure endpoints.' },
+    { tag: 'Intelligence', color: '#0F6E56', description: 'Mortgage Intelligence — BoE rate benchmarks, HMLR price aggregates, case snapshots, and insight generation. PRD-15.' },
 ];
 
 // ── Endpoint definitions ──────────────────────────────────────────────────────
@@ -1230,6 +1231,191 @@ export const ENDPOINTS: EndpointDef[] = [
         ],
         responses: [
             { status: 201, description: 'File uploaded and logged in Case documents', example: { success: true, data: { id: 'doc999', name: 'Passport.pdf', storageUrl: 'https://...' } } },
+        ],
+    },
+
+    // ── Intelligence (PRD-15) ────────────────────────────────────────────────
+
+    {
+        method: 'GET',
+        path: '/api/intelligence/overview',
+        summary: 'Market overview',
+        description: 'Returns cached BoE rate benchmarks (2yr, 5yr, variable 75%), 12-month changes in basis points, a computed market signal (IMPROVING/STABLE/WORSENING), and data feed statuses. No live BoE calls — reads from local cache only. Returns empty rates array and null signal before first ingest; never returns invented numbers.',
+        auth: true,
+        tags: ['Intelligence'],
+        responses: [
+            {
+                status: 200,
+                description: 'Overview data (may have empty rates if not yet ingested)',
+                example: {
+                    success: true,
+                    data: {
+                        rates: [
+                            { seriesId: 'IUMBV42', label: '2yr Fixed (75% LTV)', value: 4.53, change12mBps: -42, asAt: '2026-08-01T00:00:00.000Z' },
+                            { seriesId: 'IUMBV44', label: '5yr Fixed (75% LTV)', value: 4.21, change12mBps: -38, asAt: '2026-08-01T00:00:00.000Z' },
+                        ],
+                        marketSignal: 'IMPROVING',
+                        feedStatuses: [
+                            { feedId: 'BOE_RATES', lastSuccessAt: '2026-09-04T07:12:00.000Z', lastAttemptAt: '2026-09-04T07:12:00.000Z', lastError: null, isStale: false },
+                            { feedId: 'HMLR_PRICES', lastSuccessAt: '2026-09-04T08:05:00.000Z', lastAttemptAt: '2026-09-04T08:05:00.000Z', lastError: null, isStale: false },
+                        ],
+                    },
+                },
+            },
+        ],
+    },
+
+    {
+        method: 'GET',
+        path: '/api/intelligence/rates/current',
+        summary: 'Current rate benchmarks (slim)',
+        description: 'Slim payload for the Calculator market context panel. Returns the three current quoted rate benchmarks (2yr fixed, 5yr fixed, variable 75% LTV) with their as-at dates. Returns null for any series not yet ingested — panel shows stale/delayed copy but calculator continues working.',
+        auth: true,
+        tags: ['Intelligence'],
+        responses: [
+            {
+                status: 200,
+                description: 'Current rates (nulls when not yet ingested)',
+                example: {
+                    success: true,
+                    data: {
+                        fixed2yr: { value: 4.53, asAt: '2026-08-01T00:00:00.000Z' },
+                        fixed5yr: { value: 4.21, asAt: '2026-08-01T00:00:00.000Z' },
+                        variable75: { value: 5.89, asAt: '2026-08-01T00:00:00.000Z' },
+                    },
+                },
+            },
+        ],
+    },
+
+    {
+        method: 'GET',
+        path: '/api/intelligence/cases/:caseId/preview',
+        summary: 'Case figure preview',
+        description: 'Assembles Case + Client + FactFind into the confirm-box payload. Every field is returned as { value, present } — missing data returns present: false, never £0 or a fabricated number. Restricted advisers can only preview cases assigned to them (404 if not visible, not 403).',
+        auth: true,
+        tags: ['Intelligence'],
+        params: [
+            { name: 'caseId', in: 'path', required: true, type: 'string', description: 'Case ID', example: 'clx123abc' },
+        ],
+        responses: [
+            {
+                status: 200,
+                description: 'Case figures for confirm box',
+                example: {
+                    success: true,
+                    data: {
+                        caseLabel: 'KOF-2026-001 — Jane Smith',
+                        postcode: { value: 'SW1A 2AA', present: true },
+                        propertyValue: { value: 450000, present: true },
+                        deposit: { value: 90000, present: true },
+                        mortgageAmount: { value: 360000, present: true },
+                        termYears: { value: 25, present: true },
+                        grossIncome: { value: 85000, present: true },
+                        monthlyCommitments: { value: 350, present: false },
+                    },
+                },
+            },
+            { status: 404, description: 'Case not found or not visible to this adviser', example: { success: false, error: { code: 'NOT_FOUND', message: 'Case not found' } } },
+        ],
+    },
+
+    {
+        method: 'POST',
+        path: '/api/intelligence/snapshots',
+        summary: 'Generate snapshot',
+        description: 'Validates inputs, runs formulas against cached BoE rates and HMLR price data, generates a non-advisory insight paragraph, and INSERT-ONLYs a CaseIntelligenceSnapshot row. Returns the fully rendered snapshot — no client-side maths needed. Empty rate cache returns 503 RATE_DATA_NOT_READY. Two calls = two rows (never PATCH).',
+        auth: true,
+        tags: ['Intelligence'],
+        params: [
+            { name: 'postcode', in: 'body', required: true, type: 'string', description: 'Full or outward UK postcode', example: 'SW1A 2AA' },
+            { name: 'propertyValue', in: 'body', required: true, type: 'number', description: 'Property value in £', example: 450000 },
+            { name: 'mortgageAmount', in: 'body', required: true, type: 'number', description: 'Loan amount in £', example: 360000 },
+            { name: 'termYears', in: 'body', required: true, type: 'number', description: 'Mortgage term in years', example: 25 },
+            { name: 'deposit', in: 'body', required: false, type: 'number', description: 'Deposit in £', example: 90000 },
+            { name: 'grossIncome', in: 'body', required: false, type: 'number', description: 'Primary applicant gross annual income', example: 85000 },
+            { name: 'secondIncome', in: 'body', required: false, type: 'number', description: 'Second applicant gross annual income', example: 32000 },
+            { name: 'monthlyCommitments', in: 'body', required: false, type: 'number', description: 'Total monthly debt commitments', example: 350 },
+            { name: 'caseId', in: 'body', required: false, type: 'string', description: 'Linked case ID (required when source=CONFIRMED_FROM_CASE)', example: 'clx123abc' },
+            { name: 'source', in: 'body', required: true, type: 'string', description: 'MANUAL or CONFIRMED_FROM_CASE', enum: ['MANUAL', 'CONFIRMED_FROM_CASE'] },
+            { name: 'confirmedAt', in: 'body', required: false, type: 'string', description: 'ISO datetime of broker confirmation (required when source=CONFIRMED_FROM_CASE)', example: '2026-09-04T10:30:00.000Z' },
+        ],
+        responses: [
+            {
+                status: 201,
+                description: 'Snapshot created and returned',
+                example: {
+                    success: true,
+                    data: {
+                        id: 'snap_abc123',
+                        orgId: 'org_xyz',
+                        caseId: 'clx123abc',
+                        source: 'CONFIRMED_FROM_CASE',
+                        generatedAt: '2026-09-04T10:31:00.000Z',
+                        postcode: 'SW1A 2AA',
+                        outwardCode: 'SW1A',
+                        ltv: 80,
+                        lti: 4.24,
+                        dti: null,
+                        dtiBand: null,
+                        monthlyPayment: 1987.43,
+                        marketSignal: 'IMPROVING',
+                        insightText: 'The loan-to-value ratio is 80.0%. At the 4.53% 2-year fixed benchmark (BoE, August 2026), an indicative repayment figure would be £1,987 per month over 25 years.',
+                        watchText: 'Note: LTV of 80.0% is above the 75% standard reference.',
+                        geography: { region: 'London', adminDistrict: 'City of Westminster', constituency: 'Cities of London and Westminster' },
+                    },
+                },
+            },
+            { status: 400, description: 'Validation error', example: { success: false, error: { code: 'VALIDATION_ERROR', message: 'Request validation failed', fields: { caseId: ['caseId is required when source is CONFIRMED_FROM_CASE'] } } } },
+            { status: 503, description: 'Rate data not yet available', example: { success: false, error: { code: 'RATE_DATA_NOT_READY', message: 'Rate data is not yet available. Please wait for the first data import.' } } },
+        ],
+    },
+
+    {
+        method: 'GET',
+        path: '/api/intelligence/snapshots',
+        summary: 'Snapshot history',
+        description: 'Returns snapshots for the org, optionally filtered by caseId. Newest first. Org-scoped.',
+        auth: true,
+        tags: ['Intelligence'],
+        params: [
+            { name: 'caseId', in: 'query', required: false, type: 'string', description: 'Filter by case ID', example: 'clx123abc' },
+        ],
+        responses: [
+            { status: 200, description: 'List of snapshots (summary fields)', example: { success: true, data: [{ id: 'snap_abc123', caseId: 'clx123abc', source: 'CONFIRMED_FROM_CASE', generatedAt: '2026-09-04T10:31:00.000Z', postcode: 'SW1A 2AA', ltv: 80, monthlyPayment: 1987.43, marketSignal: 'IMPROVING' }] } },
+        ],
+    },
+
+    {
+        method: 'GET',
+        path: '/api/intelligence/snapshots/:id',
+        summary: 'Get snapshot by ID',
+        description: 'Returns a single snapshot for replay. Org-scoped — 404 if the snapshot belongs to a different organisation.',
+        auth: true,
+        tags: ['Intelligence'],
+        params: [
+            { name: 'id', in: 'path', required: true, type: 'string', description: 'Snapshot ID', example: 'snap_abc123' },
+        ],
+        responses: [
+            { status: 200, description: 'Full snapshot row', example: { success: true, data: { id: 'snap_abc123' } } },
+            { status: 404, description: 'Snapshot not found', example: { success: false, error: { code: 'NOT_FOUND', message: 'Snapshot not found' } } },
+        ],
+    },
+
+    {
+        method: 'POST',
+        path: '/api/intelligence/snapshots/:id/copy-to-notes',
+        summary: 'Copy snapshot to case notes',
+        description: 'Appends the J4 block (header, insight, sources, compliance footer) to Case.adviserNotes. Only available for case-linked snapshots — returns 409 for MANUAL snapshots with no caseId. Audit logged as Case / INTELLIGENCE_COPIED_TO_NOTES.',
+        auth: true,
+        tags: ['Intelligence'],
+        params: [
+            { name: 'id', in: 'path', required: true, type: 'string', description: 'Snapshot ID', example: 'snap_abc123' },
+        ],
+        responses: [
+            { status: 200, description: 'Notes updated', example: { success: true, data: { caseId: 'clx123abc', snapshotId: 'snap_abc123' } } },
+            { status: 404, description: 'Snapshot or linked case not found', example: { success: false, error: { code: 'NOT_FOUND', message: 'Snapshot not found' } } },
+            { status: 409, description: 'Snapshot has no linked case', example: { success: false, error: { code: 'CONFLICT', message: 'This snapshot is not linked to a case.' } } },
         ],
     },
 ];
