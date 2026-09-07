@@ -582,6 +582,40 @@ export interface SnapshotGeography {
   constituency: string | null;
 }
 
+/**
+ * Everything the result panels render — no client-side maths required.
+ * Declared as a type alias (not an interface) so it satisfies Prisma's
+ * InputJsonValue, which requires an implicit index signature.
+ */
+export type SnapshotOutputs = {
+  ltvPct: number | null;
+  ltvBandLabel: 'HIGH' | 'STANDARD' | null;
+  ltiRatio: number | null;
+  dtiPct: number | null;
+  dtiBandLabel: 'WATCH' | 'OK' | null;
+  monthlyPayment: number | null;
+  marketSignal: MarketSignal | null;
+  benchmarkRate2yr: number | null;
+  benchmarkRate5yr: number | null;
+  benchmarkRateVariable75: number | null;
+  effectiveNewRate: number | null;
+  /** Property value against the local median, as a percentage difference. */
+  vsMedianPct: number | null;
+};
+
+export type SnapshotSources = {
+  rates: { source: string; seriesId: string; value: number; asAt: string } | null;
+  localPrices: {
+    source: string;
+    outwardCode: string;
+    medianPrice: number;
+    change12mPct: number | null;
+    txnCount12m: number;
+    asOf: string;
+  } | null;
+  geography: { source: string; region: string | null; adminDistrict: string | null } | null;
+};
+
 export interface SnapshotResponse {
   id: string;
   orgId: string;
@@ -606,8 +640,8 @@ export interface SnapshotResponse {
   marketSignal: MarketSignal | null;
   insightText: string;
   watchText: string | null;
-  outputsJson: unknown;
-  sourcesJson: unknown;
+  outputsJson: SnapshotOutputs;
+  sourcesJson: SnapshotSources;
   geography: SnapshotGeography;
 }
 

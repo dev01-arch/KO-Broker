@@ -18,7 +18,6 @@ import type {
   OverviewResponse,
   SnapshotResponse,
 } from '@ko/types';
-import { vsLocalMedian } from '@/lib/calculators/formulas';
 import { BOE_SERIES } from '@/lib/intelligence/boe-series';
 import type {
   IntelligenceCasePreview,
@@ -167,29 +166,10 @@ export function toIntelligenceCasePreview(
 
 // ── Snapshot ──────────────────────────────────────────────────────────────────
 
-/** Backend types these blobs as `unknown`; these mirror what it writes. */
-type WireOutputs = {
-  ltvBandLabel: string | null;
-  dtiBandLabel: string | null;
-  benchmarkRate2yr: number | null;
-};
-
-type WireSources = {
-  rates?: { seriesId: string; value: number; asAt: string } | null;
-  localPrices?: {
-    outwardCode: string;
-    medianPrice: number;
-    change12mPct: number | null;
-    txnCount12m: number;
-    asOf: string;
-  } | null;
-  geography?: { region: string | null; adminDistrict: string | null } | null;
-};
-
 export function toIntelligenceSnapshot(res: SnapshotResponse): IntelligenceSnapshot {
-  const outputs = (res.outputsJson ?? {}) as Partial<WireOutputs>;
-  const sources = (res.sourcesJson ?? {}) as WireSources;
-  const local = sources.localPrices ?? null;
+  const outputs = res.outputsJson;
+  const sources = res.sourcesJson;
+  const local = sources.localPrices;
 
   const sourceList: { label: string; asAt?: string }[] = [];
   if (sources.rates) {
@@ -235,19 +215,14 @@ export function toIntelligenceSnapshot(res: SnapshotResponse): IntelligenceSnaps
         localMedian: local?.medianPrice ?? null,
         change12mPct: local?.change12mPct ?? null,
         txnCount12m: local?.txnCount12m ?? null,
-        // Backend computes this for the insight but does not persist it.
-        vsMedianPct:
-          local && res.propertyValue > 0
-            ? vsLocalMedian(res.propertyValue, local.medianPrice)
-            : null,
+        vsMedianPct: outputs.vsMedianPct,
         noSample: local == null,
       },
       mortgageMarket: {
-        fixed2yrPct: outputs.benchmarkRate2yr ?? null,
-        // Not carried on the snapshot — Overview supplies these separately.
-        fixed5yrPct: null,
-        ltv75FixedPct: null,
-        effectiveNewPct: null,
+        fixed2yrPct: outputs.benchmarkRate2yr,
+        fixed5yrPct: outputs.benchmarkRate5yr,
+        variable75Pct: outputs.benchmarkRateVariable75,
+        effectiveNewPct: outputs.effectiveNewRate,
       },
       borrower: {
         ltv: res.ltv,

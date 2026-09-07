@@ -102,7 +102,7 @@ export type IntelligenceSnapshot = {
     mortgageMarket?: {
       fixed2yrPct: number | null;
       fixed5yrPct: number | null;
-      ltv75FixedPct: number | null;
+      variable75Pct: number | null;
       effectiveNewPct: number | null;
     };
     borrower?: {

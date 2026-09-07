@@ -590,8 +590,8 @@ export function CaseIntelligence({
                   v={formatPct(outputs?.mortgageMarket?.fixed5yrPct, 2)}
                 />
                 <Kv
-                  k="75% LTV benchmark"
-                  v={formatPct(outputs?.mortgageMarket?.ltv75FixedPct, 2)}
+                  k="75% LTV variable"
+                  v={formatPct(outputs?.mortgageMarket?.variable75Pct, 2)}
                 />
                 <Kv
                   k="Effective new-lending rate"

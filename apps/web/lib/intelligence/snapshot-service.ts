@@ -23,11 +23,15 @@ import {
   ltvBand,
   loanToIncome,
   dti,
-  dtiBand,
   monthlyPaymentRepayment,
   vsLocalMedian,
-} from './intelligence-formulas';
-import type { CreateSnapshotInput, SnapshotResponse } from '@ko/types';
+} from '@/lib/calculators/formulas';
+import type {
+  CreateSnapshotInput,
+  SnapshotOutputs,
+  SnapshotResponse,
+  SnapshotSources,
+} from '@ko/types';
 
 // ── Custom error ──────────────────────────────────────────────────────────────
 
@@ -102,9 +106,15 @@ export async function createSnapshot(
   const geo = await lookupPostcode(postcode);
 
   // ── 3. Latest rates from cache (NO live BoE call) ────────────────────────
-  const rate2yr = await latestRate(BOE_SERIES.FIXED_2YR_75LTV);
+  const [rate2yr, rate5yr, rateVariable75, rateEffectiveNew] = await Promise.all([
+    latestRate(BOE_SERIES.FIXED_2YR_75LTV),
+    latestRate(BOE_SERIES.FIXED_5YR_75LTV),
+    latestRate(BOE_SERIES.VARIABLE_75LTV),
+    latestRate(BOE_SERIES.EFFECTIVE_NEW),
+  ]);
 
-  // Empty rate cache → 503
+  // Empty rate cache → 503. Only the 2yr benchmark is required; the rest are
+  // context for the Mortgage market panel and may legitimately be absent.
   if (!rate2yr) {
     throw new SnapshotRateDataError();
   }
@@ -117,7 +127,10 @@ export async function createSnapshot(
 
   // ── 6. Run formulas ───────────────────────────────────────────────────────
   const ltvPct = ltv(mortgageAmount, propertyValue);
-  const ltvBandLabel = ltvBand(ltvPct);
+  // Shared formulas report 'higher' | 'mainstream'; snapshots and the insight
+  // templates key off these labels, so map rather than change what is stored.
+  const ltvBandLabel: 'HIGH' | 'STANDARD' =
+    ltvBand(ltvPct).band === 'higher' ? 'HIGH' : 'STANDARD';
 
   let ltiRatio: number | null = null;
   let dtiPct: number | null = null;
@@ -128,8 +141,9 @@ export async function createSnapshot(
     ltiRatio = loanToIncome(mortgageAmount, totalIncome);
   }
   if (totalIncome > 0 && monthlyCommitments !== undefined && monthlyCommitments !== null) {
-    dtiPct = dti(monthlyCommitments, totalIncome);
-    dtiBandLabel = dtiBand(dtiPct);
+    const dtiResult = dti(monthlyCommitments, totalIncome);
+    dtiPct = dtiResult.dtiPct;
+    dtiBandLabel = dtiResult.watch ? 'WATCH' : 'OK';
   }
 
   // Indicative monthly payment always uses the 2yr benchmark (PRD-15 §6.3)
@@ -193,7 +207,7 @@ export async function createSnapshot(
     caseId: caseId ?? null,
   };
 
-  const outputsJson = {
+  const outputsJson: SnapshotOutputs = {
     ltvPct,
     ltvBandLabel,
     ltiRatio,
@@ -202,9 +216,13 @@ export async function createSnapshot(
     monthlyPayment,
     marketSignal,
     benchmarkRate2yr: rate2yr.value,
+    benchmarkRate5yr: rate5yr?.value ?? null,
+    benchmarkRateVariable75: rateVariable75?.value ?? null,
+    effectiveNewRate: rateEffectiveNew?.value ?? null,
+    vsMedianPct,
   };
 
-  const sourcesJson = {
+  const sourcesJson: SnapshotSources = {
     rates: {
       source: 'BOE_API',
       seriesId: BOE_SERIES.FIXED_2YR_75LTV,
@@ -295,8 +313,8 @@ export async function createSnapshot(
     marketSignal: snapshot.marketSignal,
     insightText: snapshot.insightText,
     watchText: snapshot.watchText,
-    outputsJson: snapshot.outputsJson,
-    sourcesJson: snapshot.sourcesJson,
+    outputsJson,
+    sourcesJson,
     geography: {
       region: geo?.region ?? null,
       adminDistrict: geo?.adminDistrict ?? null,
