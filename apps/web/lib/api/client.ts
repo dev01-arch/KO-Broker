@@ -4,6 +4,33 @@
  */
 
 import { caseStageToComplianceAdvanceTarget } from '@ko/utils';
+import type {
+  CreateIntelligenceSnapshotInput,
+  IntelligenceCasePreview,
+  IntelligenceCurrentRates,
+  IntelligenceOverview,
+  IntelligenceSnapshot,
+} from '@/lib/intelligence/types';
+import type {
+  CasePreviewResponse,
+  CurrentRatesResponse,
+  OverviewResponse,
+  SnapshotResponse,
+} from '@ko/types';
+import {
+  toIntelligenceCasePreview,
+  toIntelligenceCurrentRates,
+  toIntelligenceOverview,
+  toIntelligenceSnapshot,
+} from '@/lib/api/intelligence-adapters';
+
+export type {
+  CreateIntelligenceSnapshotInput,
+  IntelligenceCasePreview,
+  IntelligenceCurrentRates,
+  IntelligenceOverview,
+  IntelligenceSnapshot,
+};
 
 /** Same-origin by default so local /api/* routes receive the Clerk session token. */
 const BASE_URL = (process.env.NEXT_PUBLIC_API_URL ?? '').replace(/\/$/, '');
@@ -1377,5 +1404,47 @@ export const portalApi = {
     return apiFetch<FactFind>('/api/portal/fact-find/complete', token, {
       method: 'POST',
     });
+  },
+};
+
+// ─── Mortgage Intelligence (PRD-15) ───────────────────────────────────────────
+// Wire shapes come from @ko/types; intelligence-adapters maps them to view models.
+
+export const intelligenceApi = {
+  async getOverview(token: string): Promise<IntelligenceOverview> {
+    const res = await apiRequest<OverviewResponse>('/api/intelligence/overview', token);
+    return toIntelligenceOverview(res);
+  },
+
+  async getCurrentRates(token: string): Promise<IntelligenceCurrentRates> {
+    const res = await apiRequest<CurrentRatesResponse>('/api/intelligence/rates/current', token);
+    return toIntelligenceCurrentRates(res);
+  },
+
+  async getCasePreview(token: string, caseId: string): Promise<IntelligenceCasePreview> {
+    const res = await apiRequest<CasePreviewResponse>(
+      `/api/intelligence/cases/${encodeURIComponent(caseId)}/preview`,
+      token,
+    );
+    return toIntelligenceCasePreview(res, caseId);
+  },
+
+  async createSnapshot(
+    token: string,
+    input: CreateIntelligenceSnapshotInput,
+  ): Promise<IntelligenceSnapshot> {
+    const res = await apiRequest<SnapshotResponse>('/api/intelligence/snapshots', token, {
+      method: 'POST',
+      body: JSON.stringify(input),
+    });
+    return toIntelligenceSnapshot(res);
+  },
+
+  copyToNotes(token: string, snapshotId: string): Promise<{ ok: true }> {
+    return apiRequest<{ ok: true }>(
+      `/api/intelligence/snapshots/${encodeURIComponent(snapshotId)}/copy-to-notes`,
+      token,
+      { method: 'POST' },
+    );
   },
 };

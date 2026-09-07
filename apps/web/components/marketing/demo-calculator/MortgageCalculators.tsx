@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useState } from "react";
 import {
@@ -31,6 +31,18 @@ import {
   Info,
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "./components/ui/tooltip";
+import {
+  debtConsolidationSummary,
+  earlyRepaymentCharge,
+  equityAmount,
+  ltv as calcLtv,
+  maxBorrowing,
+  maxPurchasePrice,
+  monthlyPaymentRepayment,
+  remortgageSaving,
+  rentalYields,
+  stampDuty,
+} from "@/lib/calculators/formulas";
 
 type CalculatorType = 
   | 'affordability' 
@@ -148,10 +160,10 @@ function AffordabilityCalculator() {
   const [multiplier, setMultiplier] = useState(4.5);
 
   const totalIncome = income + secondIncome;
-  const maxBorrowing = totalIncome * multiplier;
-  const maxPurchasePrice = maxBorrowing + deposit;
+  const maxBorrowingAmt = maxBorrowing(income, secondIncome, multiplier);
+  const maxPurchase = maxPurchasePrice(maxBorrowingAmt, deposit);
   const annualCommitments = monthlyCommitments * 12;
-  const affordabilityScore = annualCommitments / totalIncome;
+  const affordabilityScore = totalIncome > 0 ? annualCommitments / totalIncome : 0;
 
   return (
     <div className="space-y-6">
@@ -211,7 +223,7 @@ function AffordabilityCalculator() {
         <MetricCard
           label="Max Borrowing"
           description="Based on income Ã— multiplier"
-          value={formatCurrency(maxBorrowing)}
+          value={formatCurrency(maxBorrowingAmt)}
           subtext={`${multiplier}x income applied`}
           gradient="linear-gradient(197deg, rgb(209,250,229) 10%, rgb(255,255,255) 39%)"
           shadow="0px 3.758px 3.382px rgba(190,200,202,0.19)"
@@ -221,7 +233,7 @@ function AffordabilityCalculator() {
         <MetricCard
           label="Max Purchase Price"
           description="Borrowing + deposit combined"
-          value={formatCurrency(maxPurchasePrice)}
+          value={formatCurrency(maxPurchase)}
           subtext={`Deposit: ${formatCurrency(deposit)}`}
           gradient="linear-gradient(197deg, rgb(219,234,254) 10%, rgb(255,255,255) 39%)"
           shadow="0px 6.421px 5.779px rgba(165,180,252,0.18)"
@@ -248,10 +260,8 @@ function MonthlyPaymentCalculator() {
   const [interestRate, setInterestRate] = useState(5);
   const [term, setTerm] = useState(25);
 
-  const monthlyRate = interestRate / 100 / 12;
-  const numPayments = term * 12;
-  const monthlyPayment = loanAmount * (monthlyRate * Math.pow(1 + monthlyRate, numPayments)) / (Math.pow(1 + monthlyRate, numPayments) - 1);
-  const totalPaid = monthlyPayment * numPayments;
+  const monthlyPayment = monthlyPaymentRepayment(loanAmount, interestRate, term);
+  const totalPaid = monthlyPayment * term * 12;
   const totalInterest = totalPaid - loanAmount;
 
   return (
@@ -361,55 +371,8 @@ function StampDutyCalculator() {
   const [firstTimeBuyer, setFirstTimeBuyer] = useState(false);
   const [additionalProperty, setAdditionalProperty] = useState(false);
 
-  const calculateStampDuty = () => {
-    let duty = 0;
-    
-    if (additionalProperty) {
-      // Additional property surcharge: 3% on entire amount + standard rates
-      const surcharge = propertyPrice * 0.03;
-      
-      if (propertyPrice > 1500000) {
-        duty += (propertyPrice - 1500000) * 0.12;
-        duty += (1500000 - 925000) * 0.10;
-        duty += (925000 - 250000) * 0.05;
-        duty += 250000 * 0;
-      } else if (propertyPrice > 925000) {
-        duty += (propertyPrice - 925000) * 0.10;
-        duty += (925000 - 250000) * 0.05;
-        duty += 250000 * 0;
-      } else if (propertyPrice > 250000) {
-        duty += (propertyPrice - 250000) * 0.05;
-        duty += 250000 * 0;
-      }
-      
-      duty += surcharge;
-    } else if (firstTimeBuyer && propertyPrice <= 625000) {
-      // First-time buyer relief
-      if (propertyPrice > 425000) {
-        duty = (propertyPrice - 425000) * 0.05;
-      }
-    } else {
-      // Standard rates
-      if (propertyPrice > 1500000) {
-        duty += (propertyPrice - 1500000) * 0.12;
-        duty += (1500000 - 925000) * 0.10;
-        duty += (925000 - 250000) * 0.05;
-        duty += 250000 * 0;
-      } else if (propertyPrice > 925000) {
-        duty += (propertyPrice - 925000) * 0.10;
-        duty += (925000 - 250000) * 0.05;
-        duty += 250000 * 0;
-      } else if (propertyPrice > 250000) {
-        duty += (propertyPrice - 250000) * 0.05;
-        duty += 250000 * 0;
-      }
-    }
-    
-    return duty;
-  };
-
-  const stampDuty = calculateStampDuty();
-  const effectiveRate = (stampDuty / propertyPrice) * 100;
+  const stampDutyAmt = stampDuty(propertyPrice, { firstTimeBuyer, additionalProperty });
+  const effectiveRate = (stampDutyAmt / propertyPrice) * 100;
 
   return (
     <div className="space-y-6">
@@ -457,8 +420,8 @@ function StampDutyCalculator() {
         <MetricCard
           label="Stamp Duty (UK 2024)"
           description={additionalProperty ? "Incl. 3% surcharge" : firstTimeBuyer ? "First-time buyer relief applied" : "Standard SDLT rates"}
-          value={formatCurrency(stampDuty)}
-          subtext={stampDuty === 0 ? "No duty payable" : "Due on completion"}
+          value={formatCurrency(stampDutyAmt)}
+          subtext={stampDutyAmt === 0 ? "No duty payable" : "Due on completion"}
           gradient="linear-gradient(197deg, rgb(243,232,255) 10%, rgb(255,255,255) 39%)"
           shadow="0px 3.758px 3.382px rgba(216,180,254,0.19)"
           icon={<Stamp size={18} />}
@@ -487,9 +450,9 @@ function LTVCalculator() {
   const [propertyValue, setPropertyValue] = useState(400000);
   const [loanAmount, setLoanAmount] = useState(320000);
 
-  const ltv = (loanAmount / propertyValue) * 100;
-  const equity = propertyValue - loanAmount;
-  const equityPercent = (equity / propertyValue) * 100;
+  const ltv = calcLtv(loanAmount, propertyValue);
+  const equity = equityAmount(propertyValue, loanAmount);
+  const equityPercent = propertyValue > 0 ? (equity / propertyValue) * 100 : 0;
 
   const getLTVCategory = (ltv: number) => {
     if (ltv <= 60) return { text: 'Excellent', color: 'text-emerald-600' };
@@ -604,8 +567,8 @@ function ERCCalculator() {
   const [ercPercentage, setErcPercentage] = useState(3);
   const [monthsRemaining, setMonthsRemaining] = useState(24);
 
-  const erc = outstandingBalance * (ercPercentage / 100);
-  const monthlyReduction = erc / monthsRemaining;
+  const erc = earlyRepaymentCharge(outstandingBalance, ercPercentage);
+  const monthlyReduction = monthsRemaining > 0 ? erc / monthsRemaining : 0;
 
   return (
     <div className="space-y-6">
@@ -676,12 +639,14 @@ function RentalYieldCalculator() {
   const [interestRate, setInterestRate] = useState(5);
 
   const annualRent = monthlyRent * 12;
-  const grossYield = (annualRent / propertyPrice) * 100;
-  
   const annualInterest = mortgage * (interestRate / 100);
-  const netIncome = annualRent - annualCosts - annualInterest;
-  const netYield = (netIncome / propertyPrice) * 100;
-  const cashOnCashReturn = (netIncome / (propertyPrice - mortgage)) * 100;
+  const { grossYield, netYield, cashOnCashReturn, netIncome } = rentalYields(
+    propertyPrice,
+    monthlyRent,
+    annualCosts,
+    mortgage,
+    interestRate,
+  );
 
   return (
     <div className="space-y-6">
@@ -823,17 +788,13 @@ function RemortgageCalculator() {
   const [remainingTerm, setRemainingTerm] = useState(20);
   const [fees, setFees] = useState(1500);
 
-  const calculateMonthlyPayment = (balance: number, rate: number, years: number) => {
-    const monthlyRate = rate / 100 / 12;
-    const numPayments = years * 12;
-    return balance * (monthlyRate * Math.pow(1 + monthlyRate, numPayments)) / (Math.pow(1 + monthlyRate, numPayments) - 1);
-  };
-
-  const currentPayment = calculateMonthlyPayment(currentBalance, currentRate, remainingTerm);
-  const newPayment = calculateMonthlyPayment(currentBalance, newRate, remainingTerm);
-  const monthlySaving = currentPayment - newPayment;
-  const annualSaving = monthlySaving * 12;
-  const breakEvenMonths = fees / monthlySaving;
+  const {
+    currentPayment,
+    newPayment,
+    monthlySaving,
+    annualSaving,
+    breakEvenMonths,
+  } = remortgageSaving(currentBalance, currentRate, newRate, remainingTerm, fees);
 
   return (
     <div className="space-y-6">
@@ -962,25 +923,25 @@ function DebtConsolidationCalculator() {
   const [consolidationRate, setConsolidationRate] = useState(5);
   const [consolidationTerm, setConsolidationTerm] = useState(10);
 
-  const totalDebt = debt1 + debt2 + debt3;
-  const weightedRate = ((debt1 * rate1) + (debt2 * rate2) + (debt3 * rate3)) / totalDebt;
-  
-  // Assume average 3 year term for existing debts
-  const calculatePayment = (amount: number, rate: number, years: number) => {
-    if (amount === 0) return 0;
-    const monthlyRate = rate / 100 / 12;
-    const numPayments = years * 12;
-    return amount * (monthlyRate * Math.pow(1 + monthlyRate, numPayments)) / (Math.pow(1 + monthlyRate, numPayments) - 1);
-  };
-
-  const currentPayment1 = calculatePayment(debt1, rate1, 3);
-  const currentPayment2 = calculatePayment(debt2, rate2, 3);
-  const currentPayment3 = calculatePayment(debt3, rate3, 3);
-  const totalCurrentPayment = currentPayment1 + currentPayment2 + currentPayment3;
-
-  const consolidatedPayment = calculatePayment(totalDebt, consolidationRate, consolidationTerm);
-  const monthlySaving = totalCurrentPayment - consolidatedPayment;
-  const annualSaving = monthlySaving * 12;
+  const {
+    totalDebt,
+    weightedRate,
+    totalCurrentPayment,
+    consolidatedPayment,
+    monthlySaving,
+    annualSaving,
+  } = debtConsolidationSummary(
+    [
+      { amount: debt1, ratePct: rate1, termYears: 3 },
+      { amount: debt2, ratePct: rate2, termYears: 3 },
+      { amount: debt3, ratePct: rate3, termYears: 3 },
+    ],
+    consolidationRate,
+    consolidationTerm,
+  );
+  const currentPayment1 = monthlyPaymentRepayment(debt1, rate1, 3);
+  const currentPayment2 = monthlyPaymentRepayment(debt2, rate2, 3);
+  const currentPayment3 = monthlyPaymentRepayment(debt3, rate3, 3);
 
   return (
     <div className="space-y-6">

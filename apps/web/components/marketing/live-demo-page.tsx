@@ -5,9 +5,10 @@ import Link from 'next/link';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { useAuth, useUser } from '@clerk/nextjs';
 import { useQueryClient } from '@tanstack/react-query';
-import { Bell, Briefcase, Building2, Calculator as CalculatorIcon, FileText, Loader2, LogOut, Settings, ShieldCheck, Upload, type LucideIcon } from 'lucide-react';
+import { Bell, Briefcase, Building2, Calculator as CalculatorIcon, FileText, Loader2, LogOut, Settings, ShieldCheck, TrendingUp, Upload, type LucideIcon } from 'lucide-react';
 import MortgageCalculators from '@/components/marketing/demo-calculator/MortgageCalculators';
 import { IntegrationsSettingsPanel } from '@/components/dashboard/integrations-settings-panel';
+import { MortgageIntelligencePanel } from '@/components/dashboard/intelligence/mortgage-intelligence-panel';
 import { clientsQueryKey, useClients, useCreateClient } from '@/hooks/use-clients';
 import { advisersQueryKey, useAdvisers } from '@/hooks/use-settings';
 import {
@@ -180,7 +181,7 @@ function IframeUploadModal({
 const LIVE_CLIENTS_QUERY_DEMO = { page: 1, perPage: 100 } as const;
 const LIVE_CASES_QUERY_DEMO = { page: 1, perPage: 100 } as const;
 
-type DemoTab = 'overview' | 'clients' | 'cases' | 'messages' | 'ai' | 'compliance' | 'calculator' | 'settings';
+type DemoTab = 'overview' | 'clients' | 'cases' | 'messages' | 'ai' | 'compliance' | 'intelligence' | 'calculator' | 'settings';
 
 const DEMO_TABS: readonly DemoTab[] = [
   'overview',
@@ -189,6 +190,7 @@ const DEMO_TABS: readonly DemoTab[] = [
   'messages',
   'ai',
   'compliance',
+  'intelligence',
   'calculator',
   'settings',
 ] as const;
@@ -209,7 +211,7 @@ function demoTabToParam(tab: DemoTab): string | null {
 /** Iframe query `tab` value for the HTML prototype. */
 function demoTabToIframeParam(tab: DemoTab): string {
   if (tab === 'calculator') return 'calculators';
-  if (tab === 'settings') return 'overview';
+  if (tab === 'settings' || tab === 'intelligence') return 'overview';
   return tab;
 }
 
@@ -235,8 +237,8 @@ function locationHref(pathname: string, params: URLSearchParams): string {
 }
 
 type NavItem =
-  | { id: DemoTab; label: string; iconUrl: string }
-  | { id: DemoTab; label: string; icon: LucideIcon };
+  | { id: DemoTab; label: string; iconUrl: string; badge?: string }
+  | { id: DemoTab; label: string; icon: LucideIcon; badge?: string };
 
 const navItems: NavItem[] = [
   { id: 'overview', label: 'Overview', iconUrl: '/assets/dashboard_customize.svg' },
@@ -244,6 +246,7 @@ const navItems: NavItem[] = [
   { id: 'cases', label: 'Cases', iconUrl: '/assets/cases.svg' },
   { id: 'messages', label: 'Messages', iconUrl: '/assets/chat.svg' },
   { id: 'ai', label: 'Reports', iconUrl: '/assets/smart_toy.svg' },
+  { id: 'intelligence', label: 'Mortgage Intel', icon: TrendingUp, badge: 'NEW' },
   { id: 'compliance', label: 'Compliance', icon: ShieldCheck },
   { id: 'calculator', label: 'Calculator', icon: CalculatorIcon },
   { id: 'settings', label: 'Settings', icon: Settings },
@@ -259,8 +262,8 @@ const mobileNavItems = navItems.filter((item) => MOBILE_NAV_IDS.includes(item.id
 const MOBILE_ICON_ACTIVE_FILTER =
   'invert(55%) sepia(94%) saturate(400%) hue-rotate(155deg) brightness(100%) contrast(100%)';
 
-function isEmbeddedPanelTab(tab: DemoTab): tab is 'calculator' | 'settings' {
-  return tab === 'calculator' || tab === 'settings';
+function isEmbeddedPanelTab(tab: DemoTab): tab is 'calculator' | 'settings' | 'intelligence' {
+  return tab === 'calculator' || tab === 'settings' || tab === 'intelligence';
 }
 
 function timeGreeting(): string {
@@ -362,9 +365,10 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
    * Ignores stale Next `useSearchParams` until the router catches up (or the user goes back).
    */
   const pendingTabUrlRef = useRef<DemoTab | null>(null);
-  /** Once opened, keep Settings/Calculator mounted (hidden) so return visits don't remount. */
+  /** Once opened, keep Settings/Calculator/Intelligence mounted (hidden) so return visits don't remount. */
   const [settingsMounted, setSettingsMounted] = useState(false);
   const [calculatorMounted, setCalculatorMounted] = useState(false);
+  const [intelligenceMounted, setIntelligenceMounted] = useState(false);
   const isDashboard = homeHref === '/dashboard';
   const isClerkUser = Boolean(user);
   const [frameHeight, setFrameHeight] = useState<number>(1200);
@@ -459,13 +463,28 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
       setActiveTab(tab);
       if (tab === 'settings') setSettingsMounted(true);
       if (tab === 'calculator') setCalculatorMounted(true);
+      if (tab === 'intelligence') setIntelligenceMounted(true);
 
       const params = readLocationSearchParams(searchParams);
       const tabParam = demoTabToParam(tab);
       if (tabParam) params.set('tab', tabParam);
       else params.delete('tab');
+      if (tab !== 'intelligence') params.delete('caseId');
 
       writeTabHref(locationHref(pathname, params), tab, options);
+    },
+    [pathname, searchParams, writeTabHref],
+  );
+
+  const openIntelligence = useCallback(
+    (caseId?: string, options?: { replace?: boolean }) => {
+      setActiveTab('intelligence');
+      setIntelligenceMounted(true);
+      const params = readLocationSearchParams(searchParams);
+      params.set('tab', 'intelligence');
+      if (caseId) params.set('caseId', caseId);
+      else params.delete('caseId');
+      writeTabHref(locationHref(pathname, params), 'intelligence', options);
     },
     [pathname, searchParams, writeTabHref],
   );
@@ -488,6 +507,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
     setActiveTab((prev) => (prev === next ? prev : next));
     if (next === 'settings') setSettingsMounted(true);
     if (next === 'calculator') setCalculatorMounted(true);
+    if (next === 'intelligence') setIntelligenceMounted(true);
   }, [searchParams]);
 
   // Keep tab state in sync with the URL (reload + browser back/forward).
@@ -507,6 +527,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
   useEffect(() => {
     if (activeTab === 'settings') setSettingsMounted(true);
     if (activeTab === 'calculator') setCalculatorMounted(true);
+    if (activeTab === 'intelligence') setIntelligenceMounted(true);
   }, [activeTab]);
 
   // Idle-warm Settings after first paint so its API routes don't cold-compile with /dashboard.
@@ -647,6 +668,15 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
   casesLoadingRef.current = isPersonalDashboard
     ? (bootstrapError ? casesLoading : bootstrapLoading) && !hasLiveListData
     : casesLoading && casesDataRef.current.length === 0;
+
+  const intelligenceCases = useMemo(
+    () =>
+      isPersonalDashboard
+        ? (bootstrapData?.data.cases ?? casesData?.data ?? [])
+        : (casesData?.data ?? []),
+    [isPersonalDashboard, bootstrapData?.data.cases, casesData?.data],
+  );
+  const intelligenceCasesLoading = casesLoadingRef.current;
 
   const liveUnreadNotifMessages = useMemo(() => {
     const rows = (unreadMessagesResponse?.data ?? []) as MessageWithContext[];
@@ -1419,6 +1449,11 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
         return;
       }
 
+      if (data?.type === 'ko:open-intelligence' && typeof data.caseId === 'string') {
+        openIntelligence(data.caseId);
+        return;
+      }
+
       if (data?.type === 'ko:fact-find-open') {
         setFactFindOpen(true);
         window.scrollTo(0, 0);
@@ -2083,7 +2118,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
 
     window.addEventListener('message', onMessage);
     return () => window.removeEventListener('message', onMessage);
-  }, [isDashboard, isClerkUser, createClient, createCase, inviteToPortal, getToken, syncLiveDataToIframe, postClientsSync, postCasesSync, postAdvisersSync, queryClient, router, selectTab, writeTabHref, pathname, searchParams]);
+  }, [isDashboard, isClerkUser, createClient, createCase, inviteToPortal, getToken, syncLiveDataToIframe, postClientsSync, postCasesSync, postAdvisersSync, queryClient, router, selectTab, openIntelligence, writeTabHref, pathname, searchParams]);
 
   // ── Directly update the iframe's documents table ────────────────────────────
   // Works because the iframe is same-origin, so the parent can touch its DOM.
@@ -3884,6 +3919,11 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
                     ) : null}
                   </span>
                   <span>{item.label}</span>
+                  {item.badge ? (
+                    <span className="ml-auto rounded-full bg-brand-teal-700 px-2 py-0.5 text-[10px] font-bold tracking-wide text-white">
+                      {item.badge}
+                    </span>
+                  ) : null}
                   {isPersonalDashboard && item.id === 'messages' && !hasMessages && (
                     <span className="ml-auto text-xs text-[#71717a]" aria-label="Upgrade required">🔒</span>
                   )}
@@ -4089,7 +4129,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
           </div>
           </div>
           {/* ── Mobile: back button when on a Settings-nested tab ───────────── */}
-          {(activeTab === 'ai' || activeTab === 'calculator') && (
+          {(activeTab === 'ai' || activeTab === 'calculator' || activeTab === 'intelligence') && (
             <button
               type="button"
               onClick={() => selectTab('settings')}
@@ -4101,7 +4141,26 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
             </button>
           )}
 
-          {/* Keep Calculator/Settings mounted (hidden) after first open — avoids remount reload. */}
+          {/* Keep Calculator/Settings/Intelligence mounted (hidden) after first open — avoids remount reload. */}
+          {intelligenceMounted && (
+            <div className={activeTab === 'intelligence' ? undefined : 'hidden'} aria-hidden={activeTab !== 'intelligence'}>
+              <MortgageIntelligencePanel
+                cases={intelligenceCases}
+                casesLoading={intelligenceCasesLoading}
+                initialCaseId={
+                  activeTab === 'intelligence'
+                    ? readLocationSearchParams(searchParams).get('caseId')
+                    : null
+                }
+                onConsumedCaseId={() => {
+                  const params = readLocationSearchParams(searchParams);
+                  if (!params.has('caseId')) return;
+                  params.delete('caseId');
+                  writeTabHref(locationHref(pathname, params), 'intelligence', { replace: true });
+                }}
+              />
+            </div>
+          )}
           {calculatorMounted && (
             <div className={activeTab === 'calculator' ? undefined : 'hidden'} aria-hidden={activeTab !== 'calculator'}>
               <MortgageCalculators />
@@ -4135,6 +4194,19 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
                   <div>
                     <p className="text-[13px] font-semibold text-[#061F18]">Calculator</p>
                     <p className="text-[11px] text-[#71717a]">Mortgage tools</p>
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => selectTab('intelligence')}
+                  className="flex items-center gap-3 rounded-xl border border-[#E4E4E4] bg-white px-4 py-3.5 text-left transition-colors hover:border-[#00B8D9] hover:bg-[#E9FCFF]"
+                >
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#f0fafb]">
+                    <TrendingUp className="h-5 w-5 text-[#535e5b]" aria-hidden />
+                  </span>
+                  <div>
+                    <p className="text-[13px] font-semibold text-[#061F18]">Mortgage Intel</p>
+                    <p className="text-[11px] text-[#71717a]">Market context</p>
                   </div>
                 </button>
               </div>
@@ -4599,7 +4671,9 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
           {mobileNavItems.map((item) => {
             // AI Reports and Calculator are nested under Settings on mobile.
             const mobileActive =
-              activeTab === 'ai' || activeTab === 'calculator' ? 'settings' : activeTab;
+              activeTab === 'ai' || activeTab === 'calculator' || activeTab === 'intelligence'
+                ? 'settings'
+                : activeTab;
             const isActive = mobileActive === item.id;
             const Icon = 'icon' in item ? item.icon : null;
             return (

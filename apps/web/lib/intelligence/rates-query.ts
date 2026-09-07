@@ -17,7 +17,6 @@ import {
   OVERVIEW_SERIES,
   SIGNAL_SERIES,
   BOE_SERIES_LABELS,
-  type BoESeriesKey,
 } from './boe-series';
 
 // ── Internal helpers ──────────────────────────────────────────────────────────
@@ -189,18 +188,18 @@ export interface CurrentRatesData {
  * Returns nulls (not fake values) when data is absent.
  */
 export async function getCurrentRates(): Promise<CurrentRatesData> {
-  const keyMap: Record<string, BoESeriesKey> = {
-    fixed2yr: 'FIXED_2YR_75LTV',
-    fixed5yr: 'FIXED_5YR_75LTV',
-    variable75: 'VARIABLE_75LTV',
+  const toSlot = (point: { value: number; validFrom: Date } | null) =>
+    point ? { value: point.value, asAt: point.validFrom.toISOString() } : null;
+
+  const [fixed2yr, fixed5yr, variable75] = await Promise.all([
+    currentPoint(BOE_SERIES.FIXED_2YR_75LTV),
+    currentPoint(BOE_SERIES.FIXED_5YR_75LTV),
+    currentPoint(BOE_SERIES.VARIABLE_75LTV),
+  ]);
+
+  return {
+    fixed2yr: toSlot(fixed2yr),
+    fixed5yr: toSlot(fixed5yr),
+    variable75: toSlot(variable75),
   };
-
-  const entries = await Promise.all(
-    (Object.entries(keyMap) as [string, BoESeriesKey][]).map(async ([slot, seriesKey]) => {
-      const point = await currentPoint(BOE_SERIES[seriesKey]);
-      return [slot, point ? { value: point.value, asAt: point.validFrom.toISOString() } : null] as const;
-    }),
-  );
-
-  return Object.fromEntries(entries) as CurrentRatesData;
 }

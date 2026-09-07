@@ -8,6 +8,7 @@
     "start": "next start -H 0.0.0.0",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
+    "test:formulas": "node --experimental-strip-types --test lib/calculators/formulas.test.ts",
     "clean": "rm -rf .next node_modules"
   },
   "dependencies": {

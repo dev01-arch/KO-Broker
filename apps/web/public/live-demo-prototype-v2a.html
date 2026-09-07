@@ -781,6 +781,8 @@ tbody tr:hover td{background:var(--surface)}
 #tab-case-detail .cd-back:hover{color:#18181b;text-decoration:underline}
 #tab-case-detail .cd-header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:nowrap}
 #tab-case-detail .cd-header-actions{display:flex;flex-direction:column;align-items:flex-end;gap:10px;flex-shrink:0;margin-left:auto}
+#tab-case-detail .cd-market-intel-btn{display:flex;height:43px;padding:4px 20px;justify-content:center;align-items:center;gap:5.637px;border-radius:32px;border:1px solid #0F6E56;background:#fff;color:#0F6E56;font-family:'Syne',sans-serif;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap;box-sizing:border-box;transition:background .15s,box-shadow .15s}
+#tab-case-detail .cd-market-intel-btn:hover{background:#E1F5EE}
 #tab-case-detail .cd-factfind-btn{display:flex;height:43px;padding:4px 20px;justify-content:center;align-items:center;gap:5.637px;border-radius:32px;border:none;background:#D4A017;color:#fff;font-family:'Syne',sans-serif;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap;box-sizing:border-box;transition:background .15s,box-shadow .15s;box-shadow:0 4px 12px rgba(212,160,23,0.28)}
 #tab-case-detail .cd-factfind-btn:hover{background:#c49215}
 #tab-case-detail .cd-factfind-bar{display:flex;justify-content:flex-end;margin-bottom:4px}
@@ -6313,6 +6315,7 @@ function openCase(id) {
           </div>
         </div>
         <div class="cd-header-actions">
+          <button type="button" class="cd-market-intel-btn" onclick="openMarketIntel('${id}')">Market intel</button>
           <button type="button" class="cd-factfind-btn" onclick="openFactFindWizard('${id}')">Launch Fact Find Form</button>
         </div>
       </div>
@@ -8927,6 +8930,14 @@ calcRun();
     ffNotifyParent(true);
     ffRender();
     document.addEventListener('keydown', ffKeyDown);
+  };
+
+  window.openMarketIntel = function (caseId) {
+    if (!caseId) return;
+    window.parent.postMessage(
+      { type: 'ko:open-intelligence', caseId: String(caseId) },
+      window.location.origin,
+    );
   };
 
   const ffStateFromQuery = ffNormalizeState(new URLSearchParams(window.location.search).get('ffErrorState') || '');
