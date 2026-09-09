@@ -5,11 +5,13 @@
  * responses onto the presentation shapes in lib/intelligence/types.ts so the
  * components never depend on the transport shape directly.
  *
- * Two deliberate reconciliations:
+ * Deliberate reconciliations:
  *  - Backend reports 12-month change in basis points; the UI renders
  *    percentage points, so bps are divided by 100 here.
  *  - Backend's overview omits the effective-new series, so the four-card
  *    scaffold is built here and each card fills in if its series is present.
+ *  - Backend's feedStatuses omit FCA lending stats, so the three-source
+ *    Data sources scaffold is built here; Last retrieved fills in if present.
  */
 
 import type {
@@ -83,11 +85,24 @@ const OVERVIEW_CARDS = [
   },
 ] as const;
 
-const FEED_META: Record<string, { label: string; cadence: string }> = {
-  BOE_RATES: { label: 'Bank of England — quoted rates', cadence: 'Monthly' },
-  HMLR_PRICES: { label: 'HM Land Registry — price paid', cadence: 'Monthly' },
-  POSTCODES_IO: { label: 'Postcodes.io — geography', cadence: 'On demand' },
-};
+/** Prototype shows three source cards; FCA stays empty until Backend exposes it. */
+const OVERVIEW_FEEDS = [
+  {
+    feedId: 'BOE_RATES',
+    label: 'Bank of England — quoted rates',
+    cadence: 'Monthly',
+  },
+  {
+    feedId: 'HMLR_PRICES',
+    label: 'HM Land Registry — price paid',
+    cadence: 'Monthly',
+  },
+  {
+    feedId: 'FCA_LENDING',
+    label: 'FCA — mortgage lending stats',
+    cadence: 'Quarterly',
+  },
+] as const;
 
 export function toIntelligenceOverview(res: OverviewResponse): IntelligenceOverview {
   const bySeries = new Map(res.rates.map((rate) => [rate.seriesId, rate]));
@@ -122,12 +137,15 @@ export function toIntelligenceOverview(res: OverviewResponse): IntelligenceOverv
     signalMeta: res.marketSignal
       ? 'Bank of England quoted household rates at 75% LTV.'
       : null,
-    feeds: res.feedStatuses.map((feed) => ({
-      feedId: feed.feedId,
-      label: FEED_META[feed.feedId]?.label ?? feed.feedId,
-      cadence: FEED_META[feed.feedId]?.cadence ?? '—',
-      lastRetrievedLabel: formatDay(feed.lastSuccessAt),
-    })),
+    feeds: OVERVIEW_FEEDS.map((feed) => {
+      const wire = res.feedStatuses.find((status) => status.feedId === feed.feedId);
+      return {
+        feedId: feed.feedId,
+        label: feed.label,
+        cadence: feed.cadence,
+        lastRetrievedLabel: formatDay(wire?.lastSuccessAt),
+      };
+    }),
     ratesStale: res.feedStatuses.some((feed) => feed.feedId === 'BOE_RATES' && feed.isStale),
     waitingForImport: res.rates.length === 0,
   };
