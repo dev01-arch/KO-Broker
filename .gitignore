@@ -44,3 +44,6 @@ postgres-data/
 
 # local backend merge reference copies
 .backend-merge-backup/
+
+# typescript build info
+*.tsbuildinfo

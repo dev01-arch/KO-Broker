@@ -34,9 +34,11 @@ export default clerkMiddleware(
       if (isApi) {
         const authObj = await auth();
         const requestHeaders = new Headers(req.headers);
-        requestHeaders.delete('x-user-id');
-        requestHeaders.delete('x-org-id');
-        requestHeaders.delete('x-user-role');
+        if (process.env.NODE_ENV === 'production') {
+          requestHeaders.delete('x-user-id');
+          requestHeaders.delete('x-org-id');
+          requestHeaders.delete('x-user-role');
+        }
 
         if (authObj.userId) {
           requestHeaders.set('x-user-id', authObj.userId);

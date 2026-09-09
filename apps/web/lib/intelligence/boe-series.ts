@@ -86,6 +86,7 @@ export const OVERVIEW_SERIES: BoESeriesKey[] = [
   'FIXED_2YR_75LTV',
   'FIXED_5YR_75LTV',
   'VARIABLE_75LTV',
+  'EFFECTIVE_NEW',
 ];
 
 /**
@@ -99,9 +100,9 @@ export const SIGNAL_SERIES: [BoESeriesKey, BoESeriesKey] = [
 
 /**
  * BoE public data API base URL.
- * Usage: `${BOE_API_BASE}?last.x=yes&SeriesCodes=IUMBV42&UsingCodes=Y&CSVF=TT&VPD=Y`
+ * Usage: `${BOE_API_BASE}?csv.x=yes&Datefrom=01/Jan/2020&Dateto=now&SeriesCodes=IUMBV42&UsingCodes=Y&CSVF=TT&VPD=Y`
  *
- * Returns CSV:
+ * Returns CSV/TSV or HTML table of values:
  *   row 0: header "Title, {series label}"
  *   row 1+: "YYYY Mon,value"
  * e.g. "2024 Sep,4.53"
@@ -111,11 +112,14 @@ export const BOE_API_BASE =
 
 /**
  * Build a BoE CSV download URL for a single series.
- * Fetches the last N data points (most recent first).
+ * Requests tabular data with titles for the series.
  */
 export function buildBoEUrl(seriesCode: string): string {
   const params = new URLSearchParams({
+    'csv.x': 'yes',
     'last.x': 'yes',
+    Datefrom: '01/Jan/2020',
+    Dateto: 'now',
     SeriesCodes: seriesCode,
     UsingCodes: 'Y',
     CSVF: 'TT',

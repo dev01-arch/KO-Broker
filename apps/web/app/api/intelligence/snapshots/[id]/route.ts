@@ -10,6 +10,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createParamHandler } from '@/lib/api/handler';
 import { prisma } from '@/lib/db';
+import { formatSnapshotResponse } from '@/lib/intelligence/snapshot-service';
 
 export const GET = createParamHandler<unknown, { id: string }>({
   method: 'GET',
@@ -26,6 +27,7 @@ export const GET = createParamHandler<unknown, { id: string }>({
       );
     }
 
-    return NextResponse.json({ success: true, data: snapshot });
+    const data = await formatSnapshotResponse(snapshot);
+    return NextResponse.json({ success: true, data });
   },
 });

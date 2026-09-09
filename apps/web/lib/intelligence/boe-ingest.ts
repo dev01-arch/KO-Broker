@@ -31,20 +31,94 @@ export interface BoEIngestReport {
   feedStatus: 'success' | 'partial' | 'failure';
 }
 
-// ── CSV parsing ───────────────────────────────────────────────────────────────
+// ── Response parsing (CSV/TSV & HTML table fallback) ──────────────────────
+
+const MONTH_NAMES = [
+  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+];
+
+function parseMonthYear(dateStr: string): Date | null {
+  const cleaned = dateStr.replace(/,/g, ' ').replace(/-/g, ' ').trim();
+  const parts = cleaned.split(/\s+/).filter(Boolean);
+  if (parts.length < 2) return null;
+
+  let monthIndex = -1;
+  let year = NaN;
+
+  for (const part of parts) {
+    const mIdx = MONTH_NAMES.findIndex(
+      (m) => m.toLowerCase() === part.slice(0, 3).toLowerCase(),
+    );
+    if (mIdx !== -1 && monthIndex === -1) {
+      monthIndex = mIdx;
+      continue;
+    }
+
+    const num = parseInt(part, 10);
+    if (!isNaN(num)) {
+      if (num >= 1900 && num <= 2100) {
+        year = num;
+      } else if (num >= 0 && num <= 99 && isNaN(year) && parts.length <= 3) {
+        year = num >= 70 ? 1900 + num : 2000 + num;
+      }
+    }
+  }
+
+  if (monthIndex === -1 || isNaN(year)) return null;
+  return new Date(Date.UTC(year, monthIndex, 1));
+}
 
 /**
- * BoE CSV format (tab-delimited when CSVF=TT):
- *   Row 0: "Title\t{series label}"
- *   Row 1+: "YYYY Mon\tvalue"   e.g. "2024 Sep\t4.53"
- *
- * We want the LATEST row (last non-blank data row).
+ * Parses a rate value string, returning NaN if invalid or placeholder.
  */
-function parseBoECsv(
-  csv: string,
+function parseRateValue(valStr: string): number {
+  const trimmed = valStr.trim();
+  if (!trimmed || trimmed === '.' || trimmed === '..' || trimmed.toLowerCase() === 'n/a' || trimmed === '-') {
+    return NaN;
+  }
+  return parseFloat(trimmed);
+}
+
+/**
+ * Parses BoE response which can be either tab/comma-delimited CSV/TSV
+ * or an HTML page containing an interactive data table.
+ */
+export function parseBoEResponse(
+  body: string,
   seriesId: string,
 ): { value: number; validFrom: Date; rawRef: string } | null {
-  const lines = csv
+  const trimmed = body.trim();
+
+  // ── HTML table parsing fallback ──────────────────────────────────────────
+  if (trimmed.includes('<table') || trimmed.includes('<tr') || trimmed.toLowerCase().startsWith('<!doctype') || trimmed.toLowerCase().startsWith('<html')) {
+    const rowMatches = trimmed.match(/<tr[^>]*>[\s\S]*?<\/tr>/gi);
+    if (rowMatches && rowMatches.length > 1) {
+      for (let i = rowMatches.length - 1; i >= 0; i--) {
+        const rowHtml = rowMatches[i]!;
+        const cellMatches = rowHtml.match(/<t[dh][^>]*>([\s\S]*?)<\/t[dh]>/gi);
+        if (!cellMatches || cellMatches.length < 2) continue;
+
+        const cellTexts = cellMatches.map((c) =>
+          c.replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').trim(),
+        );
+
+        const dateStr = cellTexts[0]!;
+        const valueStr = cellTexts[1]!;
+
+        const value = parseRateValue(valueStr);
+        if (isNaN(value)) continue;
+
+        const validFrom = parseMonthYear(dateStr);
+        if (!validFrom) continue;
+
+        return { value, validFrom, rawRef: `${seriesId}@${dateStr}` };
+      }
+    }
+  }
+
+  // ── CSV/TSV parsing ──────────────────────────────────────────────────────
+  const lines = trimmed
     .split('\n')
     .map((l) => l.trim())
     .filter(Boolean);
@@ -52,30 +126,21 @@ function parseBoECsv(
   // Skip header row
   const dataLines = lines.slice(1);
 
-  // Walk backwards to find the last non-blank value
   for (let i = dataLines.length - 1; i >= 0; i--) {
-    const cols = dataLines[i]!.split('\t');
+    const line = dataLines[i]!;
+    // Split by tab first, fallback to comma if tab not present
+    const cols = line.includes('\t') ? line.split('\t') : line.split(',');
     if (cols.length < 2) continue;
 
-    const dateStr = cols[0]!.trim(); // e.g. "2024 Sep"
-    const valueStr = cols[1]!.trim();
-    if (!valueStr || valueStr === '.' || valueStr === 'n/a') continue;
+    const dateStr = cols[0]!.replace(/"/g, '').trim();
+    const valueStr = cols[1]!.replace(/"/g, '').trim();
 
-    const value = parseFloat(valueStr);
+    const value = parseRateValue(valueStr);
     if (isNaN(value)) continue;
 
-    // Parse "YYYY Mon" → first day of that month
-    const parts = dateStr.split(' ');
-    if (parts.length !== 2) continue;
-    const year = parseInt(parts[0]!, 10);
-    const monthStr = parts[1]!;
-    const monthIndex = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-    ].indexOf(monthStr);
-    if (monthIndex === -1 || isNaN(year)) continue;
+    const validFrom = parseMonthYear(dateStr);
+    if (!validFrom) continue;
 
-    const validFrom = new Date(Date.UTC(year, monthIndex, 1));
     return { value, validFrom, rawRef: `${seriesId}@${dateStr}` };
   }
 
@@ -94,7 +159,11 @@ async function fetchOneSeries(
     const url = buildBoEUrl(seriesId);
     const res = await fetch(url, {
       signal: AbortSignal.timeout(15_000),
-      headers: { 'User-Agent': 'KO-Broker/1.0 (data@ko-broker.com)' },
+      headers: {
+        'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        Accept: 'text/html,application/xhtml+xml,text/csv,application/csv,text/plain,*/*',
+      },
     });
 
     if (!res.ok) {
@@ -105,8 +174,8 @@ async function fetchOneSeries(
       };
     }
 
-    const csv = await res.text();
-    const parsed = parseBoECsv(csv, seriesId);
+    const responseText = await res.text();
+    const parsed = parseBoEResponse(responseText, seriesId);
 
     if (!parsed) {
       return {
@@ -178,8 +247,6 @@ export async function runBoEIngest(): Promise<BoEIngestReport> {
   const ranAt = new Date();
 
   // ── Check whether this month is already fully ingested (no-op guard) ─────────
-  // BoE publishes late in the month so we use a check-and-skip rather than
-  // scheduling by day-of-month (which would be brittle).
   const thisMonthStart = new Date(Date.UTC(ranAt.getUTCFullYear(), ranAt.getUTCMonth(), 1));
   const allSeriesIds = Object.values(BOE_SERIES);
   const existingThisMonth = await prisma.rateSeriesPoint.count({
@@ -203,17 +270,25 @@ export async function runBoEIngest(): Promise<BoEIngestReport> {
   const seriesKeys = Object.keys(BOE_SERIES) as BoESeriesKey[];
   const results = await Promise.all(seriesKeys.map(fetchOneSeries));
 
-  const errorResults = results.filter((r) => r.status === 'error');
-  const feedStatus =
-    errorResults.length === 0
+  const nonSuccessResults = results.filter(
+    (r) => r.status === 'error' || r.status === 'skipped',
+  );
+  const successCount = results.filter(
+    (r) => r.status === 'upserted' || r.status === 'already_current',
+  ).length;
+
+  const feedStatus: 'success' | 'partial' | 'failure' =
+    nonSuccessResults.length === 0
       ? 'success'
-      : errorResults.length === results.length
-        ? 'failure'
-        : 'partial';
+      : successCount > 0
+        ? 'partial'
+        : 'failure';
 
   const lastError =
-    errorResults.length > 0
-      ? errorResults.map((r) => `${r.series}: ${r.error}`).join('; ')
+    nonSuccessResults.length > 0
+      ? nonSuccessResults
+          .map((r) => `${r.series}: ${r.error ?? r.status}`)
+          .join('; ')
       : null;
 
   await upsertFeedStatus('BOE_RATES', ranAt, lastError);

@@ -13,6 +13,7 @@
  */
 
 import { prisma } from '@/lib/db';
+import type { CaseIntelligenceSnapshot } from '@ko/db';
 import { logAuditEvent } from '@/lib/compliance/audit';
 import { lookupPostcode, toOutwardCode } from './postcode-cache';
 import { computeMarketSignal } from './rates-query';
@@ -289,6 +290,23 @@ export async function createSnapshot(
   });
 
   // ── 11. Return fully rendered snapshot ────────────────────────────────────
+  return formatSnapshotResponse(snapshot, {
+    region: geo?.region ?? null,
+    adminDistrict: geo?.adminDistrict ?? null,
+    constituency: geo?.constituency ?? null,
+  });
+}
+
+/**
+ * Maps a stored Prisma CaseIntelligenceSnapshot row to the standard SnapshotResponse wire contract.
+ * Serializes Date instances to ISO strings and populates the structured geography object.
+ */
+export async function formatSnapshotResponse(
+  snapshot: CaseIntelligenceSnapshot,
+  geoOverride?: { region: string | null; adminDistrict: string | null; constituency: string | null },
+): Promise<SnapshotResponse> {
+  const geo = geoOverride ?? (await lookupPostcode(snapshot.postcode));
+
   return {
     id: snapshot.id,
     orgId: snapshot.orgId,
@@ -313,8 +331,8 @@ export async function createSnapshot(
     marketSignal: snapshot.marketSignal,
     insightText: snapshot.insightText,
     watchText: snapshot.watchText,
-    outputsJson,
-    sourcesJson,
+    outputsJson: snapshot.outputsJson as SnapshotOutputs,
+    sourcesJson: snapshot.sourcesJson as SnapshotSources,
     geography: {
       region: geo?.region ?? null,
       adminDistrict: geo?.adminDistrict ?? null,

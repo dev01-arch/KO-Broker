@@ -64,19 +64,20 @@ export interface HmlrIngestReport {
  * is validated as /^[A-Z]{1,2}[0-9]{1,2}$/ before being substituted).
  */
 function buildSparqlQuery(outwardCode: string, fromDate: string): string {
+  const code = outwardCode.trim().toUpperCase();
   return `
 PREFIX lrppi: <http://landregistry.data.gov.uk/def/ppi/>
 PREFIX lrcommon: <http://landregistry.data.gov.uk/def/common/>
 PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
 
 SELECT ?price WHERE {
-  ?transx lrppi:pricePaid ?price ;
-          lrppi:propertyAddress ?addr ;
-          lrppi:transactionDate ?date .
   ?addr lrcommon:postcode ?postcode .
-  FILTER (regex(str(?postcode), "^${outwardCode} ", "i"))
+  FILTER (strstarts(str(?postcode), "${code} "))
+  ?transx lrppi:propertyAddress ?addr ;
+          lrppi:pricePaid ?price ;
+          lrppi:transactionDate ?date .
   FILTER (?date >= "${fromDate}"^^xsd:date)
-}
+} LIMIT 100
 `.trim();
 }
 
