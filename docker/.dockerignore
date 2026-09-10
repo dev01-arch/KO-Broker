@@ -1,0 +1,54 @@
+# Version control & tooling
+.git
+.gitignore
+.gitattributes
+.github
+.gstack
+.agents
+.gemini
+
+# Environment variables & secrets
+.env
+.env*
+!.env.example
+
+# Dependencies
+node_modules
+apps/*/node_modules
+packages/*/node_modules
+tooling/*/node_modules
+.pnpm-store
+
+# Build outputs & caches
+.next
+apps/web/.next
+out
+build
+dist
+.turbo
+.vercel
+*.tsbuildinfo
+
+# Local databases & storage
+postgres-data
+packages/db/prisma/*.db
+packages/db/prisma/*.db-journal
+
+# Logs & debugging
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Editor & OS files
+.DS_Store
+Thumbs.db
+.vscode
+.idea
+*.swp
+*.swo
+
+# Local reference backups & test coverage
+.backend-merge-backup
+coverage

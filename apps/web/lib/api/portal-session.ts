@@ -12,7 +12,12 @@ export type PortalSessionPayload = {
 
 function sessionSecret(): string {
   const secret = process.env.PORTAL_SESSION_SECRET?.trim();
-  if (secret) return secret;
+  if (secret) {
+    if (process.env.NODE_ENV === 'production' && secret === 'dev-portal-session-secret') {
+      throw new Error('Insecure dev PORTAL_SESSION_SECRET cannot be used in production');
+    }
+    return secret;
+  }
   if (process.env.NODE_ENV === 'production') {
     throw new Error('PORTAL_SESSION_SECRET is required in production');
   }
@@ -90,7 +95,7 @@ export function portalSessionCookieOptions(token: string) {
     value: token,
     httpOnly: true,
     secure: isProd,
-    sameSite: isProd ? ('none' as const) : ('lax' as const),
+    sameSite: 'lax' as const,
     path: '/',
     maxAge: SESSION_TTL_SEC,
   };

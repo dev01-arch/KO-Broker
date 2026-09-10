@@ -4,11 +4,35 @@ import { prisma } from '../db';
 import { AuthError } from './index';
 import { verifyPortalSession } from '@/lib/api/portal-session';
 
-const SECRET = process.env.JWT_SECRET || 'ko-broker-portal-super-secret-key-for-local-dev-12345!';
+const INSECURE_DEV_SECRET = 'ko-broker-portal-super-secret-key-for-local-dev-12345!';
+
+export function getJwtSecret(): string | null {
+  const secret = process.env.JWT_SECRET?.trim();
+  if (secret) {
+    if (process.env.NODE_ENV === 'production' && secret === INSECURE_DEV_SECRET) {
+      console.error('[portalAuth] Insecure static default JWT_SECRET cannot be used in production.');
+      return null;
+    }
+    return secret;
+  }
+
+  // Allow a mock secret in automated test environments only
+  if (process.env.NODE_ENV === 'test') {
+    return 'test-jwt-secret-ko-broker-portal-test-only';
+  }
+
+  // Strictly fail closed in all other non-test environments when JWT_SECRET is unset
+  return null;
+}
 
 // ── JWT Utilities (HS256 implementation using native crypto) ────────────────
 
 export function signToken(payload: Record<string, unknown>): string {
+  const secret = getJwtSecret();
+  if (!secret) {
+    throw new Error('JWT_SECRET is required to sign portal tokens but is not configured');
+  }
+
   const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url');
   
   // Set expiration to 7 days
@@ -16,7 +40,7 @@ export function signToken(payload: Record<string, unknown>): string {
   const payloadStr = Buffer.from(JSON.stringify({ ...payload, exp })).toString('base64url');
   
   const signature = crypto
-    .createHmac('sha256', SECRET)
+    .createHmac('sha256', secret)
     .update(`${header}.${payloadStr}`)
     .digest('base64url');
     
@@ -25,17 +49,27 @@ export function signToken(payload: Record<string, unknown>): string {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function verifyToken(token: string): Record<string, any> | null {
+  const secret = getJwtSecret();
+  if (!secret) {
+    return null;
+  }
+
   try {
     const parts = token.split('.');
     if (parts.length !== 3) return null;
     
     const [header, payloadStr, signature] = parts;
     const expectedSignature = crypto
-      .createHmac('sha256', SECRET)
+      .createHmac('sha256', secret)
       .update(`${header}.${payloadStr}`)
       .digest('base64url');
       
-    if (signature !== expectedSignature) return null;
+    if (
+      signature.length !== expectedSignature.length ||
+      !crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSignature))
+    ) {
+      return null;
+    }
     
     const payload = JSON.parse(Buffer.from(payloadStr, 'base64url').toString('utf8'));
     

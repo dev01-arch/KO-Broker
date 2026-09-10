@@ -1,4 +1,4 @@
-﻿import { NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { prisma } from '@/lib/db';
 import { getPlanFromStripePriceId } from '@/lib/billing/stripe-checkout';
@@ -9,8 +9,6 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'mock-key', {
   apiVersion: '2026-06-24.dahlia',
 });
 
-const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-
 function getPlanFromPriceId(priceId: string): OrgPlan {
   return getPlanFromStripePriceId(priceId) ?? 'STARTER';
 }
@@ -19,27 +17,22 @@ function getPlanFromPriceId(priceId: string): OrgPlan {
  * POST /api/webhooks/stripe
  */
 export async function POST(req: Request) {
-  const body = await req.text();
+  const secret = process.env.STRIPE_WEBHOOK_SECRET?.trim();
+  if (!secret) {
+    console.error('[Stripe Webhook] STRIPE_WEBHOOK_SECRET is not configured');
+    return new Response('Webhook secret not configured', { status: 500 });
+  }
+
   const signature = req.headers.get('stripe-signature');
-
-  if (!signature || !webhookSecret) {
-    console.warn('[Stripe Webhook] Received webhook without validation (no signature/secret)');
-
-    if (!webhookSecret) {
-      try {
-        const event = JSON.parse(body) as Stripe.Event;
-        await handleEvent(event);
-        return NextResponse.json({ received: true });
-      } catch {
-        return new Response('Invalid JSON payload', { status: 400 });
-      }
-    }
+  if (!signature) {
+    console.warn('[Stripe Webhook] Missing stripe-signature header');
     return new Response('Missing stripe-signature header', { status: 400 });
   }
 
+  const body = await req.text();
   let event: Stripe.Event;
   try {
-    event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
+    event = stripe.webhooks.constructEvent(body, signature, secret);
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Unknown error';
     console.error(`[Stripe Webhook] Signature verification failed: ${msg}`);

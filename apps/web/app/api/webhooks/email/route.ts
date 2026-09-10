@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { Webhook } from 'svix';
-import { headers } from 'next/headers';
 import { prisma } from '@/lib/db';
 
 interface InboundEmailPayload {
@@ -23,35 +22,34 @@ interface InboundEmailPayload {
  * resolves client by sender email, and creates an INBOUND Message record.
  */
 export async function POST(req: Request) {
-  const WEBHOOK_SECRET = process.env.RESEND_WEBHOOK_SECRET || process.env.INBOUND_EMAIL_WEBHOOK_SECRET;
+  const WEBHOOK_SECRET = (
+    process.env.RESEND_WEBHOOK_SECRET || process.env.INBOUND_EMAIL_WEBHOOK_SECRET
+  )?.trim();
+
+  if (!WEBHOOK_SECRET) {
+    console.error('[Inbound Email Webhook] Webhook secret is not configured');
+    return new Response('Webhook secret not configured', { status: 500 });
+  }
+
+  const svix_id = req.headers.get('svix-id');
+  const svix_timestamp = req.headers.get('svix-timestamp');
+  const svix_signature = req.headers.get('svix-signature');
+
+  if (!svix_id || !svix_timestamp || !svix_signature) {
+    return new Response('Missing signature headers', { status: 401 });
+  }
 
   const body = await req.text();
-  const headerPayload = await headers();
-
-  // If a secret is configured, enforce Svix cryptographic verification
-  if (WEBHOOK_SECRET) {
-    const svix_id = headerPayload.get('svix-id');
-    const svix_timestamp = headerPayload.get('svix-timestamp');
-    const svix_signature = headerPayload.get('svix-signature');
-
-    if (!svix_id || !svix_timestamp || !svix_signature) {
-      return new Response('Missing signature headers', { status: 400 });
-    }
-
-    const wh = new Webhook(WEBHOOK_SECRET);
-    try {
-      wh.verify(body, {
-        'svix-id': svix_id,
-        'svix-timestamp': svix_timestamp,
-        'svix-signature': svix_signature,
-      });
-    } catch (err) {
-      console.error('[Inbound Email Webhook] Verification failed:', err);
-      return new Response('Invalid webhook signature', { status: 400 });
-    }
-  } else {
-    // If no secret is set, log a warning (allow testing in local dev)
-    console.warn('[Inbound Email Webhook] Running WITHOUT signature verification.');
+  const wh = new Webhook(WEBHOOK_SECRET);
+  try {
+    wh.verify(body, {
+      'svix-id': svix_id,
+      'svix-timestamp': svix_timestamp,
+      'svix-signature': svix_signature,
+    });
+  } catch (err) {
+    console.error('[Inbound Email Webhook] Verification failed:', err);
+    return new Response('Invalid webhook signature', { status: 401 });
   }
 
   let payload: InboundEmailPayload;

@@ -24,6 +24,17 @@ export default clerkMiddleware(
 
     const isApi = req.nextUrl.pathname.startsWith('/api/');
 
+    // Defense-in-depth anti-CSRF check for portal mutation endpoints
+    if (isApi && req.nextUrl.pathname.startsWith('/api/portal/')) {
+      const isMutation = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method);
+      if (isMutation && req.headers.get('sec-fetch-site') === 'cross-site') {
+        return NextResponse.json(
+          { success: false, error: { code: 'FORBIDDEN', message: 'Cross-site mutation blocked' } },
+          { status: 403 },
+        );
+      }
+    }
+
     if (isPublicRoute(req)) {
       // === FRONTEND ADDITION: inject Clerk identity headers for createHandler auth ===
       // Same pattern as backend proxy.ts — API routes read x-user-id / x-org-id.
