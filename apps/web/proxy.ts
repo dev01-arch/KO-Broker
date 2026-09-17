@@ -1,11 +1,7 @@
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
 import { applyCorsHeaders, handleApiCorsPreflight } from '@/lib/api/cors';
-
-const appOrigin = (process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3001').replace(
-  /\/$/,
-  '',
-);
+import { appAuthorizedOrigins } from '@/lib/auth/app-origins';
 
 const isPublicRoute = createRouteMatcher([
   '/',
@@ -74,7 +70,7 @@ export default clerkMiddleware(
     return isApi ? applyCorsHeaders(req, NextResponse.next()) : NextResponse.next();
   },
   {
-    authorizedParties: [appOrigin, 'http://localhost:3001'],
+    authorizedParties: appAuthorizedOrigins(),
     signInUrl: '/sign-in',
     signUpUrl: '/sign-up',
   },

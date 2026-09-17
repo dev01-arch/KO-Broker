@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { appAuthorizedOrigins } from '@/lib/auth/app-origins';
 
 const LOCAL_ORIGINS = ['http://localhost:3001', 'http://localhost:3000', 'http://localhost:3002'];
 
@@ -14,7 +15,12 @@ function parseExtraOrigins(): string[] {
 /** Origins allowed to call /api/* cross-origin (Vercel frontend → Render API). */
 export function getAllowedOrigins(): string[] {
   const appOrigin = (process.env.NEXT_PUBLIC_APP_URL ?? '').replace(/\/$/, '');
-  return [...new Set([...LOCAL_ORIGINS, ...parseExtraOrigins(), ...(appOrigin ? [appOrigin] : [])])];
+  return [...new Set([
+    ...LOCAL_ORIGINS,
+    ...parseExtraOrigins(),
+    ...appAuthorizedOrigins(),
+    ...(appOrigin ? [appOrigin] : []),
+  ])];
 }
 
 export function corsHeadersForOrigin(origin: string | null): Record<string, string> | null {

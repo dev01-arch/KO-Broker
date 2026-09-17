@@ -3,6 +3,7 @@
 import { ClerkProvider } from '@clerk/nextjs';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState } from 'react';
+import { appAuthorizedOrigins, toSameOriginPath } from '@/lib/auth/app-origins';
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -28,12 +29,15 @@ export function Providers({ children }: { children: React.ReactNode }) {
     <ClerkProvider
       signInUrl="/sign-in"
       signUpUrl="/sign-up"
-      signInFallbackRedirectUrl={
-        process.env.NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL ?? '/dashboard'
-      }
-      signUpFallbackRedirectUrl={
-        process.env.NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL ?? '/dashboard'
-      }
+      allowedRedirectOrigins={appAuthorizedOrigins()}
+      signInFallbackRedirectUrl={toSameOriginPath(
+        process.env.NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL,
+        '/dashboard',
+      )}
+      signUpFallbackRedirectUrl={toSameOriginPath(
+        process.env.NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL,
+        '/dashboard',
+      )}
     >
       <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
     </ClerkProvider>

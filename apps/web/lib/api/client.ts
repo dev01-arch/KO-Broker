@@ -36,8 +36,44 @@ export type {
 
 export type { ImportClientsInput, ImportClientsResult };
 
-/** Same-origin by default so local /api/* routes receive the Clerk session token. */
-const BASE_URL = (process.env.NEXT_PUBLIC_API_URL ?? '').replace(/\/$/, '');
+function configuredApiBaseUrl(): string {
+  return (process.env.NEXT_PUBLIC_API_URL ?? '').replace(/\/$/, '');
+}
+
+function isStaleSplitBackend(configured: string): boolean {
+  if (!configured) return true;
+  try {
+    return new URL(configured).hostname.toLowerCase().endsWith('.onrender.com');
+  } catch {
+    return true;
+  }
+}
+
+/**
+ * This Next.js app owns `/api/*`. A baked-in Render URL (NEXT_PUBLIC_API_URL)
+ * keeps the dashboard talking to an old instance after deploys — 405 on new
+ * routes, and Clerk cookies never reach that host. Use same-origin instead.
+ */
+function apiUrl(path: string): string {
+  const configured = configuredApiBaseUrl();
+  if (typeof window !== 'undefined') {
+    if (isStaleSplitBackend(configured)) return path;
+    try {
+      const host = new URL(configured).hostname.toLowerCase();
+      const here = window.location.hostname.toLowerCase();
+      const stripWww = (value: string) => value.replace(/^www\./, '');
+      if (stripWww(host) === stripWww(here)) return path;
+    } catch {
+      return path;
+    }
+    return `${configured}${path}`;
+  }
+  if (isStaleSplitBackend(configured)) {
+    const app = (process.env.NEXT_PUBLIC_APP_URL ?? '').replace(/\/$/, '');
+    return app ? `${app}${path}` : path;
+  }
+  return `${configured}${path}`;
+}
 
 // ─── Response envelope ──────────────────────────────────────────────────────
 
@@ -383,7 +419,7 @@ async function apiFetch<T>(
     ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
   };
 
-  const res = await fetch(`${BASE_URL}${path}`, {
+  const res = await fetch(apiUrl(path), {
     ...options,
     redirect: 'manual',
     headers: {
@@ -433,7 +469,7 @@ async function apiFetchBlob(
   token: string,
   options: RequestInit = {},
 ): Promise<{ blob: Blob; filename: string | null }> {
-  const res = await fetch(`${BASE_URL}${path}`, {
+  const res = await fetch(apiUrl(path), {
     ...options,
     redirect: 'manual',
     headers: {
@@ -1273,7 +1309,7 @@ type WebhookResponse = WebhookAck | ApiErrorResponse;
 
 async function publicJsonFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
   const isFormData = options.body instanceof FormData;
-  const res = await fetch(`${BASE_URL}${path}`, {
+  const res = await fetch(apiUrl(path), {
     ...options,
     headers: {
       ...(isFormData ? {} : { 'Content-Type': 'application/json' }),

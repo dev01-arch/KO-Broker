@@ -3,6 +3,7 @@
 import { SignIn, SignUp } from '@clerk/nextjs';
 import { useSearchParams } from 'next/navigation';
 import { Building2 } from 'lucide-react';
+import { toSameOriginPath } from '@/lib/auth/app-origins';
 
 const clerkAppearance = {
   variables: {
@@ -34,10 +35,10 @@ type ClerkAuthPageProps = {
  */
 export function ClerkAuthPage({ mode, title, subtitle }: ClerkAuthPageProps) {
   const searchParams = useSearchParams();
-  const redirectUrl =
-    searchParams.get('redirect_url') ||
-    searchParams.get('redirect') ||
-    DEFAULT_REDIRECT;
+  const redirectUrl = toSameOriginPath(
+    searchParams.get('redirect_url') || searchParams.get('redirect'),
+    DEFAULT_REDIRECT,
+  );
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-surface px-4 py-16">

@@ -6575,6 +6575,13 @@ function calcRun() {
   if (!tab) return;
 
   const isLiveClients = new URLSearchParams(window.location.search).get('liveData') === '1';
+
+  window.koSetClientsImportVisible = function (visible) {
+    const btn = document.getElementById('cl-btn-import');
+    if (!btn) return;
+    btn.hidden = !visible;
+    btn.classList.toggle('hidden', !visible);
+  };
   const employmentLabels = {
     EMPLOYED: 'Employed',
     SELF_EMPLOYED: 'Self-employed',

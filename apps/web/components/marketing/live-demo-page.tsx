@@ -602,7 +602,8 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
   const { mutateAsync: createCase } = useCreateCase();
   const hasMessages = usePlanFeature('messages');
   const hasAiReports = usePlanFeature('ai_reports');
-  const isAdmin = useIsAdmin();
+  const isAdminFromOrg = useIsAdmin();
+  const isAdmin = isAdminFromOrg || bootstrapData?.data.org?.role === 'ADMIN';
   const { data: orgProfile } = useOrgProfile();
   const { canViewAiSummaries } = useAdviserVisibility();
   const currentPlanLabel = useMemo(() => {
@@ -840,6 +841,13 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
       },
       window.location.origin,
     );
+    // Direct DOM: the iframe starts with Import hidden, and a postMessage can
+    // arrive before koSetClientsImportVisible exists (or a cached HTML file).
+    const importBtn = iframeRef.current?.contentDocument?.getElementById('cl-btn-import');
+    if (importBtn) {
+      importBtn.hidden = !isAdmin;
+      importBtn.classList.toggle('hidden', !isAdmin);
+    }
   }, [clerkEmail, isAdmin]);
 
   const syncLiveDataToIframe = useCallback(() => {
@@ -1127,6 +1135,8 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
       params.set('tab', demoTabToIframeParam(activeTab));
       if (isMockDemo) params.set('userName', 'Alex');
     }
+    // Bust CDN/browser cache of the static prototype after UI-only HTML changes.
+    params.set('v', 'prd17-import-1');
     return `/live-demo-prototype-v2a.html?${params}`;
     // eslint-disable-next-line react-hooks/exhaustive-deps -- personal src intentionally ignores activeTab
   }, [isPersonalDashboard ? 'overview' : activeTab, overviewReady, isPersonalDashboard, isMockDemo]);
