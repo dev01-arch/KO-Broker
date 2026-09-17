@@ -274,6 +274,7 @@ export async function createClientForOrg(
     assignedMemberId?: string;
     insurerName?: string;
   },
+  options?: { skipEmails?: boolean },
 ) {
   const clientType = input.clientType ?? 'INDIVIDUAL';
   const isCompany = clientType === 'COMPANY';
@@ -361,6 +362,10 @@ export async function createClientForOrg(
         },
       });
 
+      if (options?.skipEmails) {
+        return { client: created };
+      }
+
       const welcomeEmail = await sendClientWelcomeEmail(created);
       let adviserEmail: EmailDeliveryStatus | undefined;
       if (assignedMember) {
@@ -374,20 +379,24 @@ export async function createClientForOrg(
       if (isPrismaUniqueConflict(error, 'referenceNumber') && attempt < 4) continue;
       if (!shouldUseDevStore(error)) throw error;
       const client = devStore.createClient(orgId, input);
+      const created = {
+        id: client.id,
+        referenceNumber: client.referenceNumber,
+        firstName: client.firstName,
+        lastName: client.lastName,
+        email: client.email,
+        companyName: client.companyName,
+        clientType: client.clientType,
+      };
+      if (options?.skipEmails) {
+        return { client: created };
+      }
       const welcomeEmail: EmailDeliveryStatus = { sent: false, error: 'Email skipped in offline dev mode' };
       const adviserEmail: EmailDeliveryStatus | undefined = assignedMember
         ? { sent: false, error: 'Email skipped in offline dev mode' }
         : undefined;
       return {
-        client: {
-          id: client.id,
-          referenceNumber: client.referenceNumber,
-          firstName: client.firstName,
-          lastName: client.lastName,
-          email: client.email,
-          companyName: client.companyName,
-          clientType: client.clientType,
-        },
+        client: created,
         welcomeEmail,
         adviserEmail,
       };

@@ -85,6 +85,26 @@ export const PATCH = createParamHandler<z.infer<typeof UpdateClientSchema>, { id
             );
         }
 
+        if (body.assignedMemberId) {
+            const member = await prisma.organisationMember.findFirst({
+                where: { id: body.assignedMemberId, orgId, isActive: true },
+                select: { id: true },
+            });
+            if (!member) {
+                return NextResponse.json(
+                    {
+                        success: false,
+                        error: {
+                            code: 'VALIDATION',
+                            message: 'Selected adviser not found',
+                            fields: { assignedMemberId: ['Selected adviser not found'] },
+                        },
+                    },
+                    { status: 400 },
+                );
+            }
+        }
+
         const updated = await prisma.client.update({
             where: { id },
             data: {

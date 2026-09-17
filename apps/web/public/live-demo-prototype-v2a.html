@@ -457,6 +457,7 @@ body.embedded #tab-cases{background:transparent}
   #tab-clients .cl-content{padding:12px 14px 20px;gap:16px}
   #tab-clients .cl-page-head{align-items:center;flex-wrap:nowrap;gap:12px}
   #tab-clients .cl-btn-new{flex-shrink:0;white-space:nowrap}
+  #tab-clients .cl-btn-import{flex-shrink:0;white-space:nowrap;min-height:40px}
   /* New Client drawer: full-screen on mobile */
   .cl-drawer{width:100%;left:0;right:0;border-radius:0}
   /* Messages: 2×2 stat grid */
@@ -501,6 +502,10 @@ body.embedded #tab-cases{background:transparent}
 #tab-clients .cl-subtitle{font-family:'DM Sans',sans-serif;font-size:14px;font-weight:400;color:#71717a;margin:6px 0 0;line-height:normal}
 #tab-clients .cl-btn-new{display:flex;padding:9.077px 15.56px;justify-content:center;align-items:center;gap:5.187px;border:none;border-radius:8px;background:#1D9E75;color:#fff;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;box-shadow:0 9.725px 13.81px 0 rgba(22,133,111,0.24);transition:background .2s,box-shadow .2s}
 #tab-clients .cl-btn-new:hover{background:#16856F;box-shadow:0 9.725px 16px 0 rgba(22,133,111,0.32)}
+#tab-clients .cl-page-head-actions{display:flex;align-items:center;gap:10px;flex-shrink:0}
+#tab-clients .cl-btn-import{display:flex;min-height:44px;padding:9.077px 15.56px;justify-content:center;align-items:center;gap:5.187px;border:1px solid #1D9E75;border-radius:8px;background:#fff;color:#0F6E56;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:background .2s,border-color .2s}
+#tab-clients .cl-btn-import:hover{background:#E1F5EE;border-color:#16856F}
+#tab-clients .cl-btn-import svg{width:16px;height:16px;flex-shrink:0}
 #tab-clients .cl-toolbar{display:flex;align-items:center;gap:16px;flex-wrap:nowrap}
 #tab-clients .cl-search-wrap{position:relative;flex:1 1 auto;min-width:200px;max-width:640px}
 #tab-clients .cl-search{width:100%;padding:12px 44px 12px 18px;border:none;border-radius:999px;background:#f4f4f5;font-family:'DM Sans',sans-serif;font-size:14px;color:#061F18;outline:none}
@@ -527,7 +532,7 @@ body.embedded #tab-cases{background:transparent}
 #tab-clients .cl-mobile-meta-item b{display:block;color:#a1a1aa;font-size:11px;font-weight:400;margin-bottom:4px;line-height:1.2}
 #tab-clients .cl-mobile-meta-item span{display:block;overflow:hidden;text-overflow:ellipsis}
 #tab-clients .cl-mobile-meta-footer{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px 10px;align-items:end}
-#tab-clients .cl-mobile-msg-wrap{display:flex;justify-content:flex-end;align-items:center}
+#tab-clients .cl-mobile-msg-wrap{display:flex;justify-content:flex-end;align-items:center;gap:8px}
 #tab-clients .cl-mobile-card .cl-msg-btn{background:#EFF8FF;border-color:#B2DDFF;color:#175CD3;padding:7px 12px;font-size:12px;font-weight:600}
 #tab-clients .cl-mobile-card .cl-msg-btn svg{color:#175CD3}
 #tab-clients .cl-mobile-card .cl-msg-btn:hover{background:#D1E9FF}
@@ -591,6 +596,11 @@ body.embedded #tab-cases{background:transparent}
 #tab-clients .cl-msg-btn{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border:1px solid #e4e4e7;border-radius:999px;background:#fafafa;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;color:#52525b;cursor:pointer;transition:background .15s}
 #tab-clients .cl-msg-btn:hover{background:#f4f4f5}
 #tab-clients .cl-msg-btn svg{width:14px;height:14px;color:#71717a}
+#tab-clients .cl-row-actions{display:inline-flex;align-items:center;gap:8px}
+#tab-clients .cl-edit-btn{display:inline-flex;align-items:center;justify-content:center;min-height:32px;padding:6px 12px;border:1px solid #1D9E75;border-radius:999px;background:#fff;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;color:#0F6E56;cursor:pointer;transition:background .15s}
+#tab-clients .cl-edit-btn:hover{background:#E1F5EE}
+#tab-clients .cl-client-open{display:block;width:100%;padding:0;border:0;background:transparent;text-align:left;cursor:pointer}
+#tab-clients .cl-client-open:hover .cl-client-name{color:#0F6E56;text-decoration:underline}
 #tab-clients .cl-msg-new{display:flex;padding:1.543px 6.174px 1.543px 4.63px;justify-content:center;align-items:center;gap:4.63px;border:none;border-radius:12.348px;background:#ECFDF3;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;color:#027A48;cursor:pointer;white-space:nowrap;transition:opacity .15s}
 #tab-clients .cl-msg-new:hover{opacity:0.85}
 #tab-clients .cl-msg-new-dot{width:6px;height:6px;border-radius:50%;background:#12B76A;flex-shrink:0}
@@ -2403,7 +2413,13 @@ body.ff-open .dash-main{overflow:hidden!important;height:100%!important;max-heig
               <h1 class="cl-title">Clients</h1>
               <p class="cl-subtitle" id="cl-subtitle">8 of 8 clients</p>
             </div>
-            <button type="button" class="cl-btn-new" id="cl-btn-new">New Client +</button>
+            <div class="cl-page-head-actions">
+              <button type="button" class="cl-btn-import hidden" id="cl-btn-import" hidden>
+                <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 10V2M5 5l3-3 3 3M3 12v2h10v-2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                Import
+              </button>
+              <button type="button" class="cl-btn-new" id="cl-btn-new">New Client +</button>
+            </div>
           </div>
 
           <div class="cl-toolbar">
@@ -6711,9 +6727,17 @@ function calcRun() {
     tr.setAttribute('data-client-category', clientCategory);
     tr.setAttribute('data-adviser', adviserId);
     tr.setAttribute('data-ref', client.referenceNumber || '');
+    const canEdit = !!window.koIsAdmin;
+    const nameBlock = '<div class="cl-client-name">' + fullName + '</div><div class="cl-client-email">' + (client.email || '') + '</div>' + referralNote;
+    const nameCell = canEdit
+      ? '<button type="button" class="cl-client-open" data-edit-client="' + client.id + '">' + nameBlock + '</button>'
+      : nameBlock;
+    const editBtn = canEdit
+      ? '<button type="button" class="cl-edit-btn" data-edit-client="' + client.id + '">Edit</button>'
+      : '';
     tr.innerHTML =
       '<td class="cl-col-check"><input type="checkbox" class="cl-checkbox cl-row-cb" aria-label="Select ' + fullName + '"></td>' +
-      '<td><div class="cl-client-name">' + fullName + '</div><div class="cl-client-email">' + (client.email || '') + '</div>' + referralNote + '</td>' +
+      '<td>' + nameCell + '</td>' +
       '<td class="cl-cell-muted">' + (client.referenceNumber || '—') + '</td>' +
       '<td class="cl-cell-muted">' + employment + '</td>' +
       '<td class="cl-cell-muted">' + insurance + '</td>' +
@@ -6721,7 +6745,7 @@ function calcRun() {
       '<td><span class="cl-status cl-status--' + statusMeta.className + '"><span class="cl-status-dot"></span>' + statusMeta.label + '</span></td>' +
       '<td class="cl-cell-muted">' + cases + '</td>' +
       '<td class="cl-cell-muted">' + adviserName + '</td>' +
-      '<td><button type="button" class="cl-msg-btn" onclick="showTab(\'messages\')"><svg viewBox="0 0 16 16" fill="none"><path d="M3 4h10v7H5l-2 2V4Z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>Message</button></td>';
+      '<td><div class="cl-row-actions">' + editBtn + '<button type="button" class="cl-msg-btn" onclick="showTab(\'messages\')"><svg viewBox="0 0 16 16" fill="none"><path d="M3 4h10v7H5l-2 2V4Z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>Message</button></div></td>';
     bindRowEvents(tr);
     return tr;
   }
@@ -6774,6 +6798,11 @@ function calcRun() {
     }
     if (data?.type === 'ko:advisers-sync' && Array.isArray(data.advisers)) {
       renderAdviserFilterOptions(data.advisers);
+      window.koIsAdmin = data.isAdmin === true;
+      if (typeof window.koSetClientsImportVisible === 'function') {
+        window.koSetClientsImportVisible(data.isAdmin === true);
+      }
+      if (window.koLiveClients) renderLiveClients(window.koLiveClients);
     }
     if (data?.type === 'ko:switch-tab' && data.tab && typeof showTab === 'function') {
       const tabMap = { calculator: 'calculators', settings: 'overview' };
@@ -6804,6 +6833,25 @@ function calcRun() {
       if (deleteBtn) deleteBtn.disabled = false;
     }
   });
+
+  function requestClientEdit(clientId) {
+    if (!clientId || !window.koIsAdmin || window.parent === window) return;
+    window.parent.postMessage({ type: 'ko:edit-client', clientId: clientId }, window.location.origin);
+  }
+
+  function onClientsActionClick(event) {
+    const target = event.target;
+    if (!target || !target.closest) return;
+    if (target.closest('.cl-msg-btn, .cl-msg-new, .cl-row-cb, .cl-checkbox, .cl-mobile-check')) return;
+    const edit = target.closest('[data-edit-client]');
+    if (!edit) return;
+    event.preventDefault();
+    event.stopPropagation();
+    requestClientEdit(edit.getAttribute('data-edit-client'));
+  }
+
+  tbody?.addEventListener('click', onClientsActionClick);
+  mobileList?.addEventListener('click', onClientsActionClick);
 
   function requestLiveSync() {
     if (!isLiveClients || window.parent === window) return;
@@ -6912,6 +6960,11 @@ function calcRun() {
         } else if (msgStatus) {
           messageHtml = msgStatus.outerHTML;
         }
+        const clientId = tr.getAttribute('data-client-id') || '';
+        const canEdit = !!window.koIsAdmin;
+        const editHtml = canEdit && clientId
+          ? `<button type="button" class="cl-edit-btn" data-edit-client="${escapeHtml(clientId)}">Edit</button>`
+          : '';
         const checked = tr.querySelector('.cl-row-cb')?.checked ? 'checked' : '';
         return `
           <div class="cl-mobile-card" data-mobile-page-index="${pageIndex}">
@@ -6933,7 +6986,7 @@ function calcRun() {
             <div class="cl-mobile-meta-footer">
               <div class="cl-mobile-meta-item"><b>Adviser</b><span>${escapeHtml(adviser)}</span></div>
               <div class="cl-mobile-meta-item"><b>Total number of cases</b><span>${escapeHtml(casesText)}</span></div>
-              <div class="cl-mobile-msg-wrap">${messageHtml}</div>
+              <div class="cl-mobile-msg-wrap">${editHtml}${messageHtml}</div>
             </div>
           </div>
         `;
@@ -7645,6 +7698,7 @@ function calcRun() {
   const overlay = document.getElementById('cl-drawer-overlay');
   const drawer = document.getElementById('cl-drawer');
   const openBtn = document.getElementById('cl-btn-new');
+  const importBtn = document.getElementById('cl-btn-import');
   const closeBtn = document.getElementById('cl-drawer-close');
   const cancelBtn = document.getElementById('cl-drawer-cancel');
   const form = document.getElementById('cl-drawer-form');
@@ -7969,6 +8023,15 @@ function calcRun() {
   window.openClDrawer = openClDrawer;
 
   openBtn?.addEventListener('click', requestAddClient);
+  window.koSetClientsImportVisible = function (visible) {
+    if (!importBtn) return;
+    importBtn.hidden = !visible;
+    importBtn.classList.toggle('hidden', !visible);
+  };
+  importBtn?.addEventListener('click', function () {
+    if (window.parent === window) return;
+    window.parent.postMessage({ type: 'ko:import-clients' }, window.location.origin);
+  });
   closeBtn?.addEventListener('click', closeClDrawer);
   cancelBtn?.addEventListener('click', closeClDrawer);
   overlay?.addEventListener('click', closeClDrawer);

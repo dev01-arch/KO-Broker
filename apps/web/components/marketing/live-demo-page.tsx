@@ -8,6 +8,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Bell, Briefcase, Building2, Calculator as CalculatorIcon, FileText, Loader2, LogOut, Settings, ShieldCheck, TrendingUp, Upload, type LucideIcon } from 'lucide-react';
 import MortgageCalculators from '@/components/marketing/demo-calculator/MortgageCalculators';
 import { IntegrationsSettingsPanel } from '@/components/dashboard/integrations-settings-panel';
+import { ImportClientsModal } from '@/components/dashboard/clients/import-clients-modal';
+import { EditClientModal } from '@/components/dashboard/clients/edit-client-modal';
 import { MortgageIntelligencePanel } from '@/components/dashboard/intelligence/mortgage-intelligence-panel';
 import { clientsQueryKey, useClients, useCreateClient } from '@/hooks/use-clients';
 import { advisersQueryKey, useAdvisers } from '@/hooks/use-settings';
@@ -60,6 +62,8 @@ import { formatClientName, formatClientInitials } from '@/lib/api/client-display
 import {
   applyCreatedCaseToCache,
   applyCreatedClientToCache,
+  applyImportedClientsToCache,
+  applyUpdatedClientToCache,
   applyDeletedClientsToCache,
   applyUpdatedCaseToCache,
   softInvalidateDashboardLists,
@@ -376,6 +380,8 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
   const [factFindOpen, setFactFindOpen] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const [uploadModal, setUploadModal] = useState<{ caseId: string } | null>(null);
+  const [importClientsOpen, setImportClientsOpen] = useState(false);
+  const [editClientId, setEditClientId] = useState<string | null>(null);
   const [notifOpen, setNotifOpen] = useState(false);
   const [demoUnreadNotifIds, setDemoUnreadNotifIds] = useState<string[]>(() =>
     DEMO_NOTIFICATIONS.map((n) => n.id),
@@ -829,6 +835,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
           memberId: a.memberId ?? a.id,
         })),
         lockToSelf: !isAdmin,
+        isAdmin,
         selfMemberId,
       },
       window.location.origin,
@@ -1421,6 +1428,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
         requestId?: number;
         caseId?: string;
         itemId?: string;
+        clientId?: string;
         clientIds?: string[];
         path?: string;
         tab?: string;
@@ -2038,6 +2046,16 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
         return;
       }
 
+      if (data?.type === 'ko:import-clients') {
+        if (isAdmin) setImportClientsOpen(true);
+        return;
+      }
+
+      if (data?.type === 'ko:edit-client' && typeof data.clientId === 'string') {
+        if (isAdmin) setEditClientId(data.clientId);
+        return;
+      }
+
       if (data?.type !== 'ko:create-client' || data.requestId == null || !data.payload) return;
 
       const reply = (body: Record<string, unknown>) => {
@@ -2118,7 +2136,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
 
     window.addEventListener('message', onMessage);
     return () => window.removeEventListener('message', onMessage);
-  }, [isDashboard, isClerkUser, createClient, createCase, inviteToPortal, getToken, syncLiveDataToIframe, postClientsSync, postCasesSync, postAdvisersSync, queryClient, router, selectTab, openIntelligence, writeTabHref, pathname, searchParams]);
+  }, [isDashboard, isClerkUser, isAdmin, createClient, createCase, inviteToPortal, getToken, syncLiveDataToIframe, postClientsSync, postCasesSync, postAdvisersSync, queryClient, router, selectTab, openIntelligence, writeTabHref, pathname, searchParams]);
 
   // ── Directly update the iframe's documents table ────────────────────────────
   // Works because the iframe is same-origin, so the parent can touch its DOM.
@@ -3813,6 +3831,59 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
         factFindOpen ? 'h-dvh max-h-dvh overflow-hidden' : 'min-h-dvh'
       }`}
     >
+      {importClientsOpen && isAdmin && (
+        <ImportClientsModal
+          open={importClientsOpen}
+          existingEmails={clientsDataRef.current.map((client) => client.email)}
+          onClose={() => setImportClientsOpen(false)}
+          onImported={(created) => {
+            if (created.length === 0) return;
+            applyImportedClientsToCache(queryClient, created);
+            pendingCreatedClientsRef.current = [
+              ...created,
+              ...pendingCreatedClientsRef.current.filter(
+                (client) => !created.some((row) => row.id === client.id),
+              ),
+            ];
+            const nextClients = [
+              ...created,
+              ...clientsDataRef.current.filter(
+                (client) => !created.some((row) => row.id === client.id),
+              ),
+            ];
+            clientsDataRef.current = nextClients;
+            persistLiveListsSnapshot(
+              nextClients,
+              casesDataRef.current,
+              advisersDataRef.current,
+            );
+            postClientsSync(nextClients);
+            softInvalidateDashboardLists(queryClient);
+          }}
+        />
+      )}
+      {editClientId && isAdmin && (
+        <EditClientModal
+          clientId={editClientId}
+          initialClient={clientsDataRef.current.find((client) => client.id === editClientId)}
+          advisers={advisersDataRef.current}
+          onClose={() => setEditClientId(null)}
+          onSaved={(updated) => {
+            applyUpdatedClientToCache(queryClient, updated);
+            const nextClients = clientsDataRef.current.map((client) =>
+              client.id === updated.id ? { ...client, ...updated } : client,
+            );
+            clientsDataRef.current = nextClients;
+            persistLiveListsSnapshot(
+              nextClients,
+              casesDataRef.current,
+              advisersDataRef.current,
+            );
+            postClientsSync(nextClients);
+            softInvalidateDashboardLists(queryClient);
+          }}
+        />
+      )}
       {uploadModal && (
         <IframeUploadModal
           caseId={uploadModal.caseId || null}

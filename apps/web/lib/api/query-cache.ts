@@ -132,6 +132,53 @@ export function applyCreatedClientToCache(qc: QueryClient, client: ClientSummary
   qc.setQueryData(['clients', client.id], { success: true as const, data: client });
 }
 
+/** Insert many imported clients into bootstrap + list caches. */
+export function applyImportedClientsToCache(qc: QueryClient, clients: ClientSummary[]) {
+  if (clients.length === 0) return;
+
+  patchBootstrap(qc, (data) => ({
+    ...data,
+    clients: clients.reduce((list, client) => prependUniqueById(list, client), data.clients),
+  }));
+
+  patchListCaches<ClientSummary>(
+    qc,
+    'clients',
+    [clientsListKey(LIVE_CLIENTS_QUERY), clientsListKey(CLIENTS_PAGE_QUERY)],
+    (list, meta) => {
+      const next = clients.reduce((acc, client) => prependUniqueById(acc, client), list);
+      return {
+        data: next,
+        meta: bumpMeta(meta, next.length - list.length),
+      };
+    },
+  );
+
+  for (const client of clients) {
+    qc.setQueryData(['clients', client.id], { success: true as const, data: client });
+  }
+}
+
+/** Replace an updated client in bootstrap + list caches. */
+export function applyUpdatedClientToCache(qc: QueryClient, client: ClientSummary) {
+  patchBootstrap(qc, (data) => ({
+    ...data,
+    clients: replaceById(data.clients, client),
+  }));
+
+  patchListCaches<ClientSummary>(
+    qc,
+    'clients',
+    [clientsListKey(LIVE_CLIENTS_QUERY), clientsListKey(CLIENTS_PAGE_QUERY)],
+    (list, meta) => ({
+      data: replaceById(list, client),
+      meta,
+    }),
+  );
+
+  qc.setQueryData(['clients', client.id], { success: true as const, data: client });
+}
+
 /** Insert a newly created case into bootstrap + list caches. */
 export function applyCreatedCaseToCache(qc: QueryClient, caseRow: CaseSummary) {
   patchBootstrap(qc, (data) => ({

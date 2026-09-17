@@ -1,0 +1,5 @@
+firstName,lastName,email,phone,title,dateOfBirth,employmentStatus,annualIncome,clientType,companyName,companyNumber,insurerName,assignedAdviserEmail
+Jane,Adeyemi,jane.adeyemi@example.com,07700900000,Ms,14/03/1988,EMPLOYED,65000,INDIVIDUAL,,,,
+Sam,Okeke,sam.okeke@example.com,07700900001,Mr,02/11/1979,SELF_EMPLOYED,82000,INDIVIDUAL,,,,
+,,acme.ltd@example.com,,,,,,COMPANY,Acme Consulting Ltd,12345678,,
+Bad,Email,not-an-email,,,,,,INDIVIDUAL,,,,

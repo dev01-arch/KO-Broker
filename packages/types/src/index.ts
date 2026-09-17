@@ -381,6 +381,101 @@ export const CreateClientSchema = z
   });
 export type CreateClientInput = z.infer<typeof CreateClientSchema>;
 
+/** Canonical CSV headers for the KO client import template (PRD-17). */
+export const CLIENT_IMPORT_TEMPLATE_HEADERS = [
+  'firstName',
+  'lastName',
+  'email',
+  'phone',
+  'title',
+  'dateOfBirth',
+  'employmentStatus',
+  'annualIncome',
+  'clientType',
+  'companyName',
+  'companyNumber',
+  'insurerName',
+  'assignedAdviserEmail',
+] as const;
+
+export type ClientImportField = (typeof CLIENT_IMPORT_TEMPLATE_HEADERS)[number];
+
+export const CLIENT_IMPORT_TEMPLATE_EXAMPLE_ROW = [
+  'Jane',
+  'Adeyemi',
+  'jane.adeyemi@example.com',
+  '07700900000',
+  'Ms',
+  '14/03/1988',
+  'EMPLOYED',
+  '65000',
+  'INDIVIDUAL',
+  '',
+  '',
+  '',
+  '',
+] as const;
+
+/** Frontend warns and blocks confirm above this. */
+export const CLIENT_IMPORT_GUIDED_MAX_ROWS = 500;
+/** Server rejects the commit above this. */
+export const CLIENT_IMPORT_HARD_MAX_ROWS = 1000;
+
+const optionalImportString = z
+  .string()
+  .optional()
+  .transform((value) => {
+    if (value === undefined) return undefined;
+    const trimmed = value.trim();
+    return trimmed === '' ? undefined : trimmed;
+  });
+
+export const ImportClientRowSchema = z.object({
+  rowNumber: z.number().int().positive(),
+  firstName: optionalImportString,
+  lastName: optionalImportString,
+  email: z.string().transform((value) => value.trim()),
+  phone: optionalImportString,
+  title: optionalImportString,
+  dateOfBirth: optionalImportString,
+  employmentStatus: optionalImportString,
+  annualIncome: z.union([z.number(), z.string()]).optional(),
+  clientType: optionalImportString,
+  companyName: optionalImportString,
+  companyNumber: optionalImportString,
+  insurerName: optionalImportString,
+  assignedAdviserEmail: optionalImportString,
+});
+export type ImportClientRow = z.infer<typeof ImportClientRowSchema>;
+
+export const ImportClientsSchema = z.object({
+  fileName: z.string().optional(),
+  sendWelcomeEmails: z.boolean().optional().default(false),
+  duplicateEmail: z.literal('skip').optional().default('skip'),
+  rows: z.array(ImportClientRowSchema).min(1, 'At least one row is required'),
+});
+export type ImportClientsInput = z.infer<typeof ImportClientsSchema>;
+
+export const ImportClientResultStatusSchema = z.enum(['CREATED', 'SKIPPED', 'FAILED']);
+export type ImportClientResultStatus = z.infer<typeof ImportClientResultStatusSchema>;
+
+export const ImportClientRowResultSchema = z.object({
+  rowNumber: z.number().int().positive(),
+  status: ImportClientResultStatusSchema,
+  clientId: z.string().optional(),
+  referenceNumber: z.string().optional(),
+  fields: z.record(z.string()).optional(),
+});
+export type ImportClientRowResult = z.infer<typeof ImportClientRowResultSchema>;
+
+export const ImportClientsResultSchema = z.object({
+  created: z.number().int().nonnegative(),
+  skipped: z.number().int().nonnegative(),
+  failed: z.number().int().nonnegative(),
+  results: z.array(ImportClientRowResultSchema),
+});
+export type ImportClientsResult = z.infer<typeof ImportClientsResultSchema>;
+
 export const UpdateClientSchema = z.object({
   title: z.string().optional(),
   firstName: z.string().min(1).optional(),

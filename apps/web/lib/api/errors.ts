@@ -11,6 +11,7 @@ export const API_ERROR_CODES = {
   INTERNAL_ERROR: 'INTERNAL_ERROR',
   /** Used when DB or dependent services are unavailable (503). */
   SERVICE_UNAVAILABLE: 'SERVICE_UNAVAILABLE',
+  IMPORT_TOO_LARGE: 'IMPORT_TOO_LARGE',
 } as const;
 
 export type ApiErrorCode = (typeof API_ERROR_CODES)[keyof typeof API_ERROR_CODES];
@@ -24,6 +25,7 @@ const DEFAULT_MESSAGES: Record<ApiErrorCode, string> = {
   BUSINESS_RULE_VIOLATION: 'This action is not allowed for the current case state.',
   INTERNAL_ERROR: 'An unexpected error occurred. Please try again.',
   SERVICE_UNAVAILABLE: 'Service is temporarily unavailable. Please try again shortly.',
+  IMPORT_TOO_LARGE: 'Split the file (max 1,000 rows per import).',
 };
 
 export function isApiErrorCode(err: unknown, code: ApiErrorCode): boolean {

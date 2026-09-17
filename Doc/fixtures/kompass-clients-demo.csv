@@ -1,0 +1,6 @@
+firstName,lastName,email,phone,title,dateOfBirth,employmentStatus,annualIncome,clientType,companyName,companyNumber,insurerName,assignedAdviserEmail
+Amara,Nwosu,amara.nwosu@example.com,07700901001,Ms,21/06/1991,EMPLOYED,78000,INDIVIDUAL,,,Aviva,
+Tom,Hughes,tom.hughes@example.com,07700901002,Mr,09/01/1984,SELF_EMPLOYED,94500,INDIVIDUAL,,,Legal & General,
+Sophie,Rahman,sophie.rahman@example.com,07700901003,Mrs,30/11/1995,CONTRACTOR,62000,INDIVIDUAL,,,Zurich,
+Callum,Reid,callum.reid@example.com,07700901004,Mr,04/08/1976,EMPLOYED,110000,INDIVIDUAL,,,Scottish Widows,
+,,westbridge.property@example.com,,,,,,COMPANY,Westbridge Property Ltd,87654321,,

@@ -9,6 +9,7 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test:formulas": "node --experimental-strip-types --test lib/calculators/formulas.test.ts",
+    "test:clients-import": "node --experimental-strip-types --test lib/api/clients-import-logic.test.ts lib/clients/import-parse.test.ts",
     "clean": "rm -rf .next node_modules"
   },
   "dependencies": {
@@ -27,6 +28,7 @@
     "lucide-react": "^0.510.0",
     "motion": "^12.40.0",
     "next": "16.2.4",
+    "papaparse": "^5.7.0",
     "pdf-parse": "1.1.1",
     "react": "19.2.4",
     "react-dom": "19.2.4",
@@ -34,12 +36,14 @@
     "stripe": "^22.3.0",
     "svix": "^1.96.1",
     "tailwind-merge": "^3.3.0",
+    "xlsx": "^0.18.5",
     "zod": "^3.25.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/deep-diff": "^1.0.5",
     "@types/node": "^20",
+    "@types/papaparse": "^5.5.2",
     "@types/pdf-parse": "^1.1.5",
     "@types/react": "^19",
     "@types/react-dom": "^19",

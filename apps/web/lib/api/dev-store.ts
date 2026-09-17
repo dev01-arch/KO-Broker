@@ -1296,6 +1296,24 @@ export const devStore = {
     );
   },
 
+  listClientEmails(orgId: string) {
+    return loadStore()
+      .clients.filter((client) => client.orgId === orgId)
+      .map((client) => client.email);
+  },
+
+  findMemberByEmail(orgId: string, email: string) {
+    const normalised = email.trim().toLowerCase();
+    return (
+      loadStore().members.find(
+        (member) =>
+          member.orgId === orgId &&
+          member.isActive &&
+          member.email.toLowerCase() === normalised,
+      ) ?? null
+    );
+  },
+
   createAdviser(orgId: string, input: { firstName: string; lastName: string; email: string }) {
     return mutateStore((store) => {
       const email = input.email.toLowerCase();

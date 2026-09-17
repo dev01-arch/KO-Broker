@@ -42,3 +42,4 @@ Update this file after every meaningful implementation change.
 ## Session Notes
 
 - Context files successfully updated to reflect the KO Broker Platform PRD specifications. Ready to commence Phase 1 foundational coding tasks.
+- PRD-17 (Client CSV / Excel import): ADMIN-only import wizard on the Clients tab plus `POST /api/clients/import`. Manual New Client create is unchanged (emails still send). Duplicate emails skip; welcome mail defaults off.

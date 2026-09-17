@@ -155,6 +155,53 @@ export const ENDPOINTS: EndpointDef[] = [
         ],
     },
     {
+        method: 'POST',
+        path: '/api/clients/import',
+        summary: 'Import clients',
+        description: 'ADMIN-only batch create from mapped JSON rows. Parses never happen on the server. Duplicate emails in the org are skipped. Welcome emails default off. Partial success is allowed.',
+        auth: true,
+        tags: ['Clients'],
+        params: [
+            { name: 'fileName', in: 'body', required: false, type: 'string', description: 'Original spreadsheet name for the audit log', example: 'clients.xlsx' },
+            { name: 'sendWelcomeEmails', in: 'body', required: false, type: 'boolean', description: 'When true, send welcome (and adviser-assigned) emails. Default false.', example: false },
+            { name: 'duplicateEmail', in: 'body', required: false, type: 'string', description: 'Duplicate strategy. v1 only supports skip.', example: 'skip' },
+            { name: 'rows', in: 'body', required: true, type: 'array', description: 'Mapped client rows (max 1,000). Prefer 500 from the UI.', example: 1 },
+        ],
+        responses: [
+            {
+                status: 200,
+                description: 'Import finished with per-row results',
+                example: {
+                    success: true,
+                    data: {
+                        created: 2,
+                        skipped: 1,
+                        failed: 1,
+                        results: [
+                            { rowNumber: 1, status: 'CREATED', clientId: 'clx1abc', referenceNumber: 'KOC-2026-0001' },
+                            { rowNumber: 2, status: 'SKIPPED' },
+                            { rowNumber: 3, status: 'FAILED', fields: { email: 'Valid email is required' } },
+                        ],
+                    },
+                },
+            },
+            { status: 403, description: 'Not an admin', example: { success: false, error: { code: 'FORBIDDEN', message: 'Insufficient permissions. Required role: ADMIN' } } },
+            { status: 422, description: 'Empty body, invalid payload, or over 1,000 rows', example: { success: false, error: { code: 'IMPORT_TOO_LARGE', message: 'Split the file (max 1,000 rows per import).' } } },
+        ],
+    },
+    {
+        method: 'GET',
+        path: '/api/clients/import/template',
+        summary: 'Download client import template',
+        description: 'ADMIN-only CSV attachment with canonical KO headers and one example row.',
+        auth: true,
+        tags: ['Clients'],
+        responses: [
+            { status: 200, description: 'CSV file', example: 'firstName,lastName,email,...' },
+            { status: 403, description: 'Not an admin', example: { success: false, error: { code: 'FORBIDDEN', message: 'Insufficient permissions. Required role: ADMIN' } } },
+        ],
+    },
+    {
         method: 'GET',
         path: '/api/clients/[id]',
         summary: 'Get client',

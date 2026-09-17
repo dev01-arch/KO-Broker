@@ -14,6 +14,8 @@ import type {
 import type {
   CasePreviewResponse,
   CurrentRatesResponse,
+  ImportClientsInput,
+  ImportClientsResult,
   OverviewResponse,
   SnapshotResponse,
 } from '@ko/types';
@@ -31,6 +33,8 @@ export type {
   IntelligenceOverview,
   IntelligenceSnapshot,
 };
+
+export type { ImportClientsInput, ImportClientsResult };
 
 /** Same-origin by default so local /api/* routes receive the Clerk session token. */
 const BASE_URL = (process.env.NEXT_PUBLIC_API_URL ?? '').replace(/\/$/, '');
@@ -278,13 +282,22 @@ export interface CreateClientInput {
 export interface UpdateClientInput {
   firstName?: string;
   lastName?: string;
+  companyName?: string;
+  companyNumber?: string;
   email?: string;
   phone?: string;
+  title?: string;
+  dateOfBirth?: string;
   employmentStatus?: EmploymentStatus;
   annualIncome?: number;
   isVulnerable?: boolean;
   vulnerabilityNotes?: string;
   portalEnabled?: boolean;
+  assignedMemberId?: string | null;
+  status?: ClientStatus;
+  isReferred?: boolean;
+  referredToCompany?: string;
+  insurerName?: string;
 }
 
 export interface ListCasesParams {
@@ -522,6 +535,13 @@ export const clientsApi = {
       token,
       { method: 'POST', body: JSON.stringify(input) },
     );
+  },
+
+  import(token: string, input: ImportClientsInput) {
+    return apiFetch<ImportClientsResult>('/api/clients/import', token, {
+      method: 'POST',
+      body: JSON.stringify(input),
+    });
   },
 
   update(token: string, id: string, input: UpdateClientInput) {
