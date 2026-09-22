@@ -35,6 +35,21 @@ export const GET = createParamHandler<unknown, { id: string }>({
                         adviser: { select: { id: true, firstName: true, lastName: true } },
                     },
                 },
+                // PRD-16 W3: client-owned properties
+                properties: {
+                    orderBy: { createdAt: 'desc' },
+                    select: {
+                        id: true,
+                        postcode: true,
+                        address: true,
+                        type: true,
+                        tenure: true,
+                        currentValue: true,
+                        monthlyRent: true,
+                        createdAt: true,
+                        updatedAt: true,
+                    },
+                },
                 // === FRONTEND ADDITION: assigned member for dashboard UI ===
                 assignedMember: {
                     select: { id: true, firstName: true, lastName: true, email: true },

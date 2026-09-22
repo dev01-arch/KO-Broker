@@ -653,13 +653,111 @@ See `Doc/PRD-16-Phase3-Test-Guide.md`.
 
 # Phase 4 — Property on Client + Postcode at Case Create (W3)
 
-**Status:** LOCKED — awaiting Phase 3 review  
-**Estimated effort:** ~7 hrs  
+**Workstream:** W3
+**Status:** COMPLETE
+**Estimated effort:** ~7 hrs
 **Depends on:** Phase 1 (Property table + Case.propertyId)
+**Commit:** Phase 4 commit (see git log)
 
 **Goal:** Property becomes a first-class record owned by the client. New cases capture postcode up front. Mortgage Intel's preview reads `Property.postcode` instead of re-asking. Best-effort backfill migrates existing `FactFind.propertyDetails` blobs.
 
-Tasks covered: W3.1 – W3.4 from the engineering plan.
+---
+
+## Tasks Completed
+
+### Task 4.1 — Code review and mapping ✓
+Key findings:
+- `GET /api/clients/:id` uses `createParamHandler` with an inline Prisma query (not `getClientForOrg`) — `properties` include must be added directly there
+- `POST /api/cases` route uses `createHandler` with inline `prisma.case.create` — property logic inserted before the create
+- `assembleCasePreview` reads `factFind.propertyDetails` JSON blob — needs to check `case.property.postcode` first
+- `CreateCaseSchema` had no postcode/propertyId fields
+- `CasePreviewResponse` already had `postcode: PresenceField<string>` — no types change needed
+
+### Task 4.2 — properties-data.ts ✓
+**New file:** `apps/web/lib/api/properties-data.ts`
+
+Exports:
+- `serializeProperty()` — serialises a Property row with ISO timestamps
+- `listPropertiesForClient()` — org+client scoped, ordered `createdAt desc`
+- `createPropertyForClient()` — creates Property, fires `logAuditEvent { action: PROPERTY_CREATED }`
+- `getPropertyById()` — org-scoped single lookup (used by case create validation)
+
+### Task 4.3 — GET/POST /api/clients/:id/properties ✓
+**New file:** `apps/web/app/api/clients/[id]/properties/route.ts`
+
+- `GET` returns all properties for the client
+- `POST` validates `CreatePropertySchema`, returns HTTP 201
+- Follows `requireApiAuth` + `responses.ts` pattern
+
+### Task 4.4 — Extend POST /api/cases ✓
+**File:** `apps/web/app/api/cases/route.ts`
+
+`CreateCaseSchema` extended in `@ko/types`:
+- `postcode: z.string().min(2).max(10).transform(toUpperCase).optional()`
+- `propertyId: z.string().optional()`
+
+Route logic added before `prisma.case.create`:
+1. If `propertyId` → validate it belongs to `clientId + orgId`, 404 if not
+2. Else if `postcode` → auto-create `Property { postcode, type: RESIDENTIAL, currentValue }`, capture `id`
+3. `prisma.case.create` now passes `propertyId: resolvedPropertyId`
+4. `propertyId` included in audit diff
+
+### Task 4.5 — GET /api/clients/:id includes properties[] ✓
+**File:** `apps/web/app/api/clients/[id]/route.ts`
+
+Added to the Prisma `include`:
+```typescript
+properties: {
+  orderBy: { createdAt: 'desc' },
+  select: { id, postcode, address, type, tenure, currentValue, monthlyRent, createdAt, updatedAt }
+}
+```
+
+### Task 4.6 — Intel preview reads Property.postcode first ✓
+**File:** `apps/web/lib/intelligence/case-preview.ts`
+
+Added `property: { select: { postcode: true } }` to `prisma.case.findFirst` include.
+
+Postcode resolution priority:
+1. `caseRow.property?.postcode` (new Property row)
+2. `extractPostcode(personalDetails, client.address)` (existing JSON fallback)
+
+### Task 4.7 — FactFind propertyDetails backfill ✓
+**New file:** `packages/db/prisma/migrate-property-backfill.ts`
+
+- Tries 3 postcode extraction paths: direct `pd.postcode`, `pd.address.postcode`, `pd.currentAddress.postcode`
+- Creates Property + links `Case.propertyId` in a transaction
+- Per-row error handling — never fails the whole migration
+- **Ran on live DB:** 53 cases checked, 0 errors, 53 skipped (demo data has no postcode in blobs), 0 inserted
+- Second run confirmed idempotent
+
+Added `migrate:property-backfill` script to `packages/db/package.json`.
+
+### Task 4.8 — Typecheck + lint ✓
+- Fixed: `address: input.address ?? undefined` → `address: (input.address as object) ?? undefined` (Prisma `InputJsonValue` compatibility)
+- `tsc --noEmit` → exit 0
+- `eslint` → exit 0
+
+---
+
+## Files Modified in Phase 4
+
+| File | Change type |
+| :---- | :---- |
+| `apps/web/lib/api/properties-data.ts` | New — property data layer |
+| `apps/web/app/api/clients/[id]/properties/route.ts` | New — GET/POST properties route |
+| `apps/web/app/api/clients/[id]/route.ts` | Added `properties[]` to client detail include |
+| `apps/web/app/api/cases/route.ts` | POST extended with postcode/propertyId logic |
+| `apps/web/lib/intelligence/case-preview.ts` | Reads Property.postcode first |
+| `packages/db/prisma/migrate-property-backfill.ts` | New — backfill migration |
+| `packages/db/package.json` | Added `migrate:property-backfill` script |
+| `packages/types/src/index.ts` | `CreateCaseSchema` extended with postcode + propertyId |
+
+---
+
+## Test Guide
+
+See `Doc/PRD-16-Phase4-Test-Guide.md`.
 
 ---
 

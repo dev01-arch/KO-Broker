@@ -12,6 +12,7 @@
     "migrate": "prisma migrate dev",
     "migrate:deploy": "prisma migrate deploy",
     "migrate:adviser-notes": "tsx prisma/migrate-adviser-notes.ts",
+    "migrate:property-backfill": "tsx prisma/migrate-property-backfill.ts",
     "studio": "prisma studio",
     "typecheck": "tsc --noEmit"
   },

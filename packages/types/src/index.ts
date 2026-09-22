@@ -510,6 +510,9 @@ export const CreateCaseSchema = z.object({
   propertyValue: z.number().positive().optional(),
   loanAmount: z.number().positive().optional(),
   termYears: z.number().int().positive().optional(),
+  // PRD-16 W3: postcode auto-creates a Property; propertyId links an existing one
+  postcode: z.string().min(2).max(10).transform((v) => v.trim().toUpperCase()).optional(),
+  propertyId: z.string().optional(),
 });
 export type CreateCaseInput = z.infer<typeof CreateCaseSchema>;
 

@@ -103,7 +103,7 @@ export const POST = createHandler({
     method: 'POST',
     schema: CreateCaseSchema,
     handler: async (_req: NextRequest, { body, user, orgId }) => {
-        // Verify client belongs to same org (id only — avoid loading full row).
+        // Verify client belongs to same org.
         const client = await prisma.client.findFirst({
             where: { id: body.clientId, orgId },
             select: { id: true },
@@ -113,6 +113,38 @@ export const POST = createHandler({
                 { success: false, error: { code: 'NOT_FOUND', message: 'Client not found' } },
                 { status: 404 }
             );
+        }
+
+        // PRD-16 W3: resolve propertyId
+        // - If propertyId supplied: validate it belongs to this client + org.
+        // - If postcode supplied (no propertyId): auto-create a Property row.
+        // - Neither: propertyId stays null.
+        let resolvedPropertyId: string | null = null;
+
+        if (body.propertyId) {
+            const existing = await prisma.property.findFirst({
+                where: { id: body.propertyId, clientId: body.clientId, orgId },
+                select: { id: true },
+            });
+            if (!existing) {
+                return NextResponse.json(
+                    { success: false, error: { code: 'NOT_FOUND', message: 'Property not found for this client' } },
+                    { status: 404 }
+                );
+            }
+            resolvedPropertyId = existing.id;
+        } else if (body.postcode) {
+            const newProperty = await prisma.property.create({
+                data: {
+                    orgId: orgId!,
+                    clientId: body.clientId,
+                    postcode: body.postcode,
+                    type: 'RESIDENTIAL',
+                    currentValue: body.propertyValue ?? null,
+                },
+                select: { id: true },
+            });
+            resolvedPropertyId = newProperty.id;
         }
 
         const ltv =
@@ -136,6 +168,8 @@ export const POST = createHandler({
                         ltv,
                         termYears: body.termYears,
                         assignedAdviserId: user?.id,
+                        // PRD-16 W3
+                        propertyId: resolvedPropertyId,
                     },
                     include: {
                         client: {
@@ -154,7 +188,6 @@ export const POST = createHandler({
                 });
                 break;
             } catch (error) {
-                // Unique ref race — retry with next sequence.
                 const code =
                     error && typeof error === 'object' && 'code' in error
                         ? String((error as { code?: string }).code)
@@ -171,7 +204,6 @@ export const POST = createHandler({
             );
         }
 
-        // Do not block the API response on audit write.
         void logAuditEvent({
             orgId: orgId!,
             userId: user?.id,
@@ -184,6 +216,7 @@ export const POST = createHandler({
                     type: newCase.type,
                     stage: newCase.stage,
                     clientId: newCase.clientId,
+                    propertyId: resolvedPropertyId,
                 },
             },
         });

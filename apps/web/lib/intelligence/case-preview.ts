@@ -134,6 +134,10 @@ export async function assembleCasePreview(
           propertyDetails: true,
         },
       },
+      // PRD-16 W3: read Property.postcode first before falling back to JSON blobs
+      property: {
+        select: { postcode: true },
+      },
     },
   });
 
@@ -152,8 +156,11 @@ export async function assembleCasePreview(
     client.referenceNumber;
   const caseLabel = `${caseRow.referenceNumber} — ${clientName}`;
 
-  // ── postcode ───────────────────────────────────────────────────────────────
-  const postcodeValue = extractPostcode(personalDetails, client.address);
+  // ── postcode — PRD-16 W3: Property.postcode takes priority ────────────────
+  // Falls back to factFind JSON blobs for cases without a linked Property.
+  const postcodeValue =
+    caseRow.property?.postcode?.trim() ||
+    extractPostcode(personalDetails, client.address);
 
   // ── propertyValue ──────────────────────────────────────────────────────────
   const propertyValue = caseRow.propertyValue ?? null;
@@ -168,7 +175,7 @@ export async function assembleCasePreview(
   let depositValue: number | null = null;
   if (propertyValue !== null && mortgageAmount !== null) {
     depositValue = propertyValue - mortgageAmount;
-    if (depositValue < 0) depositValue = null; // nonsensical — omit
+    if (depositValue < 0) depositValue = null;
   }
 
   // ── grossIncome → client.annualIncome → factFind incomeDetails ────────────
@@ -183,7 +190,7 @@ export async function assembleCasePreview(
 
   const preview: CasePreviewResponse = {
     caseLabel,
-    postcode: field(postcodeValue),
+    postcode: field(postcodeValue ?? null),
     propertyValue: field(propertyValue),
     deposit: field(depositValue),
     mortgageAmount: field(mortgageAmount),
