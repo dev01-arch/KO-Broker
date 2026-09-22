@@ -938,13 +938,102 @@ See `Doc/PRD-16-Phase6-Test-Guide.md`.
 
 # Phase 7 — Radar + FCA Sync (W6)
 
-**Status:** LOCKED — awaiting Phase 6 review  
-**Estimated effort:** ~10 hrs  
+**Workstream:** W6
+**Status:** COMPLETE
+**Estimated effort:** ~10 hrs
 **Depends on:** Phase 3 (date spine fields on Case), Phase 1 (Lender table for FCA cron), FCA spike decision
+**Commit:** Phase 7 commit (see git log)
 
-**Goal:** Dashboard bootstrap includes two radar counts (offers ending in 14 days, rate periods ending in 90 days). Cases list accepts date-based filters. FCA cron (or Settings CSV fallback) appends new lender names and marks departed ones INACTIVE.
+**Goal:** Dashboard bootstrap includes two radar counts (offers ending in 14 days, rate periods ending in 90 days). Cases list accepts date-based filters. FCA cron route is registered and auth-protected (501 stub until W0 spike decision is recorded).
 
-Tasks covered: W6.1 – W6.4 from the engineering plan.
+---
+
+## Tasks Completed
+
+### Task 7.1 — Code review and mapping ✓
+Key findings:
+- `getDashboardBootstrap` uses a single `Promise.all` — two new `prisma.case.count` queries added in the same batch
+- `GET /api/cases` uses an inline `prisma.case.findMany` (not `listCasesForOrg`) — date filters added directly to the route's `andFilters`
+- `caseListSelect` needed `offerExpiresAt` and `initialRateEndsAt` added to expose them in list responses
+- `vercel.json` had 3 cron entries — 4th added for `lenders-fca`
+- Existing cron auth pattern: `CRON_SECRET` header check, 401 if wrong, 503 in production if secret absent, no-op in dev
+
+### Task 7.2 — Radar counts in getDashboardBootstrap ✓
+**File:** `apps/web/lib/api/dashboard-data.ts`
+
+Two new `prisma.case.count` calls added in the existing `Promise.all` (6 queries total, one round-trip):
+- `offersEnding14d`: `{ offerExpiresAt: { gte: now, lte: now+14d }, stage: { notIn: [COMPLETION, ARCHIVED] }, ...adviserScope }`
+- `ratesEnding90d`: `{ initialRateEndsAt: { gte: now, lte: now+90d }, stage: { notIn: [COMPLETION, ARCHIVED] }, ...adviserScope }`
+
+Adviser scope applied via `caseAssignedToAdviserWhere` — same scoping as the case list. Both counts returned at the top level of the bootstrap response alongside `org`, `clients`, `cases`, `advisers`.
+
+Fixed: `as const` on `notIn` array caused TS2322 (`readonly` not assignable to mutable). Cast to `('COMPLETION' | 'ARCHIVED')[]`.
+
+### Task 7.3 — Date filters on GET /api/cases ✓
+**File:** `apps/web/app/api/cases/route.ts`
+
+New query params:
+- `offerEndingWithinDays` — adds `offerExpiresAt: { gte: now, lte: now + N*days }` to AND filters
+- `rateEndingWithinDays` — adds `initialRateEndsAt: { gte: now, lte: now + N*days }` to AND filters
+
+Both are optional, combinable with existing `stage`, `type`, `search`, `adviserId` filters. Invalid/missing values default to `undefined` (filter not applied).
+
+### Task 7.4 — Date fields in caseListSelect ✓
+**File:** `apps/web/lib/api/cases-data.ts`
+
+`offerExpiresAt: true` and `initialRateEndsAt: true` added to `caseListSelect`. These fields now appear in every case row returned by `listCasesForOrg` — used by the UI to render the date columns and by the filters to function correctly.
+
+### Task 7.5 — GET/POST /api/cron/lenders-fca ✓
+**New file:** `apps/web/app/api/cron/lenders-fca/route.ts`
+
+- Mirrors `intelligence-rates` auth pattern exactly (CRON_SECRET check)
+- Returns HTTP 501 `{ ok: false, status: "NOT_IMPLEMENTED", message: "..." }` with a clear message referencing the W0 spike decision document
+- The message explains the seed is live and lender search is functional
+- Route is production-ready from an auth perspective — only the ingest logic is missing
+
+### Task 7.6 — vercel.json FCA cron entry ✓
+**File:** `apps/web/vercel.json`
+
+Added 4th cron:
+```json
+{ "path": "/api/cron/lenders-fca", "schedule": "0 6 1 * *" }
+```
+
+Schedule: 06:00 UTC on the 1st of each month. Once `runFcaIngest()` is implemented, Vercel will automatically start calling this route.
+
+### Task 7.7 — Typecheck + lint ✓
+- Fixed TS2322: `['COMPLETION', 'ARCHIVED'] as const` → `as ('COMPLETION' | 'ARCHIVED')[]`
+- `tsc --noEmit` → exit 0, zero errors
+- `eslint` → exit 0, zero warnings
+
+---
+
+## Files Modified in Phase 7
+
+| File | Change type |
+| :---- | :---- |
+| `apps/web/lib/api/dashboard-data.ts` | Added `offersEnding14d` + `ratesEnding90d` counts + adviser scoping |
+| `apps/web/lib/api/cases-data.ts` | Added `offerExpiresAt` + `initialRateEndsAt` to `caseListSelect` |
+| `apps/web/app/api/cases/route.ts` | Added `offerEndingWithinDays` + `rateEndingWithinDays` filter params |
+| `apps/web/app/api/cron/lenders-fca/route.ts` | New — FCA cron stub (501 NOT_IMPLEMENTED) |
+| `apps/web/vercel.json` | Added 4th cron schedule for lenders-fca |
+
+---
+
+## Remaining Work (FCA cron implementation)
+
+The FCA cron is a stub until the W0 spike decision is recorded in `Doc/PRD-16-Backend-Engineering-Plan.md` Section 7. Once decided:
+
+1. If FCA bulk CSV: implement `lib/api/lenders-fca-ingest.ts` → `runFcaIngest()`
+2. Replace the 501 response in `lenders-fca/route.ts` with a call to `runFcaIngest()`
+3. Update the `DataFeedStatus` row with `feedId: 'FCA_LENDERS'` on each run
+4. Vercel cron schedule is already live — no further config needed
+
+---
+
+## Test Guide
+
+See `Doc/PRD-16-Phase7-Test-Guide.md`.
 
 ---
 

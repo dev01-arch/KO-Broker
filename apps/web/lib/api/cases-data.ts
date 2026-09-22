@@ -37,6 +37,9 @@ const caseListSelect = {
   selectedLender: true,
   selectedProduct: true,
   updatedAt: true,
+  // PRD-16 W6: date fields for radar filtering
+  offerExpiresAt: true,
+  initialRateEndsAt: true,
   client: {
     select: {
       id: true,

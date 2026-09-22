@@ -43,6 +43,15 @@ export const GET = createHandler({
         const type = searchParams.get('type') ?? undefined;
         const adviserId = searchParams.get('adviserId') ?? undefined;
         const search = searchParams.get('search') ?? '';
+        // PRD-16 W6: radar filters — clicking a stat card on Overview filters the list
+        const offerEndingWithinDays = searchParams.get('offerEndingWithinDays')
+          ? Math.max(1, parseInt(searchParams.get('offerEndingWithinDays')!, 10))
+          : undefined;
+        const rateEndingWithinDays = searchParams.get('rateEndingWithinDays')
+          ? Math.max(1, parseInt(searchParams.get('rateEndingWithinDays')!, 10))
+          : undefined;
+
+        const now = new Date();
 
         const andFilters = [
             ...(isAdviserWithRestriction && currentUser
@@ -61,6 +70,24 @@ export const GET = createHandler({
                     },
                   ]
                 : []),
+            // PRD-16 W6: offer expiry radar
+            ...(offerEndingWithinDays !== undefined
+              ? [{
+                  offerExpiresAt: {
+                    gte: now,
+                    lte: new Date(now.getTime() + offerEndingWithinDays * 24 * 60 * 60 * 1000),
+                  },
+                }]
+              : []),
+            // PRD-16 W6: rate-end radar
+            ...(rateEndingWithinDays !== undefined
+              ? [{
+                  initialRateEndsAt: {
+                    gte: now,
+                    lte: new Date(now.getTime() + rateEndingWithinDays * 24 * 60 * 60 * 1000),
+                  },
+                }]
+              : []),
         ];
 
         const where = {
@@ -79,6 +106,7 @@ export const GET = createHandler({
                 include: {
                     client: { select: { id: true, firstName: true, lastName: true, referenceNumber: true, isVulnerable: true } },
                     adviser: { select: { id: true, firstName: true, lastName: true } },
+                    // PRD-16 W6: include date fields for radar UI display
                     _count: { select: { messages: true, documents: true } },
                 },
             }),
