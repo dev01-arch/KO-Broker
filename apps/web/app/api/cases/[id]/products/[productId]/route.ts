@@ -14,6 +14,9 @@ type RouteContext = { params: Promise<{ id: string; productId: string }> };
 /**
  * PATCH /api/cases/[id]/products/[productId]
  * Update a product considered row. Setting isSelected: true selects it as the recommendation.
+ *
+ * PRD-16 W1: accepts lenderId (FK) to change the lender on an existing product.
+ * When lenderId is provided, lenderName is derived from the Lender directory.
  */
 export async function PATCH(req: NextRequest, context: RouteContext) {
   try {
@@ -35,9 +38,13 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
 
     const result = await updateProductForCase(orgId, id, productId, parsed.data, user.id);
     if ('error' in result) {
-      return apiNotFound(
-        'message' in result && result.message ? result.message : 'Product not found',
-      );
+      if (result.error === 'NOT_FOUND') {
+        return apiNotFound('message' in result && result.message ? result.message : 'Product not found');
+      }
+      if (result.error === 'VALIDATION_ERROR') {
+        return apiError('VALIDATION_ERROR', result.message ?? 'Invalid lender', 422);
+      }
+      return apiError('INTERNAL_ERROR', 'An unexpected error occurred', 500);
     }
 
     return apiSuccess(serializeProductConsidered(result.product));

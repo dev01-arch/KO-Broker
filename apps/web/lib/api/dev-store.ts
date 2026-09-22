@@ -809,7 +809,7 @@ export const devStore = {
         id: randomUUID(),
         orgId,
         caseId,
-        lenderName: input.lenderName,
+        lenderName: input.lenderName ?? input.lenderOtherName ?? 'Other',
         productName: input.productName,
         rate: input.rate,
         fee: input.fee,

@@ -443,13 +443,110 @@ All of the following must pass before Phase 2 begins:
 
 # Phase 2 — Lender Select on Products (W1)
 
-**Status:** LOCKED — awaiting Phase 1 review  
+**Workstream:** W1  
+**Status:** COMPLETE  
 **Estimated effort:** ~6 hrs  
-**Depends on:** Phase 1 (Lender table + seed)
+**Depends on:** Phase 1 (Lender table + seed)  
+**Commit:** Phase 2 commit (see git log)
 
 **Goal:** Products considered stop using a free-text lender name. Advisers pick from the seeded list. The `Other` escape hatch handles unknown lenders. Existing data continues to work via backward-compatible `lenderName` fallback.
 
-Tasks covered: W1.1 – W1.4 from the engineering plan.
+---
+
+## Tasks Completed
+
+### Task 2.1 — Code review and mapping ✓
+Read `products-data.ts`, both product routes, `cases-data.ts`, and `UpdateCaseSchema`. Key findings:
+- `createProductForCase` was writing `lenderName` directly from free-text input
+- `updateCaseForOrg` was using `...input` spread — unsafe for new fields
+- `serializeProductConsidered` did not expose PRD-16 fields
+- Routes used `requireApiAuth` pattern (not `createHandler`) — no change needed there
+
+### Task 2.2 — Extend Zod schemas in @ko/types ✓
+**File:** `packages/types/src/index.ts`
+
+`CreateProductConsideredSchema`:
+- `lenderName` changed from required to optional (backward compat)
+- Added: `lenderId?`, `lenderOtherName?`, `productType?`, `initialTermMonths?`, `ercSummary?`
+- `superRefine` validation: at least one of `lenderId` or `lenderName` is required
+
+`UpdateProductConsideredSchema`:
+- Same new fields added as nullable optionals
+
+`SaveProductsSchema` (bulk sync):
+- `lenderName` made optional
+- Same PRD-16 fields added
+
+`UpdateCaseSchema` (extended in Phase 1):
+- Already contained all PRD-16 fields; now fully consumed by `updateCaseForOrg`
+
+### Task 2.3 — Update createProductForCase ✓
+**File:** `apps/web/lib/api/products-data.ts`
+
+New `resolveLenderName()` helper:
+- Accepts `lenderId`, `lenderOtherName`, `lenderNameFallback`
+- If `lenderId` supplied: fetches `Lender` row, uses `Lender.name` as display name
+- If `lenderId` refers to `Other` sentinel (`source = 'OTHER'`): uses `lenderOtherName` as display name
+- If only `lenderNameFallback`: uses as-is, `lenderId` stays null
+- Returns null on invalid `lenderId` (triggers `VALIDATION_ERROR`)
+
+`createProductForCase` changes:
+- Calls `resolveLenderName()` before the transaction
+- Writes `lenderId`, `lenderOtherName`, `productType`, `initialTermMonths`, `ercSummary` on create
+- On product selection: syncs `Case.lenderId` + `Case.lenderOtherName` alongside legacy `selectedLender` string
+
+### Task 2.4 — Update updateProductForCase ✓
+**File:** `apps/web/lib/api/products-data.ts`
+
+`updateProductForCase` changes:
+- Detects if lender is being changed (`input.lenderId !== undefined || input.lenderName !== undefined`)
+- Calls `resolveLenderName()` only when lender is changing — avoids unnecessary DB lookup
+- All PRD-16 fields conditionally patched
+- On selection: syncs `Case.lenderId` + `Case.lenderOtherName`
+- On deselect: clears `Case.lenderId` + `Case.lenderOtherName`
+
+`deleteProductForCase` changes:
+- Clears `Case.lenderId` + `Case.lenderOtherName` when selected product is deleted
+
+`serializeProductConsidered` extended:
+- Now returns `lenderId`, `lenderOtherName`, `productType`, `initialTermMonths`, `ercSummary` in API response
+
+### Task 2.5 — Update product routes ✓
+**Files:** `apps/web/app/api/cases/[id]/products/route.ts` and `[productId]/route.ts`
+
+Both routes updated to handle new `VALIDATION_ERROR` return code from the data layer (returns HTTP 422 with message). No other logic changes needed — `parsed.data` already flows straight through to the data functions.
+
+### Task 2.6 — Extend updateCaseForOrg ✓
+**File:** `apps/web/lib/api/cases-data.ts`
+
+Replaced the `...input` spread with explicit field-by-field data object to:
+- Prevent accidental writes of unknown fields to the DB
+- Allow ISO date string → `Date` conversion via `toDate()` helper
+- Safely include all 16 PRD-16 fields: `propertyId`, `lenderId`, `lenderOtherName`, date spine (6 fields), account strip (5 fields)
+
+### Task 2.7 — Typecheck + lint ✓
+- `tsc --noEmit` → exit 0, zero errors
+- `eslint` → exit 0, zero errors (one pre-existing warning in dev-store.ts line 417 unrelated to Phase 2)
+- Fixed: `dev-store.ts` lenderName fallback (`lenderName ?? lenderOtherName ?? 'Other'`) to handle now-optional field
+
+---
+
+## Files Modified in Phase 2
+
+| File | Change type |
+| :---- | :---- |
+| `packages/types/src/index.ts` | Extended `CreateProductConsideredSchema`, `UpdateProductConsideredSchema`, `SaveProductsSchema` |
+| `apps/web/lib/api/products-data.ts` | Rewrote create/update/delete/serialise with lenderId support |
+| `apps/web/lib/api/cases-data.ts` | Extended `updateCaseForOrg` with all PRD-16 Case fields |
+| `apps/web/app/api/cases/[id]/products/route.ts` | Added VALIDATION_ERROR handling |
+| `apps/web/app/api/cases/[id]/products/[productId]/route.ts` | Added VALIDATION_ERROR handling |
+| `apps/web/lib/api/dev-store.ts` | Fixed lenderName optional field fallback |
+
+---
+
+## Test Guide
+
+See `Doc/PRD-16-Phase2-Test-Guide.md` for full test commands and acceptance checklist.
 
 ---
 

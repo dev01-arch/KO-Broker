@@ -226,6 +226,23 @@ export async function updateCaseForOrg(
     selectedFee?: number;
     adviserNotes?: string;
     assignedAdviserId?: string | null;
+    // PRD-16: Property + Lender FK
+    propertyId?: string | null;
+    lenderId?: string | null;
+    lenderOtherName?: string | null;
+    // PRD-16: Date spine
+    aipAt?: string | null;
+    submittedAt?: string | null;
+    offerIssuedAt?: string | null;
+    offerExpiresAt?: string | null;
+    exchangeAt?: string | null;
+    completionAt?: string | null;
+    // PRD-16: Account strip
+    rateType?: string | null;
+    monthlyPayment?: number | null;
+    initialRateEndsAt?: string | null;
+    chargeType?: string | null;
+    isOffset?: boolean | null;
   },
 ) {
   try {
@@ -253,11 +270,45 @@ export async function updateCaseForOrg(
     const ltv =
       propertyValue && loanAmount ? calculateLTV(loanAmount, propertyValue) : undefined;
 
+    // Convert ISO date strings to Date objects for Prisma (nullable fields pass null through)
+    const toDate = (v?: string | null): Date | null | undefined => {
+      if (v === null) return null;
+      if (v === undefined) return undefined;
+      return new Date(v);
+    };
+
     const updated = await prisma.case.update({
       where: { id },
       data: {
-        ...input,
+        // Existing fields
+        ...(input.stage !== undefined ? { stage: input.stage } : {}),
+        ...(input.propertyValue !== undefined ? { propertyValue: input.propertyValue } : {}),
+        ...(input.loanAmount !== undefined ? { loanAmount: input.loanAmount } : {}),
+        ...(input.termYears !== undefined ? { termYears: input.termYears } : {}),
+        ...(input.selectedLender !== undefined ? { selectedLender: input.selectedLender } : {}),
+        ...(input.selectedProduct !== undefined ? { selectedProduct: input.selectedProduct } : {}),
+        ...(input.selectedRate !== undefined ? { selectedRate: input.selectedRate } : {}),
+        ...(input.selectedFee !== undefined ? { selectedFee: input.selectedFee } : {}),
+        ...(input.adviserNotes !== undefined ? { adviserNotes: input.adviserNotes } : {}),
+        ...(input.assignedAdviserId !== undefined ? { assignedAdviserId: input.assignedAdviserId } : {}),
         ...(ltv !== undefined ? { ltv } : {}),
+        // PRD-16: Property + Lender FK
+        ...(input.propertyId !== undefined ? { propertyId: input.propertyId } : {}),
+        ...(input.lenderId !== undefined ? { lenderId: input.lenderId } : {}),
+        ...(input.lenderOtherName !== undefined ? { lenderOtherName: input.lenderOtherName } : {}),
+        // PRD-16: Date spine
+        ...(input.aipAt !== undefined ? { aipAt: toDate(input.aipAt) } : {}),
+        ...(input.submittedAt !== undefined ? { submittedAt: toDate(input.submittedAt) } : {}),
+        ...(input.offerIssuedAt !== undefined ? { offerIssuedAt: toDate(input.offerIssuedAt) } : {}),
+        ...(input.offerExpiresAt !== undefined ? { offerExpiresAt: toDate(input.offerExpiresAt) } : {}),
+        ...(input.exchangeAt !== undefined ? { exchangeAt: toDate(input.exchangeAt) } : {}),
+        ...(input.completionAt !== undefined ? { completionAt: toDate(input.completionAt) } : {}),
+        // PRD-16: Account strip
+        ...(input.rateType !== undefined ? { rateType: input.rateType } : {}),
+        ...(input.monthlyPayment !== undefined ? { monthlyPayment: input.monthlyPayment } : {}),
+        ...(input.initialRateEndsAt !== undefined ? { initialRateEndsAt: toDate(input.initialRateEndsAt) } : {}),
+        ...(input.chargeType !== undefined ? { chargeType: input.chargeType } : {}),
+        ...(input.isOffset !== undefined ? { isOffset: input.isOffset } : {}),
       },
       select: caseListSelect,
     });

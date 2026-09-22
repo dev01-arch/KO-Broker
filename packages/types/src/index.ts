@@ -240,11 +240,17 @@ export const SaveProductsSchema = z.object({
   products: z
     .array(
       z.object({
-        lenderName: z.string().min(1, 'Lender name is required'),
+        lenderName: z.string().optional(),
         productName: z.string().min(1, 'Product name is required'),
         rate: z.number().nonnegative().nullable().optional(),
         fee: z.number().nonnegative().nullable().optional(),
         isSelected: z.boolean().default(false),
+        // PRD-16
+        lenderId: z.string().optional(),
+        lenderOtherName: z.string().optional(),
+        productType: z.string().optional(),
+        initialTermMonths: z.number().int().positive().optional(),
+        ercSummary: z.string().optional(),
       }),
     )
     .min(1, 'At least one product must be recorded'),
@@ -543,14 +549,36 @@ export const UpdateCaseSchema = z.object({
 });
 export type UpdateCaseInput = z.infer<typeof UpdateCaseSchema>;
 
-/** Product considered during RESEARCH stage (compliance: ≥3 + one selected). */
+/** Product considered during RESEARCH stage (compliance: ≥3 + one selected).
+ *
+ * PRD-16 W1: lenderId (FK) replaces free-text lenderName for new products.
+ * Backward compat: lenderName is still accepted so existing callers keep working.
+ * When lenderId is supplied the data layer derives lenderName from the Lender row.
+ * When lenderId refers to the "Other" sentinel, lenderOtherName is required.
+ */
 export const CreateProductConsideredSchema = z.object({
-  lenderName: z.string().min(1, 'Lender name is required'),
+  // Legacy free-text — accepted for backward compat; ignored when lenderId is present
+  lenderName: z.string().optional(),
   productName: z.string().min(1, 'Product name is required'),
   rate: z.number().optional(),
   fee: z.number().optional(),
   isSelected: z.boolean().optional(),
   reasonNotSelected: z.string().optional(),
+  // PRD-16: structured lender FK
+  lenderId: z.string().optional(),
+  lenderOtherName: z.string().optional(),
+  productType: z.string().optional(),
+  initialTermMonths: z.number().int().positive().optional(),
+  ercSummary: z.string().optional(),
+}).superRefine((data, ctx) => {
+  // Must have at least one of lenderId or lenderName
+  if (!data.lenderId && !data.lenderName?.trim()) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Either lenderId or lenderName is required',
+      path: ['lenderId'],
+    });
+  }
 });
 export type CreateProductConsideredInput = z.infer<typeof CreateProductConsideredSchema>;
 
@@ -561,6 +589,12 @@ export const UpdateProductConsideredSchema = z.object({
   fee: z.number().nullable().optional(),
   isSelected: z.boolean().optional(),
   reasonNotSelected: z.string().nullable().optional(),
+  // PRD-16: structured lender FK
+  lenderId: z.string().nullable().optional(),
+  lenderOtherName: z.string().nullable().optional(),
+  productType: z.string().nullable().optional(),
+  initialTermMonths: z.number().int().positive().nullable().optional(),
+  ercSummary: z.string().nullable().optional(),
 });
 export type UpdateProductConsideredInput = z.infer<typeof UpdateProductConsideredSchema>;
 

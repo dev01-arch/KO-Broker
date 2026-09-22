@@ -40,6 +40,10 @@ export async function GET(_req: NextRequest, context: RouteContext) {
  * POST /api/cases/[id]/products
  * Record a product considered during RESEARCH.
  * Set isSelected: true to mark the recommended product (clears other selections).
+ *
+ * PRD-16 W1: accepts lenderId (FK) in addition to legacy lenderName string.
+ * When lenderId is provided, lenderName is derived from the Lender directory.
+ * When lenderId refers to the "Other" sentinel, lenderOtherName is required.
  */
 export async function POST(req: NextRequest, context: RouteContext) {
   try {
@@ -60,7 +64,13 @@ export async function POST(req: NextRequest, context: RouteContext) {
     if (!parsed.success) return apiFromZodError(parsed.error);
 
     const result = await createProductForCase(orgId, id, parsed.data, user.id);
-    if ('error' in result) return apiNotFound('Case not found');
+    if ('error' in result) {
+      if (result.error === 'NOT_FOUND') return apiNotFound('Case not found');
+      if (result.error === 'VALIDATION_ERROR') {
+        return apiError('VALIDATION_ERROR', result.message ?? 'Invalid lender', 422);
+      }
+      return apiError('INTERNAL_ERROR', 'An unexpected error occurred', 500);
+    }
 
     return apiSuccess(serializeProductConsidered(result.product), { status: 201 });
   } catch (error) {
