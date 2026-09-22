@@ -57,16 +57,11 @@ importers:
         specifier: ^12.40.0
         version: 12.40.0(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       next:
-<<<<<<< HEAD
-        specifier: 16.2.4
-        version: 16.2.4(@babel/core@7.29.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+        specifier: 16.3.4
+        version: 16.3.4(@babel/core@7.29.0)(@types/node@20.19.39)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       papaparse:
         specifier: ^5.7.0
         version: 5.7.0
-=======
-        specifier: 16.3.4
-        version: 16.3.4(@babel/core@7.29.0)(@types/node@20.19.39)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
->>>>>>> 36a03cf (fiX: security feature review)
       pdf-parse:
         specifier: 1.1.1
         version: 1.1.1

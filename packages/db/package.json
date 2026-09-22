@@ -8,6 +8,7 @@
     "generate": "prisma generate",
     "push": "prisma db push --accept-data-loss",
     "seed": "tsx prisma/seed.ts",
+    "seed:lenders": "tsx prisma/seed-lenders.ts",
     "migrate": "prisma migrate dev",
     "migrate:deploy": "prisma migrate deploy",
     "studio": "prisma studio",

@@ -523,6 +523,23 @@ export const UpdateCaseSchema = z.object({
   selectedFee: z.number().optional(),
   adviserNotes: z.string().optional(),
   assignedAdviserId: z.string().nullable().optional(),
+  // PRD-16: Property + Lender FK
+  propertyId: z.string().nullable().optional(),
+  lenderId: z.string().nullable().optional(),
+  lenderOtherName: z.string().nullable().optional(),
+  // PRD-16: Date spine
+  aipAt: z.string().datetime().nullable().optional(),
+  submittedAt: z.string().datetime().nullable().optional(),
+  offerIssuedAt: z.string().datetime().nullable().optional(),
+  offerExpiresAt: z.string().datetime().nullable().optional(),
+  exchangeAt: z.string().datetime().nullable().optional(),
+  completionAt: z.string().datetime().nullable().optional(),
+  // PRD-16: Account strip
+  rateType: z.string().nullable().optional(),
+  monthlyPayment: z.number().nullable().optional(),
+  initialRateEndsAt: z.string().datetime().nullable().optional(),
+  chargeType: z.string().nullable().optional(),
+  isOffset: z.boolean().nullable().optional(),
 });
 export type UpdateCaseInput = z.infer<typeof UpdateCaseSchema>;
 
@@ -789,3 +806,91 @@ export interface CurrentRatesResponse {
   fixed5yr: { value: number; asAt: string } | null;
   variable75: { value: number; asAt: string } | null;
 }
+
+// ── PRD-16: Lender directory, Property, CaseNote, ClientInfoRequest schemas ───
+
+// Enums
+export const LenderStatusSchema = z.enum(['ACTIVE', 'INACTIVE', 'LEGACY']);
+export type LenderStatus = z.infer<typeof LenderStatusSchema>;
+
+export const LenderSourceSchema = z.enum(['SEED', 'FCA', 'OTHER']);
+export type LenderSource = z.infer<typeof LenderSourceSchema>;
+
+export const PropertyTypeSchema = z.enum(['RESIDENTIAL', 'BTL', 'OTHER']);
+export type PropertyType = z.infer<typeof PropertyTypeSchema>;
+
+export const CaseNoteSourceSchema = z.enum(['ADVISER', 'INTEL', 'SYSTEM']);
+export type CaseNoteSource = z.infer<typeof CaseNoteSourceSchema>;
+
+export const InfoRequestStatusSchema = z.enum(['OUTSTANDING', 'FULFILLED', 'CANCELLED']);
+export type InfoRequestStatus = z.infer<typeof InfoRequestStatusSchema>;
+
+// ── GET /api/lenders?q= ───────────────────────────────────────────────────────
+
+export const LenderSearchQuerySchema = z.object({
+  q: z.string().optional(),
+});
+export type LenderSearchQuery = z.infer<typeof LenderSearchQuerySchema>;
+
+/** Shape of a single lender row returned by GET /api/lenders */
+export interface LenderRow {
+  id: string;
+  name: string;
+  normalizedName: string;
+  status: LenderStatus;
+  source: LenderSource;
+}
+
+// ── POST /api/cases/:id/notes ─────────────────────────────────────────────────
+
+export const CreateCaseNoteSchema = z.object({
+  body: z.string().min(1, 'Note body is required'),
+  tag: z.string().optional(),
+});
+export type CreateCaseNoteInput = z.infer<typeof CreateCaseNoteSchema>;
+
+// ── POST /api/clients/:id/properties ─────────────────────────────────────────
+
+export const CreatePropertySchema = z.object({
+  postcode: z
+    .string()
+    .min(2, 'Postcode is required')
+    .max(10)
+    .transform((v) => v.trim().toUpperCase()),
+  address: z.record(z.string(), z.unknown()).optional(),
+  tenure: z.string().optional(),
+  type: PropertyTypeSchema.optional(),
+  currentValue: z.number().positive().optional(),
+  monthlyRent: z.number().nonnegative().optional(),
+});
+export type CreatePropertyInput = z.infer<typeof CreatePropertySchema>;
+
+// ── PATCH /api/cases/:id — date spine + account strip ────────────────────────
+
+export const UpdateCaseDateSpineSchema = z.object({
+  aipAt: z.string().datetime().nullable().optional(),
+  submittedAt: z.string().datetime().nullable().optional(),
+  offerIssuedAt: z.string().datetime().nullable().optional(),
+  offerExpiresAt: z.string().datetime().nullable().optional(),
+  exchangeAt: z.string().datetime().nullable().optional(),
+  completionAt: z.string().datetime().nullable().optional(),
+  rateType: z.string().nullable().optional(),
+  monthlyPayment: z.number().nullable().optional(),
+  initialRateEndsAt: z.string().datetime().nullable().optional(),
+  chargeType: z.string().nullable().optional(),
+  isOffset: z.boolean().nullable().optional(),
+});
+export type UpdateCaseDateSpineInput = z.infer<typeof UpdateCaseDateSpineSchema>;
+
+// ── POST /api/cases/:id/info-requests ────────────────────────────────────────
+
+export const CreateInfoRequestSchema = z.object({
+  checklistItemId: z.string().optional(),
+  documentType: DocumentTypeSchema.optional(),
+  body: z.string().optional(),
+  channel: MessageChannelSchema.optional(),
+}).refine(
+  (data) => data.checklistItemId !== undefined || data.documentType !== undefined,
+  { message: 'Either checklistItemId or documentType is required' },
+);
+export type CreateInfoRequestInput = z.infer<typeof CreateInfoRequestSchema>;

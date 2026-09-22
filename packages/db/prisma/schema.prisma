@@ -125,6 +125,38 @@ enum MarketSignal {
   WORSENING
 }
 
+// ── PRD-16: Lender directory + property + notes + info-requests enums ──────────
+
+enum LenderStatus {
+  ACTIVE
+  INACTIVE
+  LEGACY
+}
+
+enum LenderSource {
+  SEED
+  FCA
+  OTHER
+}
+
+enum PropertyType {
+  RESIDENTIAL
+  BTL
+  OTHER
+}
+
+enum CaseNoteSource {
+  ADVISER
+  INTEL
+  SYSTEM
+}
+
+enum InfoRequestStatus {
+  OUTSTANDING
+  FULFILLED
+  CANCELLED
+}
+
 // ── Models ─────────────────────────────────────
 
 model Organisation {
@@ -142,6 +174,7 @@ model Organisation {
   clients                  Client[]
   cases                    Case[]
   caseIntelligenceSnapshots CaseIntelligenceSnapshot[]
+  properties               Property[]
 
   @@map("organisations")
 }
@@ -175,6 +208,7 @@ model User {
   complianceRecords  ComplianceRecord[]
   suitabilityReports SuitabilityReport[]
   auditLogs          AuditLog[]
+  caseNotes          CaseNote[]          @relation("CaseNoteAuthor")
 
   @@map("users")
 }
@@ -234,8 +268,10 @@ model Client {
   organisation   Organisation        @relation(fields: [orgId], references: [id])
   assignedMember OrganisationMember? @relation(fields: [assignedMemberId], references: [id], onDelete: SetNull)
   cases          Case[]
-  documents    Document[]
-  messages     Message[]
+  documents      Document[]
+  messages       Message[]
+  properties     Property[]
+  infoRequests   ClientInfoRequest[]
 
   @@unique([orgId, referenceNumber])
   @@map("clients")
@@ -258,19 +294,50 @@ model Case {
   selectedFee     Float?
   adviserNotes    String?
   assignedAdviserId String?
+
+  // ── PRD-16: Property FK ───────────────────────────────
+  propertyId      String?
+
+  // ── PRD-16: Lender FK (alongside selectedLender string during transition) ──
+  lenderId        String?
+  lenderOtherName String?
+
+  // ── PRD-16: Date spine ────────────────────────────────
+  aipAt           DateTime?
+  submittedAt     DateTime?
+  offerIssuedAt   DateTime?
+  offerExpiresAt  DateTime?
+  exchangeAt      DateTime?
+  completionAt    DateTime?
+
+  // ── PRD-16: Account strip ─────────────────────────────
+  rateType          String?
+  monthlyPayment    Float?
+  initialRateEndsAt DateTime?
+  chargeType        String?
+  isOffset          Boolean?
+
+  // ── PRD-16: Stale recommendation ──────────────────────
+  recommendationStaleAt     DateTime?
+  recommendationStaleReason String?
+
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
-  organisation      Organisation       @relation(fields: [orgId], references: [id])
-  client            Client             @relation(fields: [clientId], references: [id])
-  adviser           User?              @relation("CaseAdviser", fields: [assignedAdviserId], references: [id])
-  factFind          FactFind?
+  organisation       Organisation       @relation(fields: [orgId], references: [id])
+  client             Client             @relation(fields: [clientId], references: [id])
+  adviser            User?              @relation("CaseAdviser", fields: [assignedAdviserId], references: [id])
+  property           Property?          @relation(fields: [propertyId], references: [id])
+  lender             Lender?            @relation("CaseLender", fields: [lenderId], references: [id])
+  factFind           FactFind?
   productsConsidered ProductConsidered[]
   complianceRecords  ComplianceRecord[]
   suitabilityReports SuitabilityReport[]
   messages           Message[]
   documents          Document[]
   intelligenceSnapshots CaseIntelligenceSnapshot[]
+  notes              CaseNote[]
+  infoRequests       ClientInfoRequest[]
 
   @@unique([orgId, referenceNumber])
   @@map("cases")
@@ -296,17 +363,26 @@ model FactFind {
 }
 
 model ProductConsidered {
-  id                String  @id @default(cuid())
+  id                String   @id @default(cuid())
   caseId            String
   lenderName        String
   productName       String
   rate              Float?
   fee               Float?
-  isSelected        Boolean @default(false)
+  isSelected        Boolean  @default(false)
   reasonNotSelected String?
+
+  // ── PRD-16: Lender FK + product detail fields ─────────
+  lenderId          String?
+  lenderOtherName   String?
+  productType       String?
+  initialTermMonths Int?
+  ercSummary        String?
+
   createdAt         DateTime @default(now())
 
-  case Case @relation(fields: [caseId], references: [id])
+  case   Case    @relation(fields: [caseId], references: [id])
+  lender Lender? @relation(fields: [lenderId], references: [id])
 
   @@map("products_considered")
 }
@@ -443,6 +519,97 @@ model LenderCriteria {
   // NOTE: Global reference data — no orgId
 
   @@map("lender_criteria")
+}
+
+// ── PRD-16: Lender directory ───────────────────────────────────────────────────
+
+/// Global lender reference directory — no orgId.
+/// Rows used on a case or product are never renamed or deleted.
+/// LEGACY = closed brands kept for remortgage lookups (NRAM, Bradford & Bingley, etc.)
+/// OTHER = reserved sentinel row for free-text override; source = OTHER, never deactivated.
+model Lender {
+  id             String       @id @default(cuid())
+  name           String       @unique
+  normalizedName String       @unique
+  fcaFrn         String?
+  status         LenderStatus @default(ACTIVE)
+  source         LenderSource @default(SEED)
+  lastSeenAt     DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  productsConsidered ProductConsidered[]
+  cases              Case[]              @relation("CaseLender")
+
+  @@map("lenders")
+}
+
+// ── PRD-16: Property ───────────────────────────────────────────────────────────
+
+/// Client-owned property record. Promoted off FactFind.propertyDetails JSON.
+/// No top-level nav item — appears on client detail and case header only.
+model Property {
+  id           String       @id @default(cuid())
+  orgId        String
+  clientId     String
+  address      Json?
+  postcode     String
+  tenure       String?
+  type         PropertyType @default(RESIDENTIAL)
+  currentValue Float?
+  monthlyRent  Float?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  organisation Organisation @relation(fields: [orgId], references: [id])
+  client       Client       @relation(fields: [clientId], references: [id])
+  cases        Case[]
+
+  @@map("properties")
+}
+
+// ── PRD-16: CaseNote ───────────────────────────────────────────────────────────
+
+/// Append-only notes thread on a case. Replaces Case.adviserNotes (single string).
+/// INSERT-ONLY — no UPDATE or DELETE in the API.
+/// tag values: intel | disclosure | amend | system
+model CaseNote {
+  id           String         @id @default(cuid())
+  orgId        String
+  caseId       String
+  body         String
+  tag          String?
+  authorUserId String?
+  source       CaseNoteSource @default(ADVISER)
+  createdAt    DateTime       @default(now())
+
+  case   Case  @relation(fields: [caseId], references: [id])
+  author User? @relation("CaseNoteAuthor", fields: [authorUserId], references: [id])
+
+  @@map("case_notes")
+}
+
+// ── PRD-16: ClientInfoRequest ─────────────────────────────────────────────────
+
+/// Tracks "request from client" actions. Outstanding until a matching document
+/// is uploaded or the adviser confirms the checklist item.
+model ClientInfoRequest {
+  id                  String            @id @default(cuid())
+  orgId               String
+  caseId              String
+  clientId            String
+  checklistItemId     String?
+  documentType        String?
+  messageId           String?
+  status              InfoRequestStatus @default(OUTSTANDING)
+  fulfilledDocumentId String?
+  createdAt           DateTime          @default(now())
+  fulfilledAt         DateTime?
+
+  case   Case   @relation(fields: [caseId], references: [id])
+  client Client @relation(fields: [clientId], references: [id])
+
+  @@map("client_info_requests")
 }
 
 // ── PRD-15: Mortgage Intelligence models ──────────────────────────────────────
