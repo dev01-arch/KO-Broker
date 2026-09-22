@@ -123,6 +123,18 @@ export function serializeCaseDetail(caseRecord: {
     createdAt: Date;
     author?: { id: string; firstName: string | null; lastName: string | null } | null;
   }>;
+  // PRD-16 W5: outstanding info requests
+  infoRequests?: Array<{
+    id: string;
+    clientId: string;
+    checklistItemId: string | null;
+    documentType: string | null;
+    messageId: string | null;
+    status: string;
+    fulfilledDocumentId: string | null;
+    createdAt: Date;
+    fulfilledAt: Date | null;
+  }>;
   _count: { messages: number; documents: number };
 }) {
   return {
@@ -200,6 +212,18 @@ export function serializeCaseDetail(caseRecord: {
         ? { id: n.author.id, firstName: n.author.firstName, lastName: n.author.lastName }
         : undefined,
       createdAt: n.createdAt.toISOString(),
+    })),
+    // PRD-16 W5: outstanding info requests
+    infoRequests: (caseRecord.infoRequests ?? []).map((r) => ({
+      id: r.id,
+      clientId: r.clientId,
+      checklistItemId: r.checklistItemId ?? undefined,
+      documentType: r.documentType ?? undefined,
+      messageId: r.messageId ?? undefined,
+      status: r.status,
+      fulfilledDocumentId: r.fulfilledDocumentId ?? undefined,
+      createdAt: r.createdAt.toISOString(),
+      fulfilledAt: r.fulfilledAt?.toISOString() ?? undefined,
     })),
     _count: caseRecord._count,
   };

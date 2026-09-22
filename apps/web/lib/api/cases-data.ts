@@ -210,6 +210,22 @@ export async function getCaseForOrg(orgId: string, id: string) {
             author: { select: { id: true, firstName: true, lastName: true } },
           },
         },
+        // PRD-16 W5: outstanding document requests — badge count for compliance panel
+        infoRequests: {
+          where: { status: 'OUTSTANDING' },
+          orderBy: { createdAt: 'desc' as const },
+          select: {
+            id: true,
+            clientId: true,
+            checklistItemId: true,
+            documentType: true,
+            messageId: true,
+            status: true,
+            fulfilledDocumentId: true,
+            createdAt: true,
+            fulfilledAt: true,
+          },
+        },
         _count: { select: { messages: true, documents: true } },
       },
     });

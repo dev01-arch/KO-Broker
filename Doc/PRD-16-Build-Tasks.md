@@ -864,13 +864,75 @@ See `Doc/PRD-16-Phase5-Test-Guide.md`.
 
 # Phase 6 — Request from Client (W5)
 
-**Status:** LOCKED — awaiting Phase 5 review  
-**Estimated effort:** ~7 hrs  
+**Workstream:** W5
+**Status:** COMPLETE
+**Estimated effort:** ~7 hrs
 **Depends on:** Phase 1 (ClientInfoRequest table), messages system (PRD-10, already live)
+**Commit:** Phase 6 commit (see git log)
 
 **Goal:** Advisers can request a specific document or checklist item from a client directly from the compliance panel or document row. The request goes through the existing message system (email/SMS/portal). The item stays outstanding in Compliance until a matching document is uploaded or the adviser marks it complete.
 
-Tasks covered: W5.1 – W5.5 from the engineering plan.
+---
+
+## Tasks Completed
+
+### Task 6.1 — Code review and mapping ✓
+Key findings:
+- `POST /api/documents` creates document then logs audit — fulfil hook added after `document.create`
+- `completeComplianceItemForOrg` creates `ComplianceRecord` then refreshes compliance — fulfil hook added after the create
+- `broadcastMessageForOrg` handles all channels (email/SMS/portal/digest) — correct function to use
+- `getCaseForOrg` uses Prisma `include` — `infoRequests` relation added with `status: OUTSTANDING` filter
+- No existing `/api/cases/:id/info-requests` route
+
+### Task 6.2 — info-requests-data.ts ✓
+**New file:** `apps/web/lib/api/info-requests-data.ts`
+
+`createInfoRequestForCase`: Loads case + client, builds pre-filled message body, calls `broadcastMessageForOrg`, creates `ClientInfoRequest { status: OUTSTANDING }`, `logAuditEvent { action: INFO_REQUEST_CREATED }`. Returns `{ infoRequest, message, delivery }`.
+
+`fulfilInfoRequestsForDocument`: Matches `{ caseId, orgId, status: OUTSTANDING, documentType }`, `updateMany FULFILLED + fulfilledDocumentId + fulfilledAt`, audit fire-and-forget.
+
+`fulfilInfoRequestsForChecklistItem`: Matches `{ caseId, orgId, status: OUTSTANDING, checklistItemId }`, `updateMany FULFILLED + fulfilledAt`, audit fire-and-forget.
+
+### Task 6.3 — GET/POST /api/cases/:id/info-requests ✓
+**New file:** `apps/web/app/api/cases/[id]/info-requests/route.ts`
+
+GET + POST only. No PATCH or DELETE. `CreateInfoRequestSchema` validation (either `documentType` or `checklistItemId` required). HTTP 201 with `{ infoRequest, delivery }`.
+
+### Task 6.4 — Auto-fulfil on document upload ✓
+**File:** `apps/web/app/api/documents/route.ts`
+
+Dynamic import of `fulfilInfoRequestsForDocument`, called `void` after `document.create` when `caseId` present.
+
+### Task 6.5 — Fulfil on compliance item completion ✓
+**File:** `apps/web/lib/api/compliance-overview-data.ts`
+
+Dynamic import of `fulfilInfoRequestsForChecklistItem`, called `void` after `complianceRecord.create` inside `completeComplianceItemForOrg`.
+
+### Task 6.6 — GET /api/cases/:id includes infoRequests[] ✓
+`getCaseForOrg`: `infoRequests` include with `status: OUTSTANDING` filter. `serializeCaseDetail`: `infoRequests[]` type and output added.
+
+### Task 6.7 — Typecheck + lint ✓
+- `tsc --noEmit` → exit 0, zero errors
+- `eslint` → exit 0, zero warnings
+
+---
+
+## Files Modified in Phase 6
+
+| File | Change type |
+| :---- | :---- |
+| `apps/web/lib/api/info-requests-data.ts` | New — info request data layer |
+| `apps/web/app/api/cases/[id]/info-requests/route.ts` | New — GET/POST route |
+| `apps/web/app/api/documents/route.ts` | Added auto-fulfil after document create |
+| `apps/web/lib/api/compliance-overview-data.ts` | Added fulfil after checklist item completion |
+| `apps/web/lib/api/cases-data.ts` | Added infoRequests include to getCaseForOrg |
+| `apps/web/lib/api/cases.ts` | Added infoRequests[] to serializeCaseDetail |
+
+---
+
+## Test Guide
+
+See `Doc/PRD-16-Phase6-Test-Guide.md`.
 
 ---
 

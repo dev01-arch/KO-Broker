@@ -220,6 +220,12 @@ export const POST = createHandler({
             },
         });
 
+        // ── PRD-16 W5: auto-fulfil matching OUTSTANDING info requests ─────────
+        if (caseId) {
+            const { fulfilInfoRequestsForDocument } = await import('@/lib/api/info-requests-data');
+            void fulfilInfoRequestsForDocument(orgId!, caseId, document.id, parsedType.data);
+        }
+
         // ── Audit log ─────────────────────────────────────────────────────────
 
         await logAuditEvent({

@@ -210,6 +210,10 @@ export async function completeComplianceItemForOrg(
         action: 'COMPLIANCE_ITEM_COMPLETED',
         diff: { itemId },
       });
+
+      // PRD-16 W5: fulfil any OUTSTANDING info requests tied to this checklist item
+      const { fulfilInfoRequestsForChecklistItem } = await import('@/lib/api/info-requests-data');
+      void fulfilInfoRequestsForChecklistItem(orgId, caseId, itemId);
     }
 
     const refreshed = await getCaseComplianceForOrg(orgId, caseId, options);
