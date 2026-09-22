@@ -763,13 +763,102 @@ See `Doc/PRD-16-Phase4-Test-Guide.md`.
 
 # Phase 5 — Amend + Stale Recommendation (W4)
 
-**Status:** LOCKED — awaiting Phase 4 review  
-**Estimated effort:** ~10 hrs  
-**Depends on:** Phase 2 (lenderId on products), Phase 3 (notes thread for stale notes), Phase 4 (propertyId FK for stale trigger)
+**Workstream:** W4
+**Status:** COMPLETE
+**Estimated effort:** ~10 hrs
+**Depends on:** Phase 2 (lenderId on products), Phase 3 (notes thread), Phase 4 (propertyId FK)
+**Commit:** Phase 5 commit (see git log)
 
-**Goal:** Changing a qualifying fact after a product is selected marks the recommendation stale, drops non-finalised reports back to DRAFT, and writes a CaseNote. A completed fact-find can be amended with an explicit audit trail. Re-selecting a product clears the stale flag. FINALISED reports are never touched.
+**Goal:** Changing a qualifying fact after a product is selected marks the recommendation stale, drops non-finalised reports back to DRAFT, and writes a SYSTEM CaseNote. A completed fact-find can be amended with an explicit audit trail. Re-selecting a product clears the stale flag. FINALISED reports are never touched.
 
-Tasks covered: W4.1 – W4.6 from the engineering plan.
+---
+
+## Tasks Completed
+
+### Task 5.1 — Code review and mapping ✓
+Key findings:
+- `updateCaseForOrg` spreads input directly — needed to snapshot existing fields first
+- `upsertFactFindWithCompliance` had a hard `FORBIDDEN` guard on completed fact-finds — needed `isAmend` flag as a separate bypass path
+- `createProductForCase` / `updateProductForCase` both run `$transaction` — stale clear fits inside them
+- FINALISED protection already existed in `approveAiReportForOrg` and `regenerateSection` — no changes needed
+
+### Task 5.2 — lib/compliance/stale.ts ✓
+**New file:** `apps/web/lib/compliance/stale.ts`
+
+`checkAndSetRecommendationStale`:
+1. Checks `hasSelected` via `productConsidered.count({ isSelected: true })` — skips if 0
+2. Sets `recommendationStaleAt` + `recommendationStaleReason` on Case
+3. `updateMany` on SuitabilityReport with `status: { in: ['DRAFT', 'ADVISER_REVIEW'] }` → sets to `DRAFT`. `APPROVED` and `FINALISED` excluded.
+4. Writes SYSTEM CaseNote `tag: amend` — only on first stale set (idempotent on re-trigger)
+5. Fires `logAuditEvent { action: RECOMMENDATION_STALE }` fire-and-forget
+6. Accepts optional `TxClient` to participate in caller's transaction
+
+`clearRecommendationStale`:
+1. Checks `wasStale` from DB — no-op if not stale
+2. Clears `recommendationStaleAt` + `recommendationStaleReason`
+3. Writes SYSTEM CaseNote `tag: amend` body "stale flag cleared"
+4. Fires `logAuditEvent { action: RECOMMENDATION_STALE_CLEARED }`
+5. Also accepts optional `TxClient`
+
+### Task 5.3 — Hook stale into updateCaseForOrg ✓
+**File:** `apps/web/lib/api/cases-data.ts`
+
+- Snapshot now selects `loanAmount`, `propertyValue`, `termYears`, `propertyId` before the update
+- After `prisma.case.update`, compares each against `input.*`
+- If any changed: calls `checkAndSetRecommendationStale` fire-and-forget
+- Added `options?: { userId? }` param so stale events are attributed to the adviser
+- PATCH route updated to pass `{ userId: authResult.user?.id }`
+
+### Task 5.4 — isAmend flag + stale in upsertFactFindWithCompliance ✓
+**Files:** `packages/types/src/index.ts`, `apps/web/lib/api/fact-find-data.ts`
+
+Schema change: `UpsertFactFindSchema` gets `isAmend: z.boolean().optional()`
+
+`upsertFactFindWithCompliance` logic:
+- `isAmend=true` bypasses the `FORBIDDEN` completedAt guard (separate from `allowWhenComplete`)
+- Audit action: `isAmend + factFindComplete` → `FACT_FIND_AMENDED`; `markComplete` → `FACT_FIND_COMPLETED`; else → `FACT_FIND_UPDATED`
+- `STALE_SECTIONS = { incomeDetails, expenditureDetails, propertyDetails, existingMortgages }`
+- On amend of any qualifying section → `checkAndSetRecommendationStale` fire-and-forget
+- `isAmend` stripped from `sectionData` before DB write (alongside `markComplete`)
+- `completePortalFactFind` unchanged — portal completion is not an amend
+
+### Task 5.5 — Stale clear in product selection ✓
+**File:** `apps/web/lib/api/products-data.ts`
+
+- `clearRecommendationStale` imported
+- Called inside `$transaction` in both `createProductForCase` and `updateProductForCase` after `Case.update` when `isSelected=true`
+- Passes `tx` so it runs atomically with the product sync
+- If case was stale: clears flag, writes SYSTEM CaseNote, fires audit event
+
+### Task 5.6 — FINALISED report protection verified ✓
+No code changes. Three existing protection points confirmed:
+1. `approveAiReportForOrg` — explicit `if status === FINALISED` guard → `BUSINESS_RULE_VIOLATION`
+2. `regenerateSection` — same guard
+3. `checkAndSetRecommendationStale` — `updateMany` filter `status: { in: ['DRAFT', 'ADVISER_REVIEW'] }` — APPROVED + FINALISED never in the list
+
+### Task 5.7 — Typecheck + lint ✓
+- `tsc --noEmit` → exit 0
+- `eslint` → exit 0
+- Fixed: `eslint-disable-next-line` on `isAmend: _isAmend` destructure in `fact-find-data.ts`
+
+---
+
+## Files Modified in Phase 5
+
+| File | Change type |
+| :---- | :---- |
+| `apps/web/lib/compliance/stale.ts` | New — stale detection + clear functions |
+| `apps/web/lib/api/cases-data.ts` | Stale hook in `updateCaseForOrg`; options.userId param |
+| `apps/web/app/api/cases/[id]/route.ts` | Passes userId to `updateCaseForOrg` |
+| `apps/web/lib/api/fact-find-data.ts` | `isAmend` bypass + stale hook on qualifying sections |
+| `apps/web/lib/api/products-data.ts` | `clearRecommendationStale` in product selection transactions |
+| `packages/types/src/index.ts` | `isAmend` field on `UpsertFactFindSchema` |
+
+---
+
+## Test Guide
+
+See `Doc/PRD-16-Phase5-Test-Guide.md`.
 
 ---
 

@@ -5,6 +5,7 @@ import { validateStageTransition } from '@/lib/api/stage-transition';
 import { calculateLTV, generateReference } from '@ko/utils';
 import type { CaseStage, CaseType, UpsertFactFindInput } from '@ko/types';
 import { caseAssignedToAdviserWhere } from '@/lib/auth/adviser-scope';
+import { checkAndSetRecommendationStale } from '@/lib/compliance/stale';
 
 function shouldUseDevStore(error: unknown) {
   return process.env.NODE_ENV === 'development' && isPrismaConnectionError(error);
@@ -250,11 +251,20 @@ export async function updateCaseForOrg(
     chargeType?: string | null;
     isOffset?: boolean | null;
   },
+  options?: { userId?: string },
 ) {
   try {
+    // Snapshot qualifying fields BEFORE update so we can detect stale triggers
     const existing = await prisma.case.findFirst({
       where: { id, orgId },
-      select: { id: true, stage: true, propertyValue: true, loanAmount: true },
+      select: {
+        id: true,
+        stage: true,
+        propertyValue: true,
+        loanAmount: true,
+        termYears: true,
+        propertyId: true,
+      },
     });
     if (!existing) return { error: 'NOT_FOUND' as const };
 
@@ -276,7 +286,6 @@ export async function updateCaseForOrg(
     const ltv =
       propertyValue && loanAmount ? calculateLTV(loanAmount, propertyValue) : undefined;
 
-    // Convert ISO date strings to Date objects for Prisma (nullable fields pass null through)
     const toDate = (v?: string | null): Date | null | undefined => {
       if (v === null) return null;
       if (v === undefined) return undefined;
@@ -286,7 +295,6 @@ export async function updateCaseForOrg(
     const updated = await prisma.case.update({
       where: { id },
       data: {
-        // Existing fields
         ...(input.stage !== undefined ? { stage: input.stage } : {}),
         ...(input.propertyValue !== undefined ? { propertyValue: input.propertyValue } : {}),
         ...(input.loanAmount !== undefined ? { loanAmount: input.loanAmount } : {}),
@@ -298,18 +306,15 @@ export async function updateCaseForOrg(
         ...(input.adviserNotes !== undefined ? { adviserNotes: input.adviserNotes } : {}),
         ...(input.assignedAdviserId !== undefined ? { assignedAdviserId: input.assignedAdviserId } : {}),
         ...(ltv !== undefined ? { ltv } : {}),
-        // PRD-16: Property + Lender FK
         ...(input.propertyId !== undefined ? { propertyId: input.propertyId } : {}),
         ...(input.lenderId !== undefined ? { lenderId: input.lenderId } : {}),
         ...(input.lenderOtherName !== undefined ? { lenderOtherName: input.lenderOtherName } : {}),
-        // PRD-16: Date spine
         ...(input.aipAt !== undefined ? { aipAt: toDate(input.aipAt) } : {}),
         ...(input.submittedAt !== undefined ? { submittedAt: toDate(input.submittedAt) } : {}),
         ...(input.offerIssuedAt !== undefined ? { offerIssuedAt: toDate(input.offerIssuedAt) } : {}),
         ...(input.offerExpiresAt !== undefined ? { offerExpiresAt: toDate(input.offerExpiresAt) } : {}),
         ...(input.exchangeAt !== undefined ? { exchangeAt: toDate(input.exchangeAt) } : {}),
         ...(input.completionAt !== undefined ? { completionAt: toDate(input.completionAt) } : {}),
-        // PRD-16: Account strip
         ...(input.rateType !== undefined ? { rateType: input.rateType } : {}),
         ...(input.monthlyPayment !== undefined ? { monthlyPayment: input.monthlyPayment } : {}),
         ...(input.initialRateEndsAt !== undefined ? { initialRateEndsAt: toDate(input.initialRateEndsAt) } : {}),
@@ -318,6 +323,33 @@ export async function updateCaseForOrg(
       },
       select: caseListSelect,
     });
+
+    // ── PRD-16 W4: stale detection ─────────────────────────────────────────
+    // Detect which qualifying fields actually changed value
+    const changedFields: string[] = [];
+    if (input.loanAmount !== undefined && input.loanAmount !== existing.loanAmount) {
+      changedFields.push('loanAmount');
+    }
+    if (input.propertyValue !== undefined && input.propertyValue !== existing.propertyValue) {
+      changedFields.push('propertyValue');
+    }
+    if (input.termYears !== undefined && input.termYears !== existing.termYears) {
+      changedFields.push('termYears');
+    }
+    if (input.propertyId !== undefined && input.propertyId !== existing.propertyId) {
+      changedFields.push('propertyId');
+    }
+
+    if (changedFields.length > 0) {
+      // Fire-and-forget — stale check reads from DB so runs after the update above
+      void checkAndSetRecommendationStale({
+        orgId,
+        caseId: id,
+        changedFields,
+        reason: `Case financial details updated (${changedFields.join(', ')})`,
+        userId: options?.userId,
+      });
+    }
 
     return { case: updated };
   } catch (error) {

@@ -15,6 +15,7 @@ import { prisma } from '@/lib/db';
 import { devStore } from '@/lib/api/dev-store';
 import { isPrismaConnectionError } from '@/lib/api/prisma-errors';
 import { logAuditEvent } from '@/lib/compliance/audit';
+import { clearRecommendationStale } from '@/lib/compliance/stale';
 import type {
   CreateProductConsideredInput,
   UpdateProductConsideredInput,
@@ -186,6 +187,18 @@ export async function createProductForCase(
             updatedAt: new Date(),
           },
         });
+
+        // PRD-16 W4: clear stale flag when a product is selected
+        await clearRecommendationStale(
+          {
+            orgId,
+            caseId,
+            productId: created.id,
+            lenderName: created.lenderName,
+            userId,
+          },
+          tx,
+        );
       }
 
       return created;
@@ -289,6 +302,18 @@ export async function updateProductForCase(
             updatedAt: new Date(),
           },
         });
+
+        // PRD-16 W4: clear stale flag when a product is selected
+        await clearRecommendationStale(
+          {
+            orgId,
+            caseId,
+            productId: updated.id,
+            lenderName: updated.lenderName,
+            userId,
+          },
+          tx,
+        );
       } else if (existing.isSelected && input.isSelected === false) {
         await tx.case.update({
           where: { id: caseId },

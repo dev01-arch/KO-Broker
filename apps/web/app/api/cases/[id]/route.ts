@@ -96,7 +96,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       }
     }
 
-    const result = await updateCaseForOrg(orgId, id, parsed.data);
+    const result = await updateCaseForOrg(orgId, id, parsed.data, { userId: authResult.user?.id });
     if ('error' in result) {
       if (result.error === 'BUSINESS_RULE_VIOLATION') {
         const message =

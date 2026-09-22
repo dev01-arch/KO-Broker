@@ -3,11 +3,20 @@ import { devStore } from '@/lib/api/dev-store';
 import { isPrismaConnectionError } from '@/lib/api/prisma-errors';
 import { computeDiff, logAuditEvent } from '@/lib/compliance/audit';
 import { calculateVulnerabilityScore, checkIsVulnerable } from '@/lib/compliance/vulnerability';
+import { checkAndSetRecommendationStale } from '@/lib/compliance/stale';
 import type { UpsertFactFindInput } from '@ko/types';
 
 function shouldUseDevStore(error: unknown) {
   return process.env.NODE_ENV === 'development' && isPrismaConnectionError(error);
 }
+
+// Sections whose change on amend can trigger a stale recommendation
+const STALE_SECTIONS = new Set([
+  'incomeDetails',
+  'expenditureDetails',
+  'propertyDetails',
+  'existingMortgages',
+]);
 
 export type FactFindUpsertResult =
   | {
@@ -30,14 +39,14 @@ export async function upsertFactFindWithCompliance(
     });
     if (!caseRecord) return { error: 'NOT_FOUND' as const };
 
-    if (
-      !options?.allowWhenComplete &&
-      caseRecord.factFind?.completedAt &&
-      !input.markComplete
-    ) {
+    const isAmend = input.isAmend === true;
+    const factFindComplete = !!caseRecord.factFind?.completedAt;
+
+    // Guard: completed fact-find can only be edited via explicit amend or allowWhenComplete
+    if (factFindComplete && !isAmend && !options?.allowWhenComplete && !input.markComplete) {
       return {
         error: 'FORBIDDEN' as const,
-        message: 'This fact-find is already complete and cannot be edited.',
+        message: 'This fact-find is already complete and cannot be edited. Use the Amend action.',
       };
     }
 
@@ -75,7 +84,9 @@ export async function upsertFactFindWithCompliance(
       }
     }
 
-    const { markComplete, ...sections } = input;
+    // Strip framework flags — only sections go into the DB
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { markComplete, isAmend: _isAmend, ...sections } = input;
     const sectionData = Object.fromEntries(
       Object.entries(sections).filter(([, value]) => value !== undefined),
     );
@@ -98,20 +109,43 @@ export async function upsertFactFindWithCompliance(
       },
     });
 
+    // Determine audit action:
+    //   isAmend + already complete → FACT_FIND_AMENDED
+    //   markComplete               → FACT_FIND_COMPLETED
+    //   otherwise                  → FACT_FIND_UPDATED
+    const auditAction = isAmend && factFindComplete
+      ? 'FACT_FIND_AMENDED'
+      : markComplete
+        ? 'FACT_FIND_COMPLETED'
+        : 'FACT_FIND_UPDATED';
+
     await logAuditEvent({
       orgId,
       userId: options?.userId,
       entityType: 'Case',
       entityId: caseId,
-      action: markComplete ? 'FACT_FIND_COMPLETED' : 'FACT_FIND_UPDATED',
+      action: auditAction,
       diff: computeDiff(
         (existingFactFind ?? {}) as unknown as Record<string, unknown>,
         factFind as unknown as Record<string, unknown>,
       ),
     });
 
-    // Completing a fact-find while still at ENQUIRY should move the case into FACT_FIND
-    // so the next compliance advance is RESEARCH (not blocked on disclosure alone).
+    // PRD-16 W4: stale detection on amend of qualifying sections
+    if (isAmend && factFindComplete) {
+      const changedSections = Object.keys(sectionData).filter((k) => STALE_SECTIONS.has(k));
+      if (changedSections.length > 0) {
+        void checkAndSetRecommendationStale({
+          orgId,
+          caseId,
+          changedFields: changedSections,
+          reason: `Fact-find amended (${changedSections.join(', ')})`,
+          userId: options?.userId,
+        });
+      }
+    }
+
+    // Auto stage advance: completing fact-find at ENQUIRY → FACT_FIND
     if (markComplete && caseRecord.stage === 'ENQUIRY') {
       await prisma.$transaction(async (tx) => {
         await tx.complianceRecord.create({

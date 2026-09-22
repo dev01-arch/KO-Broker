@@ -612,6 +612,9 @@ export const UpsertFactFindSchema = z.object({
   existingMortgages: factFindSectionSchema.optional(),
   clientPreferences: factFindSectionSchema.optional(),
   markComplete: z.boolean().optional(),
+  // PRD-16 W4: explicit amend mode — bypasses the completed guard and writes
+  // FACT_FIND_AMENDED audit event instead of FACT_FIND_UPDATED.
+  isAmend: z.boolean().optional(),
 });
 export type UpsertFactFindInput = z.infer<typeof UpsertFactFindSchema>;
 
