@@ -1,18 +1,16 @@
 /**
- * POST /api/intelligence/snapshots/:id/copy-to-notes — PRD-15 B9
+ * POST /api/intelligence/snapshots/:id/copy-to-notes — PRD-15 B9 + PRD-16 W2
  *
- * Appends the J4-format block to Case.adviserNotes:
+ * Inserts the J4-format block as a CaseNote (source: INTEL, tag: intel).
  *
- *   [Mortgage Intelligence · {date}]
- *   {insightText}
- *   {watchText?}
- *   Sources: BoE quoted rates ({asAt}); HMLR sold prices ({district}).
- *   Market context only. Not a recommendation.
+ * PRD-16 W2 change: no longer writes to Case.adviserNotes. The note is
+ * appended to the insert-only CaseNote thread so it is never lost by a
+ * later overwrite of the old single-string field.
  *
  * Rules:
- *   - 409 if the snapshot has no caseId (MANUAL snapshots, copy-to-notes disabled).
- *   - 404 if the snapshot is not in this org, or the linked case is not in this org.
- *   - Org-scoped on both snapshot and the target case.
+ *   - 409 if the snapshot has no caseId (MANUAL snapshots).
+ *   - 404 if snapshot or linked case not found in this org.
+ *   - Org-scoped on both snapshot and target case.
  *   - Audit log: entityType Case / action INTELLIGENCE_COPIED_TO_NOTES.
  *
  * Auth: Clerk session + mortgage_intelligence feature gate.
@@ -58,11 +56,7 @@ function buildJ4Block(snapshot: {
     `[Mortgage Intelligence · ${dateLabel}]`,
     snapshot.insightText,
   ];
-
-  if (snapshot.watchText) {
-    lines.push(snapshot.watchText);
-  }
-
+  if (snapshot.watchText) lines.push(snapshot.watchText);
   lines.push(`Sources: BoE quoted rates (${ratesAsAt})${localPricesPart}.`);
   lines.push('Market context only. Not a recommendation.');
 
@@ -75,7 +69,7 @@ export const POST = createParamHandler<unknown, { id: string }>({
   method: 'POST',
   requiredFeature: 'mortgage_intelligence',
   handler: async (_req: NextRequest, { orgId, user, params }): Promise<NextResponse> => {
-    // ── 1. Fetch snapshot (org-scoped) ────────────────────────────────────────
+    // 1. Fetch snapshot (org-scoped)
     const snapshot = await prisma.caseIntelligenceSnapshot.findFirst({
       where: { id: params.id, orgId },
       select: {
@@ -96,7 +90,7 @@ export const POST = createParamHandler<unknown, { id: string }>({
       );
     }
 
-    // ── 2. 409 if no caseId (MANUAL snapshot) ────────────────────────────────
+    // 2. 409 if MANUAL snapshot (no caseId)
     if (!snapshot.caseId) {
       return NextResponse.json(
         {
@@ -110,10 +104,10 @@ export const POST = createParamHandler<unknown, { id: string }>({
       );
     }
 
-    // ── 3. Fetch target case (org-scoped) ─────────────────────────────────────
+    // 3. Fetch target case (org-scoped)
     const caseRow = await prisma.case.findFirst({
       where: { id: snapshot.caseId, orgId },
-      select: { id: true, adviserNotes: true },
+      select: { id: true },
     });
 
     if (!caseRow) {
@@ -123,18 +117,20 @@ export const POST = createParamHandler<unknown, { id: string }>({
       );
     }
 
-    // ── 4. Build and append the J4 block ─────────────────────────────────────
+    // 4. Insert the J4 block as a CaseNote (PRD-16 W2 — INSERT-ONLY thread)
     const j4Block = buildJ4Block(snapshot);
-    const existingNotes = caseRow.adviserNotes ?? '';
-    const separator = existingNotes.length > 0 ? '\n\n' : '';
-    const updatedNotes = `${existingNotes}${separator}${j4Block}`;
-
-    await prisma.case.update({
-      where: { id: caseRow.id },
-      data: { adviserNotes: updatedNotes },
+    await prisma.caseNote.create({
+      data: {
+        orgId: orgId!,
+        caseId: caseRow.id,
+        body: j4Block,
+        tag: 'intel',
+        source: 'INTEL',
+        authorUserId: user?.id ?? null,
+      },
     });
 
-    // ── 5. Audit log (fire-and-forget) ────────────────────────────────────────
+    // 5. Audit log
     void logAuditEvent({
       orgId: orgId!,
       userId: user?.id,

@@ -11,6 +11,7 @@
     "seed:lenders": "tsx prisma/seed-lenders.ts",
     "migrate": "prisma migrate dev",
     "migrate:deploy": "prisma migrate deploy",
+    "migrate:adviser-notes": "tsx prisma/migrate-adviser-notes.ts",
     "studio": "prisma studio",
     "typecheck": "tsc --noEmit"
   },

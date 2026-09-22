@@ -105,6 +105,23 @@ export function serializeCaseDetail(caseRecord: {
     isSelected: boolean;
     reasonNotSelected?: string | null;
     createdAt: Date;
+    lenderId?: string | null;
+    lenderOtherName?: string | null;
+    productType?: string | null;
+    initialTermMonths?: number | null;
+    ercSummary?: string | null;
+  }>;
+  // PRD-16 W2: append-only notes thread
+  notes?: Array<{
+    id: string;
+    caseId: string;
+    orgId: string;
+    body: string;
+    tag: string | null;
+    source: string;
+    authorUserId: string | null;
+    createdAt: Date;
+    author?: { id: string; firstName: string | null; lastName: string | null } | null;
   }>;
   _count: { messages: number; documents: number };
 }) {
@@ -164,6 +181,25 @@ export function serializeCaseDetail(caseRecord: {
       isSelected: p.isSelected,
       reasonNotSelected: p.reasonNotSelected ?? undefined,
       createdAt: p.createdAt.toISOString(),
+      // PRD-16 W1
+      lenderId: p.lenderId ?? undefined,
+      lenderOtherName: p.lenderOtherName ?? undefined,
+      productType: p.productType ?? undefined,
+      initialTermMonths: p.initialTermMonths ?? undefined,
+      ercSummary: p.ercSummary ?? undefined,
+    })),
+    // PRD-16 W2: notes thread
+    notes: (caseRecord.notes ?? []).map((n) => ({
+      id: n.id,
+      caseId: n.caseId,
+      body: n.body,
+      tag: n.tag ?? undefined,
+      source: n.source,
+      authorUserId: n.authorUserId ?? undefined,
+      author: n.author
+        ? { id: n.author.id, firstName: n.author.firstName, lastName: n.author.lastName }
+        : undefined,
+      createdAt: n.createdAt.toISOString(),
     })),
     _count: caseRecord._count,
   };

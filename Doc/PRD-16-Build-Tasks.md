@@ -552,13 +552,102 @@ See `Doc/PRD-16-Phase2-Test-Guide.md` for full test commands and acceptance chec
 
 # Phase 3 — Case Overview: Notes Thread + Date Spine (W2)
 
-**Status:** LOCKED — awaiting Phase 2 review  
+**Workstream:** W2  
+**Status:** COMPLETE  
 **Estimated effort:** ~8 hrs  
-**Depends on:** Phase 1 (CaseNote table + date fields on Case)
+**Depends on:** Phase 1 (CaseNote table + date fields on Case)  
+**Commit:** Phase 3 commit (see git log)
 
-**Goal:** `Case.adviserNotes` (single string) is replaced by an append-only `CaseNote` thread. Date spine and account strip fields are writable via PATCH. Intel's copy-to-notes writes a CaseNote row. The GET case detail response includes `notes[]`.
+**Goal:** `Case.adviserNotes` (single overwriting string) replaced by an append-only `CaseNote` thread. Date spine and account strip fields writable via PATCH. Intel copy-to-notes writes a CaseNote row. GET case detail response includes `notes[]`.
 
-Tasks covered: W2.1 – W2.4 from the engineering plan.
+---
+
+## Tasks Completed
+
+### Task 3.1 — Code review and mapping ✓
+Read `getCaseForOrg`, `serializeCaseDetail`, `cases.ts` serialiser, and the intelligence `copy-to-notes` route. Key findings:
+- `getCaseForOrg` uses Prisma `include` — easy to add `notes` relation
+- `serializeCaseDetail` has an explicit typed input — needs `notes[]` added to type and output
+- `copy-to-notes` appended to `Case.adviserNotes` string via `prisma.case.update` — needs replacing with `prisma.caseNote.create`
+- No `/api/cases/:id/notes` route existed
+
+### Task 3.2 — notes-data.ts + GET/POST /api/cases/:id/notes ✓
+**New files:**
+- `apps/web/lib/api/notes-data.ts`
+- `apps/web/app/api/cases/[id]/notes/route.ts`
+
+`notes-data.ts` exports:
+- `serializeCaseNote()` — serialises a note row including optional author
+- `listNotesForCase()` — returns all notes ordered `createdAt asc`, with author joined
+- `createNoteForCase()` — INSERT-ONLY, calls `logAuditEvent { action: CASE_NOTE_ADDED }`
+
+Route exports `GET` and `POST` only. No `DELETE`, no `PATCH`. Follows `requireApiAuth` pattern. `POST` validates against `CreateCaseNoteSchema`, returns HTTP 201.
+
+### Task 3.3 — Extend getCaseForOrg ✓
+**File:** `apps/web/lib/api/cases-data.ts`
+
+Added to the Prisma `include`:
+```typescript
+notes: {
+  orderBy: { createdAt: 'asc' },
+  include: { author: { select: { id, firstName, lastName } } },
+}
+```
+
+### Task 3.4 — Extend serializeCaseDetail ✓
+**File:** `apps/web/lib/api/cases.ts`
+
+- Added `notes[]` type to the input parameter (optional array of CaseNote with author)
+- Also added PRD-16 W1 product fields (`lenderId`, `lenderOtherName`, `productType`, `initialTermMonths`, `ercSummary`) to `productsConsidered` type and serialisation
+- Notes serialised as `{ id, caseId, body, tag, source, authorUserId, author, createdAt }` with ISO timestamp
+
+### Task 3.5 — Update copy-to-notes ✓
+**File:** `apps/web/app/api/intelligence/snapshots/[id]/copy-to-notes/route.ts`
+
+Replaced `prisma.case.update({ data: { adviserNotes: updatedNotes } })` with:
+```typescript
+await prisma.caseNote.create({
+  data: { orgId, caseId, body: j4Block, tag: 'intel', source: 'INTEL', authorUserId }
+});
+```
+`Case.adviserNotes` is no longer written by this route.
+
+### Task 3.6 — adviserNotes backfill migration ✓
+**New files:** `packages/db/prisma/migrate-adviser-notes.ts`
+
+Script logic:
+1. Finds all cases where `adviserNotes` is non-empty
+2. For each: checks if a `CaseNote { source: ADVISER }` already exists (idempotency)
+3. If not: inserts `CaseNote { source: ADVISER, authorUserId: null, createdAt: case.updatedAt }`
+4. Does NOT clear `Case.adviserNotes`
+
+**Ran against live DB:** 10 cases migrated, 0 errors. Second run: `Inserted: 0, Skipped: 10`.
+
+Added `migrate:adviser-notes` script to `packages/db/package.json`.
+
+### Task 3.7 — Typecheck + lint ✓
+- `tsc --noEmit` → exit 0, zero errors
+- `eslint` → exit 0, zero errors
+
+---
+
+## Files Modified in Phase 3
+
+| File | Change type |
+| :---- | :---- |
+| `apps/web/lib/api/notes-data.ts` | New — notes data layer (INSERT-ONLY) |
+| `apps/web/app/api/cases/[id]/notes/route.ts` | New — GET/POST notes route |
+| `apps/web/lib/api/cases-data.ts` | Extended `getCaseForOrg` with notes include |
+| `apps/web/lib/api/cases.ts` | Extended `serializeCaseDetail` with notes[] and PRD-16 W1 product fields |
+| `apps/web/app/api/intelligence/snapshots/[id]/copy-to-notes/route.ts` | Rewrote to write CaseNote instead of Case.adviserNotes |
+| `packages/db/prisma/migrate-adviser-notes.ts` | New — backfill migration script |
+| `packages/db/package.json` | Added `migrate:adviser-notes` script |
+
+---
+
+## Test Guide
+
+See `Doc/PRD-16-Phase3-Test-Guide.md`.
 
 ---
 

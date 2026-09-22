@@ -203,6 +203,12 @@ export async function getCaseForOrg(orgId: string, id: string) {
         },
         factFind: true,
         productsConsidered: { orderBy: { createdAt: 'asc' as const } },
+        notes: {
+          orderBy: { createdAt: 'asc' as const },
+          include: {
+            author: { select: { id: true, firstName: true, lastName: true } },
+          },
+        },
         _count: { select: { messages: true, documents: true } },
       },
     });
