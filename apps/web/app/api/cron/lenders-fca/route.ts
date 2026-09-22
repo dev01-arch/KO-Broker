@@ -1,30 +1,25 @@
 /**
  * GET + POST /api/cron/lenders-fca — PRD-16 W6
  *
- * Vercel Cron job: monthly on the 1st at 06:00 UTC.
- * Appends newly authorised lenders from the FCA FS Register to the lenders table
- * and marks previously-active FCA lenders as INACTIVE when absent for 2 consecutive runs.
+ * Vercel Cron job: monthly on the 1st at 06:00 UTC (configured in vercel.json).
+ *
+ * Keeps the lenders table current against the FCA FS Register:
+ *   - Verifies existing lenders with known FRNs are still authorised
+ *   - Discovers new mortgage lenders via FCA search
+ *   - Marks long-absent FCA lenders as INACTIVE (32-day grace period)
+ *   - Updates DataFeedStatus feedId='FCA_LENDERS'
+ *
+ * Requires env vars: FCA_API_EMAIL, FCA_API_KEY
+ * Register free at: https://register.fca.org.uk/developer/s/
  *
  * Protected by Authorization: Bearer CRON_SECRET (same pattern as other cron routes).
- *
- * CURRENT STATUS: NOT_IMPLEMENTED (HTTP 501)
- * The FCA bulk-data source format must be confirmed before this implementation
- * is completed. See PRD-16 W0 spike decision in:
- *   Doc/PRD-16-Backend-Engineering-Plan.md — Section 7: Decisions Log
- *
- * Once the spike decision is recorded:
- *   - If FCA bulk file: implement fetchFcaLenders() in lib/api/lenders-fca-ingest.ts
- *   - If CSV fallback: add POST /api/settings/lenders/import (manual upload route)
- *     and keep this cron returning 501 until the FCA source is available
- *
- * The seed (189 lenders from Appendix A) is already live. This cron is the
- * monthly update mechanism — its absence does not break lender search.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { runFcaIngest } from '@/lib/api/lenders-fca-ingest';
 
 async function runCron(req: NextRequest): Promise<NextResponse> {
-  // ── Auth check — mirrors intelligence-rates / intelligence-prices pattern ──
+  // ── Auth check — mirrors intelligence-rates pattern ───────────────────────
   const secret = process.env.CRON_SECRET?.trim();
   if (secret) {
     const authHeader = req.headers.get('authorization') ?? '';
@@ -38,19 +33,30 @@ async function runCron(req: NextRequest): Promise<NextResponse> {
     );
   }
 
-  // ── Not yet implemented — awaiting W0 FCA spike decision ─────────────────
-  return NextResponse.json(
-    {
-      ok: false,
-      status: 'NOT_IMPLEMENTED',
-      message:
-        'FCA lender sync is not yet implemented. ' +
-        'Complete the W0 spike decision (FCA bulk file vs Settings CSV fallback) ' +
-        'before implementing lib/api/lenders-fca-ingest.ts. ' +
-        'The seed (189 lenders) is already live and lender search is functional.',
-    },
-    { status: 501 },
-  );
+  // ── Env var guard ─────────────────────────────────────────────────────────
+  if (!process.env.FCA_API_EMAIL || !process.env.FCA_API_KEY) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error:
+          'FCA_API_EMAIL and FCA_API_KEY are required. ' +
+          'Register for a free key at https://register.fca.org.uk/developer/s/',
+      },
+      { status: 503 },
+    );
+  }
+
+  try {
+    const report = await runFcaIngest();
+    const statusCode = report.feedStatus === 'failure' ? 500 : 200;
+    return NextResponse.json({ ok: report.feedStatus !== 'failure', ...report }, { status: statusCode });
+  } catch (error) {
+    console.error('[cron/lenders-fca]', error);
+    return NextResponse.json(
+      { ok: false, error: error instanceof Error ? error.message : 'Cron failed' },
+      { status: 500 },
+    );
+  }
 }
 
 export async function GET(req: NextRequest) {

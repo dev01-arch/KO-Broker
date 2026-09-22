@@ -864,7 +864,7 @@ W6 FCA cron is independent of W1–W5 except it needs Lender table (W0).
 | 2026-09-21 | FINALISED suitability reports are never mutated when facts change | Product | Confirmed — implement in W4 |
 | 2026-09-21 | Zero new nav items. Case is the hub. No new route group creates a top-level Lenders, Properties, or Tasks page | Product | Confirmed — backend routes are sub-resources only |
 | 2026-09-21 | `Other` is a reserved lender row, not a sentinel string | Product | Confirmed — seed with `source = OTHER`, never deactivate |
-| TBC | FCA bulk file vs Settings CSV fallback | Head of D&E + Backend | **W0 spike required before W6 starts** |
+| **2026-09-22** | **FCA bulk file vs Settings CSV fallback → Use FCA FS Register API (free, REST, JSON). Register at [register.fca.org.uk/developer/s/](https://register.fca.org.uk/developer/s/). Auth: `FCA_API_EMAIL` + `FCA_API_KEY` headers. Two-stage ingest: (1) verify existing lenders by FRN, (2) discover new mortgage lenders via keyword search + permission check. Implemented in `lib/api/lenders-fca-ingest.ts`.** | **Head of D&E + Backend** | **RESOLVED — implemented** |
 | TBC | adviserNotes column — drop at which migration version | Head of D&E | Suggest: keep through W2 release, drop in W3 migration |
 
 ---
