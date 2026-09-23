@@ -15,7 +15,11 @@ Backfilling FRNs enables:
 
 ## The Manual Process
 
-### Step 1 — Export lenders without FRN
+**Quick Start:** Use the ready-to-run SQL script in `Doc/FCA-FRN-Backfill-Top-20-SQL.md`. It backfills the top 20 UK lenders in one go. Takes ~2 seconds to run in Supabase Dashboard → SQL Editor.
+
+For additional lenders beyond the top 20, follow this process:
+
+### Step 1 — Identify lenders without FRN
 
 Run this in the Supabase Dashboard → SQL Editor:
 
@@ -57,9 +61,44 @@ For each lender name:
 
 For lenders you cannot find or that are not authorised, leave the `fcaFrn` column blank.
 
-### Step 3 — Load the CSV
+### Step 3 — Load the FRNs via SQL
 
-Create the backfill script (already exists at `packages/db/scripts/backfill-lender-frns.ts`):
+**Recommended approach:** Direct SQL UPDATE statements in Supabase Dashboard.
+
+For each lender you've looked up:
+
+```sql
+UPDATE lenders SET fca_frn = '<FRN>', last_seen_at = NOW() 
+WHERE name ILIKE '<lender name>' AND fca_frn IS NULL;
+```
+
+Example batch script:
+
+```sql
+-- Add 5 lenders at once
+UPDATE lenders SET fca_frn = '346665', last_seen_at = NOW() WHERE name ILIKE 'Kensington' AND fca_frn IS NULL;
+UPDATE lenders SET fca_frn = '204503', last_seen_at = NOW() WHERE name ILIKE 'Aldermore Bank' AND fca_frn IS NULL;
+UPDATE lenders SET fca_frn = '535157', last_seen_at = NOW() WHERE name ILIKE 'Shawbrook Bank%' AND fca_frn IS NULL;
+UPDATE lenders SET fca_frn = '271612', last_seen_at = NOW() WHERE name ILIKE 'Together' AND fca_frn IS NULL;
+UPDATE lenders SET fca_frn = '308448', last_seen_at = NOW() WHERE name ILIKE 'Paragon' AND fca_frn IS NULL;
+```
+
+Run in: Supabase Dashboard → SQL Editor → New query → Paste → Run
+
+**Alternative — CSV bulk-load script:**
+
+If you have a large batch (50+ lenders) already in CSV format, use the backfill script:
+
+Create the CSV with two columns: `name,fcaFrn`
+
+```csv
+name,fcaFrn
+Accord Mortgages,305936
+Affirmative,667844
+...
+```
+
+Then run:
 
 ```typescript
 // packages/db/scripts/backfill-lender-frns.ts

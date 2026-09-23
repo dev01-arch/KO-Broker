@@ -268,26 +268,25 @@ see it in their dropdown on the next keystroke. No deployment required.
 
 Many of the 189 seeded lenders have `fcaFrn = null` because the seed was loaded
 from a name list without FRNs. Backfilling FRNs improves the verification cron's
-coverage and accuracy. This is a background task — not urgent, but worth doing
-when time allows.
+coverage and accuracy.
 
-For each lender with `fcaFrn = null`:
+**Quick start:** Use the ready-to-run SQL script in `Doc/FCA-FRN-Backfill-Top-20-SQL.md`.
+It backfills the top 20 UK lenders in one go (10 high-street banks, 4 building
+societies, 6 specialist lenders). Takes ~2 seconds to run in Supabase Dashboard → SQL Editor.
 
-1. Search the FCA register by name
-2. Confirm the firm has the mortgage permission
-3. Update the row:
+**For additional lenders:**
 
-```bash
-# Get the lender id
-curl -s "$APP_URL/api/lenders?q=NatWest" \
-  -H "Cookie: __session=$ADMIN_SESSION" | jq '.[0].id'
+1. Search the FCA register by name at [register.fca.org.uk](https://register.fca.org.uk/s/)
+2. Confirm the firm has the "Entering into a regulated mortgage contract" permission
+3. Note the FRN (6-7 digit number)
+4. Run in Supabase SQL Editor:
 
-# Update directly in DB (no PATCH endpoint for FRN yet — use DB tool or Supabase dashboard)
-# SQL: UPDATE lenders SET fca_frn = '122702' WHERE name = 'NatWest';
+```sql
+UPDATE lenders SET fca_frn = '<FRN>', last_seen_at = NOW() 
+WHERE name ILIKE '<lender name>' AND fca_frn IS NULL;
 ```
 
-Or do it in bulk via the Supabase Table Editor — paste a CSV of name → FRN pairs
-and update rows manually.
+**Batch approach:** For 10+ lenders at once, create a SQL script with multiple UPDATE statements (see `Doc/FCA-FRN-Backfill-Top-20-SQL.md` as a template).
 
 ---
 
