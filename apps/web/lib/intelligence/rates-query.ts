@@ -135,13 +135,19 @@ export interface FeedStatusData {
   isStale: boolean;
 }
 
-/** Load DataFeedStatus rows for the two intel feeds. */
-export async function getIntelFeedStatuses(): Promise<FeedStatusData[]> {
-  const FEED_IDS = ['BOE_RATES', 'HMLR_PRICES'];
-  const STALE_THRESHOLD_DAYS = 45;
+/** Stale windows from PRD-16 cron monitoring: monthly BoE/HMLR vs 32-day FCA grace. */
+const FEED_STALE_DAYS: Record<string, number> = {
+  BOE_RATES: 45,
+  HMLR_PRICES: 45,
+  FCA_LENDERS: 32,
+};
 
+const INTEL_FEED_IDS = ['BOE_RATES', 'HMLR_PRICES', 'FCA_LENDERS'] as const;
+
+/** Load DataFeedStatus rows for Intel overview (BoE, HMLR, FCA lender sync). */
+export async function getIntelFeedStatuses(): Promise<FeedStatusData[]> {
   const rows = await prisma.dataFeedStatus.findMany({
-    where: { feedId: { in: FEED_IDS } },
+    where: { feedId: { in: [...INTEL_FEED_IDS] } },
     select: {
       feedId: true,
       lastSuccessAt: true,
@@ -153,7 +159,8 @@ export async function getIntelFeedStatuses(): Promise<FeedStatusData[]> {
   const now = Date.now();
   const rowMap = new Map(rows.map((r) => [r.feedId, r]));
 
-  return FEED_IDS.map((feedId) => {
+  return INTEL_FEED_IDS.map((feedId) => {
+    const staleAfterDays = FEED_STALE_DAYS[feedId] ?? 45;
     const row = rowMap.get(feedId);
     if (!row) {
       return {
@@ -172,7 +179,7 @@ export async function getIntelFeedStatuses(): Promise<FeedStatusData[]> {
       lastSuccessAt: row.lastSuccessAt?.toISOString() ?? null,
       lastAttemptAt: row.lastAttemptAt?.toISOString() ?? null,
       lastError: row.lastError ?? null,
-      isStale: daysSinceSuccess > STALE_THRESHOLD_DAYS,
+      isStale: daysSinceSuccess > staleAfterDays,
     };
   });
 }

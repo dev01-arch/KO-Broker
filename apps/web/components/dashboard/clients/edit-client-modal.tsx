@@ -8,11 +8,13 @@ import {
   formatApiError,
   requireAuthToken,
   type AdviserRecord,
+  type ClientProperty,
   type ClientStatus,
   type ClientSummary,
   type EmploymentStatus,
   type UpdateClientInput,
 } from '@/lib/api/client';
+import { listClientProperties, upsertCaseProperty, type PropertyDraft } from '@/lib/cases/prd16-store';
 
 const INSURERS = [
   'Aviva',
@@ -62,6 +64,22 @@ function toDateInput(value: string | Date | null | undefined): string {
   if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
   const iso = raw.slice(0, 10);
   return /^\d{4}-\d{2}-\d{2}$/.test(iso) ? iso : '';
+}
+
+function line1FromAddress(address: ClientProperty['address']): string | undefined {
+  if (!address || typeof address !== 'object' || Array.isArray(address)) return undefined;
+  const line1 = (address as { line1?: unknown }).line1;
+  return typeof line1 === 'string' && line1.trim() ? line1.trim() : undefined;
+}
+
+function propertyToDraft(home: ClientProperty, clientId: string): PropertyDraft {
+  return {
+    id: home.id,
+    clientId: home.clientId || clientId,
+    postcode: home.postcode,
+    line1: line1FromAddress(home.address),
+    value: home.currentValue != null ? String(home.currentValue) : undefined,
+  };
 }
 
 function parseIncome(raw: string): number | undefined {
@@ -118,6 +136,10 @@ export function EditClientModal({
   );
   const [referenceNumber, setReferenceNumber] = useState(initialClient?.referenceNumber ?? '');
   const [loaded, setLoaded] = useState<ClientSummary | null>(initialClient ?? null);
+  const [properties, setProperties] = useState<PropertyDraft[]>([]);
+  const [newPostcode, setNewPostcode] = useState('');
+  const [newLine1, setNewLine1] = useState('');
+  const [propertyMsg, setPropertyMsg] = useState<string | null>(null);
 
   const isCompany = clientType === 'COMPANY';
   const activeAdvisers = useMemo(
@@ -165,11 +187,27 @@ export function EditClientModal({
         };
         setLoaded(summary);
         setForm(formFromClient({ ...data, ...summary }));
+        try {
+          const listed = await clientsApi.listProperties(token, clientId);
+          const apiHomes = listed.data?.length ? listed.data : (data.properties ?? []);
+          if (apiHomes.length) {
+            setProperties(apiHomes.map((home) => propertyToDraft(home, clientId)));
+          } else {
+            setProperties(listClientProperties(clientId));
+          }
+        } catch {
+          if (data.properties?.length) {
+            setProperties(data.properties.map((home) => propertyToDraft(home, clientId)));
+          } else {
+            setProperties(listClientProperties(clientId));
+          }
+        }
       } catch (err) {
         if (cancelled) return;
         if (initialClient) {
           setLoaded(initialClient);
           setForm(formFromClient(initialClient));
+          setProperties(listClientProperties(clientId));
         } else {
           setError(formatApiError(err, { fallback: 'Could not load this client.' }));
         }
@@ -187,6 +225,45 @@ export function EditClientModal({
 
   function update<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((current) => ({ ...current, [key]: value }));
+  }
+
+  async function addProperty() {
+    const postcode = newPostcode.trim();
+    if (!postcode) {
+      setPropertyMsg('Postcode is required.');
+      return;
+    }
+    const line1 = newLine1.trim() || undefined;
+    setPropertyMsg(null);
+    try {
+      const token = await requireAuthToken(getToken);
+      const created = await clientsApi.createProperty(token, clientId, {
+        postcode,
+        ...(line1 ? { address: { line1 } } : {}),
+      });
+      const draft = propertyToDraft(created.data, clientId);
+      upsertCaseProperty(draft);
+      setProperties((current) => {
+        if (current.some((home) => home.id === draft.id)) {
+          return current.map((home) => (home.id === draft.id ? draft : home));
+        }
+        return [...current, draft];
+      });
+      setNewPostcode('');
+      setNewLine1('');
+      setPropertyMsg('Saved.');
+    } catch {
+      upsertCaseProperty({
+        id: `prop_${Date.now()}`,
+        clientId,
+        postcode,
+        line1,
+      });
+      setProperties(listClientProperties(clientId));
+      setNewPostcode('');
+      setNewLine1('');
+      setPropertyMsg('Saved on this device. Cases for this client can reuse this home.');
+    }
   }
 
   async function handleSave(event: React.FormEvent) {
@@ -471,6 +548,57 @@ export function EditClientModal({
                   ))}
                 </select>
               </label>
+
+              <section className="rounded-xl border border-gray-100 bg-[#fafafa] p-3">
+                <h3 className="text-sm font-semibold text-ink">Properties</h3>
+                <p className="mt-0.5 text-xs text-[#71717a]">
+                  Stored on this client. There is no Properties item in nav.
+                </p>
+                {properties.length === 0 ? (
+                  <p className="mt-2 text-xs text-[#a1a1aa]">No property recorded yet.</p>
+                ) : (
+                  <ul className="mt-2 space-y-2">
+                    {properties.map((home) => (
+                      <li
+                        key={home.id}
+                        className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-ink"
+                      >
+                        <strong>{home.postcode}</strong>
+                        {home.line1 ? ` · ${home.line1}` : ''}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  <label className="block text-xs font-medium text-ink">
+                    Postcode
+                    <input
+                      className={`${fieldClass} mt-1`}
+                      value={newPostcode}
+                      onChange={(event) => setNewPostcode(event.target.value)}
+                      placeholder="SW1A 2AA"
+                      autoComplete="postal-code"
+                    />
+                  </label>
+                  <label className="block text-xs font-medium text-ink">
+                    Address (optional)
+                    <input
+                      className={`${fieldClass} mt-1`}
+                      value={newLine1}
+                      onChange={(event) => setNewLine1(event.target.value)}
+                      placeholder="14 Maple Avenue"
+                    />
+                  </label>
+                </div>
+                <button
+                  type="button"
+                  onClick={addProperty}
+                  className="mt-2 min-h-11 rounded-lg border border-gray-200 bg-white px-3 text-sm font-medium text-ink hover:bg-gray-50"
+                >
+                  Add property
+                </button>
+                {propertyMsg ? <p className="mt-2 text-xs text-[#52525b]">{propertyMsg}</p> : null}
+              </section>
 
               {error ? <p className="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-600">{error}</p> : null}
             </div>

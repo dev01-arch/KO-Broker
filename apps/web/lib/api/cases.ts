@@ -15,6 +15,12 @@ type CaseAdviser = {
   lastName: string | null;
 };
 
+function toIso(value?: Date | string | null) {
+  if (!value) return undefined;
+  if (value instanceof Date) return Number.isFinite(value.getTime()) ? value.toISOString() : undefined;
+  return String(value);
+}
+
 export function serializeCaseSummary(caseRecord: {
   id: string;
   referenceNumber: string;
@@ -27,6 +33,8 @@ export function serializeCaseSummary(caseRecord: {
   termYears?: number | null;
   selectedLender?: string | null;
   selectedProduct?: string | null;
+  offerExpiresAt?: Date | string | null;
+  initialRateEndsAt?: Date | string | null;
   updatedAt: Date;
   client: CaseClient;
   adviser?: CaseAdviser | null;
@@ -45,6 +53,8 @@ export function serializeCaseSummary(caseRecord: {
     termYears: caseRecord.termYears ?? undefined,
     selectedLender: caseRecord.selectedLender ?? undefined,
     selectedProduct: caseRecord.selectedProduct ?? undefined,
+    offerExpiresAt: toIso(caseRecord.offerExpiresAt),
+    initialRateEndsAt: toIso(caseRecord.initialRateEndsAt),
     adviser: caseRecord.adviser
       ? {
           id: caseRecord.adviser.id,
@@ -75,6 +85,29 @@ export function serializeCaseDetail(caseRecord: {
   assignedAdviserId?: string | null;
   createdAt: Date;
   updatedAt: Date;
+  propertyId?: string | null;
+  lenderId?: string | null;
+  lenderOtherName?: string | null;
+  aipAt?: Date | string | null;
+  submittedAt?: Date | string | null;
+  offerIssuedAt?: Date | string | null;
+  offerExpiresAt?: Date | string | null;
+  exchangeAt?: Date | string | null;
+  completionAt?: Date | string | null;
+  rateType?: string | null;
+  monthlyPayment?: number | null;
+  initialRateEndsAt?: Date | string | null;
+  chargeType?: string | null;
+  isOffset?: boolean | null;
+  recommendationStaleAt?: Date | string | null;
+  recommendationStaleReason?: string | null;
+  property?: {
+    id: string;
+    postcode: string;
+    address?: unknown;
+    type?: string;
+    currentValue?: number | null;
+  } | null;
   client: CaseClient & {
     referenceNumber: string;
     phone?: string | null;
@@ -158,6 +191,31 @@ export function serializeCaseDetail(caseRecord: {
     adviserNotes: caseRecord.adviserNotes ?? undefined,
     assignedAdviserId: caseRecord.assignedAdviserId ?? undefined,
     createdAt: caseRecord.createdAt.toISOString(),
+    propertyId: caseRecord.propertyId ?? undefined,
+    lenderId: caseRecord.lenderId ?? undefined,
+    lenderOtherName: caseRecord.lenderOtherName ?? undefined,
+    aipAt: toIso(caseRecord.aipAt),
+    submittedAt: toIso(caseRecord.submittedAt),
+    offerIssuedAt: toIso(caseRecord.offerIssuedAt),
+    offerExpiresAt: toIso(caseRecord.offerExpiresAt),
+    exchangeAt: toIso(caseRecord.exchangeAt),
+    completionAt: toIso(caseRecord.completionAt),
+    rateType: caseRecord.rateType ?? undefined,
+    monthlyPayment: caseRecord.monthlyPayment ?? undefined,
+    initialRateEndsAt: toIso(caseRecord.initialRateEndsAt),
+    chargeType: caseRecord.chargeType ?? undefined,
+    isOffset: caseRecord.isOffset ?? undefined,
+    recommendationStaleAt: toIso(caseRecord.recommendationStaleAt),
+    recommendationStaleReason: caseRecord.recommendationStaleReason ?? undefined,
+    property: caseRecord.property
+      ? {
+          id: caseRecord.property.id,
+          postcode: caseRecord.property.postcode,
+          address: caseRecord.property.address ?? undefined,
+          type: caseRecord.property.type ?? undefined,
+          currentValue: caseRecord.property.currentValue ?? undefined,
+        }
+      : undefined,
     client: {
       id: caseRecord.client.id,
       referenceNumber: caseRecord.client.referenceNumber,

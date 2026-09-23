@@ -10,6 +10,7 @@ import {
   TrendingUp,
 } from 'lucide-react';
 import type { CaseSummary } from '@/lib/api/client';
+import { readCaseProperty } from '@/lib/cases/prd16-store';
 import { formatApiError, getApiErrorCode, getApiErrorFieldMap } from '@/lib/api/client';
 import type {
   IntelligenceCasePreview,
@@ -174,11 +175,22 @@ export function CaseIntelligence({
   const [snapshot, setSnapshot] = useState<IntelligenceSnapshot | null>(null);
   const confirmBtnRef = useRef<HTMLButtonElement>(null);
 
-  const { data: preview, isFetching: previewLoading, error: previewError } =
+  const { data: previewRaw, isFetching: previewLoading, error: previewError } =
     useIntelligenceCasePreview(
       step === 'confirm' ? selectedCaseId || null : null,
       step === 'confirm',
     );
+
+  const preview = useMemo(() => {
+    if (!previewRaw) return previewRaw;
+    if (previewRaw.postcode.present && previewRaw.postcode.value) return previewRaw;
+    const stored = readCaseProperty(previewRaw.caseId);
+    if (!stored?.postcode) return previewRaw;
+    return {
+      ...previewRaw,
+      postcode: { value: stored.postcode, present: true },
+    };
+  }, [previewRaw]);
 
   const createSnapshot = useCreateIntelligenceSnapshot();
   const copyNotes = useCopyIntelligenceSnapshotToNotes();

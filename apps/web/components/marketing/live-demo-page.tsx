@@ -29,6 +29,7 @@ import {
   aiApi,
   casesApi,
   clientsApi,
+  lendersApi,
   complianceApi,
   documentsApi,
   formatApiError,
@@ -57,6 +58,7 @@ import {
   type ApiSuccessResponse,
   type CaseComplianceSnapshot,
   type ComplianceOverviewPayload,
+  type DashboardBootstrapPayload,
 } from '@/lib/api/client';
 import { formatClientName, formatClientInitials } from '@/lib/api/client-display';
 import {
@@ -72,6 +74,34 @@ import {
   readDashboardBootstrapSnapshot,
   writeDashboardBootstrapSnapshot,
 } from '@/lib/api/dashboard-cache';
+import { searchLenders, type LenderSearchHit } from '@/lib/lenders/directory';
+import { mountLenderSelect } from '@/lib/lenders/mount-lender-select';
+import {
+  appendNoteThread,
+  dateInputToIso,
+  formatPropertySummary,
+  isoToDateInput,
+  parseNoteThread,
+  readCaseOpsDraft,
+  writeCaseOpsDraft,
+  type CaseOpsDraft,
+} from '@/lib/cases/overview-ops';
+import {
+  addInfoRequest,
+  clearStale,
+  forceStale,
+  fulfilInfoRequests,
+  listClientProperties,
+  listInfoRequests,
+  markFactsStale,
+  markRecommendationSnapshot,
+  radarCaseIds,
+  readCaseProperty,
+  readProductExtras,
+  readStale,
+  upsertCaseProperty,
+  writeProductExtras,
+} from '@/lib/cases/prd16-store';
 
 /** Persist current bootstrap-shaped lists so the iframe can paint instantly next load. */
 function persistLiveListsSnapshot(
@@ -379,6 +409,9 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
   const [iframeLoaded, setIframeLoaded] = useState(false);
   const [factFindOpen, setFactFindOpen] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
+  const factFindLenderSelectRef = useRef<ReturnType<typeof mountLenderSelect> | null>(null);
+  const overviewLenderSelectRef = useRef<ReturnType<typeof mountLenderSelect> | null>(null);
+  const overviewLenderSaveTimerRef = useRef<number | null>(null);
   const [uploadModal, setUploadModal] = useState<{ caseId: string } | null>(null);
   const [importClientsOpen, setImportClientsOpen] = useState(false);
   const [editClientId, setEditClientId] = useState<string | null>(null);
@@ -407,6 +440,23 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
   // Stable ref so onLoad/click closures always call the current getToken.
   const getTokenRef = useRef(getToken);
   useEffect(() => { getTokenRef.current = getToken; }, [getToken]);
+
+  async function searchLendersForSelect(query: string): Promise<LenderSearchHit[]> {
+    try {
+      const token = await getTokenRef.current();
+      if (!token) return searchLenders(query);
+      const res = await lendersApi.search(token, query);
+      const rows = res.data ?? [];
+      if (!rows.length) return searchLenders(query);
+      return rows.map((row) => ({
+        id: row.id,
+        name: row.name,
+        isOther: row.source === 'OTHER' || /^other$/i.test(row.name),
+      }));
+    } catch {
+      return searchLenders(query);
+    }
+  }
   // Track the currently open case so async click handlers can reference it.
   const activeCaseIdRef = useRef<string>('');
   // Cache opened case detail for cross-tab message sync.
@@ -424,6 +474,9 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
         selectedFee?: number;
         adviserNotes?: string;
         loanAmount?: number;
+        propertyValue?: number;
+        termYears?: number;
+        ltv?: number;
       }
     >
   >({});
@@ -1032,6 +1085,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
     }
     const idoc = iframeRef.current?.contentDocument;
     if (idoc) renderPersonalOverviewSections(idoc);
+    if (idoc) paintRadarCards(idoc);
   }, [renderPersonalOverviewSections]);
 
   // Start iframe as soon as Clerk auth is ready (don't wait for full user profile hydration).
@@ -1115,6 +1169,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
         koRenderComplianceOverview?: (data: ComplianceOverviewPayload | null) => void;
       };
       iwinComp.koRenderComplianceOverview?.(null);
+      paintRadarCards(idoc);
     },
     [displayName, isPersonalDashboard],
   );
@@ -1136,7 +1191,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
       if (isMockDemo) params.set('userName', 'Alex');
     }
     // Bust CDN/browser cache of the static prototype after UI-only HTML changes.
-    params.set('v', 'prd17-import-1');
+    params.set('v', 'prd16-api-2');
     return `/live-demo-prototype-v2a.html?${params}`;
     // eslint-disable-next-line react-hooks/exhaustive-deps -- personal src intentionally ignores activeTab
   }, [isPersonalDashboard ? 'overview' : activeTab, overviewReady, isPersonalDashboard, isMockDemo]);
@@ -1484,7 +1539,31 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
       }
 
       if (data?.type === 'ko:fact-find-close') {
+        factFindLenderSelectRef.current?.destroy();
+        factFindLenderSelectRef.current = null;
         setFactFindOpen(false);
+        return;
+      }
+
+      if (data?.type === 'ko:fact-find-card') {
+        const idoc = iframeRef.current?.contentDocument;
+        const host = idoc?.querySelector<HTMLElement>('[data-ko-ff-lender-host]');
+        factFindLenderSelectRef.current?.destroy();
+        factFindLenderSelectRef.current = null;
+        if (!host) return;
+        const iwin = iframeRef.current?.contentWindow as Window & {
+          ffUpd?: (path: string, value: string) => void;
+        };
+        factFindLenderSelectRef.current = mountLenderSelect(host, {
+          nameAttr: 'data-path="existingMortgageLender"',
+          hiddenClass: 'ff-box-input',
+          placeholder: 'Search lenders…',
+          initialValue: host.getAttribute('data-initial') ?? '',
+          searchFn: searchLendersForSelect,
+          onChange: (value) => {
+            iwin?.ffUpd?.('existingMortgageLender', value);
+          },
+        });
         return;
       }
 
@@ -1621,6 +1700,9 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
             selectedFee: 'selectedFee' in caseRow ? caseRow.selectedFee : undefined,
             adviserNotes: 'adviserNotes' in caseRow ? caseRow.adviserNotes : undefined,
             loanAmount: caseRow.loanAmount,
+            propertyValue: caseRow.propertyValue,
+            termYears: caseRow.termYears,
+            ltv: caseRow.ltv,
           };
           // Paint stage/progress rail immediately from list/cache — don't wait on extras.
           const idoc = iframeRef.current?.contentDocument;
@@ -1830,7 +1912,6 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
       }
 
       if (data?.type === 'ko:create-case' && data.requestId != null && data.payload) {
-        const casePayload = data.payload as CreateCaseInput;
         const replyCase = (body: Record<string, unknown>) => {
           iframeWindow.postMessage(
             { type: 'ko:create-case-result', requestId: data.requestId, ...body },
@@ -1839,8 +1920,49 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
         };
 
         try {
-          const result = await createCase(casePayload);
+          const extra = data.payload as CreateCaseInput & {
+            postcode?: string;
+            addressLine1?: string;
+          };
+          const result = await createCase({
+            clientId: extra.clientId,
+            type: extra.type,
+            propertyValue: extra.propertyValue,
+            loanAmount: extra.loanAmount,
+            termYears: extra.termYears,
+            ...(extra.postcode ? { postcode: extra.postcode } : {}),
+          });
           const created = result.data;
+          if (extra.postcode) {
+            upsertCaseProperty({
+              id: created.id,
+              clientId: created.clientId,
+              caseId: created.id,
+              postcode: extra.postcode,
+              line1: extra.addressLine1,
+              value: extra.propertyValue != null ? String(extra.propertyValue) : undefined,
+            });
+            void (async () => {
+              try {
+                const token = await getToken();
+                if (!token) return;
+                await casesApi.upsertFactFind(token, created.id, {
+                  propertyDetails: {
+                    postcode: extra.postcode,
+                    addressLine1: extra.addressLine1,
+                  },
+                  personalDetails: {
+                    currentAddress: {
+                      postcode: extra.postcode,
+                      line1: extra.addressLine1,
+                    },
+                  },
+                });
+              } catch {
+                // Property stays on this device for Intel even if fact-find write fails.
+              }
+            })();
+          }
           // Mutation already patched caches; refresh refs immediately for iframe sync.
           applyCreatedCaseToCache(queryClient, created);
           const nextCases = [
@@ -1951,6 +2073,8 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
           const payload = expandFactFindUpsertPayload(
             data.payload as UpsertFactFindInput,
           ) as UpsertFactFindInput;
+          const incoming = data.payload as UpsertFactFindInput & { isAmend?: boolean };
+          if (incoming.isAmend) payload.isAmend = true;
           const saved = await casesApi.upsertFactFind(token, data.caseId, payload);
           replyFactFind({
             success: true,
@@ -1961,6 +2085,14 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
           });
 
           void queryClient.invalidateQueries({ queryKey: casesQueryKey(LIVE_CASES_QUERY) });
+
+          const openId = String(data.caseId);
+          const snap = caseDetailRef.current[openId];
+          if (snap?.selectedLender || snap?.selectedProduct) {
+            forceStale(openId, 'Facts changed since this product was selected.');
+            const idoc = iframeRef.current?.contentDocument;
+            if (idoc) paintStaleBanner(idoc, openId);
+          }
 
           // After final submit, refresh case detail so compliance rail reflects FACT_FIND.
           if (payload.markComplete) {
@@ -2176,6 +2308,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
         <td class="cd-doc-cell-muted">${esc(doc.uploadedBy ?? '—')}</td>
         <td class="cd-doc-cell-muted">${date}</td>
         <td><span class="cd-doc-status cd-doc-status--active"><span class="cd-doc-status-dot"></span>Active</span></td>
+        <td><button type="button" class="ko-acc-btn ko-acc-btn--ghost" data-ko-request-doc="${esc(doc.documentType)}" style="padding:4px 8px;font-size:11px">Request</button></td>
       </tr>`;
     }).join('');
     wireDocsToolbarActions(idoc, caseId, docs);
@@ -2400,6 +2533,26 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
     };
 
     applyFilters();
+    root.querySelectorAll<HTMLButtonElement>('[data-ko-request-doc]').forEach((btn) => {
+      btn.onclick = () => {
+        const type = btn.getAttribute('data-ko-request-doc') || 'INCOME';
+        void requestFromClient(caseId, `${type.toLowerCase()} documents`, type);
+      };
+    });
+    if (!root.querySelector('[data-ko-request-payslips]')) {
+      const toolbar = root.querySelector('.cd-docs-actions');
+      if (toolbar) {
+        const reqBtn = idoc.createElement('button');
+        reqBtn.type = 'button';
+        reqBtn.className = 'cd-docs-tool-btn';
+        reqBtn.setAttribute('data-ko-request-payslips', '1');
+        reqBtn.textContent = 'Request from client';
+        reqBtn.onclick = () => {
+          void requestFromClient(caseId, "3 months' payslips", 'INCOME');
+        };
+        toolbar.appendChild(reqBtn);
+      }
+    }
   }
 
   // ── Render real audit-log entries into the Overview timeline track ───────────
@@ -3133,6 +3286,632 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
     OFFER:     { toStage: 'COMPLETION', label: 'Completion' },
   };
 
+  function fieldHtml(id: string, label: string, type: string, value: string, extra = '') {
+    return `<label class="ko-acc-field">${label}<input id="${id}" type="${type}" value="${value}" ${extra} /></label>`;
+  }
+
+  function paintOverviewLenderRow(idoc: Document, caseId: string, lender?: string | null) {
+    const label = lender?.trim() || 'TBC';
+    idoc.querySelectorAll(`#caseview-overview-${caseId} .cd-detail-row`).forEach((row) => {
+      const lab = row.querySelector('.cd-detail-label');
+      const val = row.querySelector('.cd-detail-val');
+      if (lab?.textContent === 'Lender' && val) val.textContent = label;
+    });
+    // Keep the iframe's open-case cache in sync so a later soft-update doesn't revert to TBC.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const iwin = iframeRef.current?.contentWindow as any;
+    if (iwin?.cases?.[caseId]) iwin.cases[caseId].lender = label;
+    const listRow = casesDataRef.current.find((c) => c.id === caseId);
+    if (listRow) listRow.selectedLender = lender?.trim() || undefined;
+    if (caseDetailRef.current[caseId]) {
+      caseDetailRef.current[caseId].selectedLender = lender?.trim() || undefined;
+    }
+  }
+
+  function pushOpenCaseDetail(caseRow: Case | CaseSummary) {
+    applyUpdatedCaseToCache(queryClient, caseRow);
+    iframeRef.current?.contentWindow?.postMessage(
+      { type: 'ko:case-detail', case: caseRow },
+      window.location.origin,
+    );
+  }
+
+  function paintStaleBanner(idoc: Document, caseId: string, caseRow?: Case) {
+    const root = idoc.querySelector(`#caseview-overview-${caseId}`);
+    if (!root) return;
+    root.querySelectorAll('.ko-stale-banner').forEach((el) => el.remove());
+    const rec = readStale(caseId);
+    const apiReason = caseRow?.recommendationStaleReason;
+    const stale = Boolean(caseRow?.recommendationStaleAt) || Boolean(rec?.stale);
+    if (!stale) return;
+    const reason = apiReason || rec?.reason || 'Facts changed since this product was selected.';
+    const banner = idoc.createElement('div');
+    banner.className = 'ko-stale-banner';
+    banner.innerHTML = `<p>${reason}</p><button type="button" class="ko-acc-btn" data-ko-review-products>Review products</button>`;
+    root.prepend(banner);
+    banner.querySelector('[data-ko-review-products]')?.addEventListener('click', () => {
+      const acc = idoc.querySelector<HTMLDetailsElement>(
+        `#caseview-overview-${caseId} [data-ko-acc-products]`,
+      );
+      idoc.querySelector<HTMLElement>(`.cd-tab[onclick*="overview-${caseId}"]`)?.click();
+      if (acc) {
+        acc.hidden = false;
+        acc.open = true;
+        acc.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    });
+    const reportBody = idoc.getElementById(`cd-rpt-body-${caseId}`);
+    if (reportBody) {
+      reportBody.querySelectorAll('.ko-stale-banner').forEach((el) => el.remove());
+      const copy = banner.cloneNode(true) as HTMLElement;
+      copy.querySelector('[data-ko-review-products]')?.addEventListener('click', () => {
+        banner.querySelector<HTMLButtonElement>('[data-ko-review-products]')?.click();
+      });
+      reportBody.prepend(copy);
+    }
+  }
+
+  function paintRadarCards(idoc: Document) {
+    const ids = casesDataRef.current.map((c) => c.id);
+    const offers = radarCaseIds(ids, 'offers14', (id) => {
+      const row = casesDataRef.current.find((c) => c.id === id);
+      return {
+        offerExpiresAt: row?.offerExpiresAt ?? readCaseOpsDraft(id).offerExpiresAt,
+      };
+    });
+    const rates = radarCaseIds(ids, 'rates90', (id) => {
+      const row = casesDataRef.current.find((c) => c.id === id);
+      return {
+        initialRateEndsAt: row?.initialRateEndsAt ?? readCaseOpsDraft(id).initialRateEndsAt,
+      };
+    });
+    const bootstrap = queryClient.getQueryData<ApiSuccessResponse<DashboardBootstrapPayload>>(
+      dashboardBootstrapQueryKey,
+    );
+    const setVal = (kind: string, n: number) => {
+      const el = idoc.querySelector(`[data-ko-radar-val="${kind}"]`);
+      if (el) el.textContent = String(n);
+    };
+    setVal('offers14', bootstrap?.data.offersEnding14d ?? offers.length);
+    setVal('rates90', bootstrap?.data.ratesEnding90d ?? rates.length);
+    const iwin = idoc.defaultView as Window & {
+      __koRadarOffers?: string[];
+      __koRadarRates?: string[];
+      koApplyRadarFilter?: (caseIds: string[], kind: string) => void;
+    };
+    if (iwin) {
+      iwin.__koRadarOffers = offers;
+      iwin.__koRadarRates = rates;
+    }
+    idoc.querySelectorAll<HTMLElement>('[data-ko-radar]').forEach((btn) => {
+      btn.onclick = () => {
+        const kind = btn.getAttribute('data-ko-radar') as 'offers14' | 'rates90' | null;
+        if (!kind) return;
+        const local = kind === 'offers14' ? offers : rates;
+        void (async () => {
+          let match = local;
+          try {
+            const token = await getTokenRef.current();
+            if (token) {
+              const listed = await casesApi.list(token, {
+                perPage: 100,
+                ...(kind === 'offers14'
+                  ? { offerEndingWithinDays: 14 }
+                  : { rateEndingWithinDays: 90 }),
+              });
+              match = (listed.data ?? []).map((c) => c.id);
+            }
+          } catch {
+            // Local date drafts still filter Cases if the list endpoint is unavailable.
+          }
+          iwin?.koApplyRadarFilter?.(match, kind);
+        })();
+      };
+    });
+  }
+
+  function paintOutstandingRequests(idoc: Document, caseId: string, apiLabels?: string[]) {
+    const local = listInfoRequests(caseId).filter((r) => r.outstanding).map((r) => r.label);
+    const open = [...new Set([...(apiLabels ?? []), ...local])].filter(Boolean);
+    const hosts = [
+      idoc.querySelector(`#caseview-compliance-${caseId} .cd-comp-card`),
+      idoc.querySelector(`#caseview-docs-${caseId}`),
+    ];
+    hosts.forEach((host) => {
+      if (!host) return;
+      host.querySelectorAll('.ko-outstanding').forEach((el) => el.remove());
+      if (!open.length) return;
+      const box = idoc.createElement('div');
+      box.className = 'ko-outstanding';
+      box.textContent = `Outstanding client requests: ${open.join(', ')}`;
+      host.appendChild(box);
+    });
+  }
+
+  async function requestFromClient(caseId: string, label: string, documentType?: string) {
+    const caseRow = casesDataRef.current.find((c) => c.id === caseId);
+    const ref = caseRow?.referenceNumber ?? caseId;
+    const body = `Please upload ${label} for ${ref}`;
+    const allowed: DocumentType[] = ['ID', 'INCOME', 'FINANCIAL', 'LENDER', 'COMPLIANCE', 'OTHER'];
+    const mapped =
+      documentType && allowed.includes(documentType as DocumentType)
+        ? (documentType as DocumentType)
+        : 'OTHER';
+    addInfoRequest(caseId, { label, body, documentType: mapped });
+    const idoc = iframeRef.current?.contentDocument;
+    if (idoc) {
+      paintOutstandingRequests(idoc, caseId);
+      const tabBtn = idoc.querySelector<HTMLElement>(`.cd-tab[onclick*="msgs-${caseId}"]`);
+      tabBtn?.click();
+      const input = idoc.querySelector<HTMLInputElement>(
+        `#caseview-msgs-${caseId} .cd-msg-composer-input`,
+      );
+      if (input) input.value = body;
+    }
+    try {
+      const token = await getTokenRef.current();
+      if (!token) return;
+      await casesApi.createInfoRequest(token, caseId, { documentType: mapped, body });
+      if (idoc) paintOutstandingRequests(idoc, caseId);
+    } catch {
+      try {
+        if (!hasMessagesRef.current) return;
+        const token = await getTokenRef.current();
+        if (!token) return;
+        await messagesApi.send(token, { body, caseId, sourceType: 'CASE_UPDATE' });
+      } catch {
+        // Composer still has the text if send is blocked by plan.
+      }
+    }
+  }
+
+  function wireComplianceRequestButtons(idoc: Document, caseId: string) {
+    idoc.querySelectorAll<HTMLButtonElement>('[data-ko-request-check]').forEach((btn) => {
+      if (btn.dataset.koWired === '1') return;
+      btn.dataset.koWired = '1';
+      btn.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        void requestFromClient(
+          caseId,
+          btn.getAttribute('data-ko-request-check') || 'supporting documents',
+        );
+      });
+    });
+    paintOutstandingRequests(idoc, caseId);
+  }
+
+  async function mountCaseOverviewPanels(idoc: Document, caseId: string) {
+    const detailsHost = idoc.querySelector<HTMLElement>(
+      `#caseview-overview-${caseId} [data-ko-overview-details-edit]`,
+    );
+    const propertyHost = idoc.querySelector<HTMLElement>(
+      `#caseview-overview-${caseId} [data-ko-overview-property]`,
+    );
+    const datesHost = idoc.querySelector<HTMLElement>(
+      `#caseview-overview-${caseId} [data-ko-overview-dates]`,
+    );
+    const accountHost = idoc.querySelector<HTMLElement>(
+      `#caseview-overview-${caseId} [data-ko-overview-account]`,
+    );
+    const notesHost = idoc.querySelector<HTMLElement>(
+      `#caseview-overview-${caseId} [data-ko-overview-notes]`,
+    );
+    if (!detailsHost && !notesHost) return;
+
+    const esc = (s: string) =>
+      s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+    try {
+      const token = await getTokenRef.current();
+      if (!token) return;
+      const caseRes = await casesApi.get(token, caseId);
+      const row = caseRes.data;
+      caseDetailRef.current[caseId] = {
+        ...caseDetailRef.current[caseId],
+        adviserNotes: row.adviserNotes,
+        loanAmount: row.loanAmount,
+        propertyValue: row.propertyValue,
+        termYears: row.termYears,
+        ltv: row.ltv,
+        selectedLender: row.selectedLender,
+      };
+
+      if (detailsHost) {
+        overviewLenderSelectRef.current?.destroy();
+        overviewLenderSelectRef.current = null;
+        const loan = row.loanAmount != null ? String(row.loanAmount) : '';
+        const value = row.propertyValue != null ? String(row.propertyValue) : '';
+        const term = row.termYears != null ? String(row.termYears) : '';
+        const ltv = row.ltv != null ? `${row.ltv}%` : '—';
+        detailsHost.innerHTML = `
+          <div class="ko-acc-grid">
+            ${fieldHtml('ko-ov-loan', 'Loan amount (£)', 'number', esc(loan), 'min="0" step="1"')}
+            ${fieldHtml('ko-ov-value', 'Property value (£)', 'number', esc(value), 'min="0" step="1"')}
+            ${fieldHtml('ko-ov-term', 'Term (years)', 'number', esc(term), 'min="1" step="1"')}
+            <label class="ko-acc-field">LTV<input value="${esc(ltv)}" readonly /></label>
+            <label class="ko-acc-field" style="grid-column:1/-1;position:relative;z-index:2">Selected lender
+              <div data-ko-overview-lender-host></div>
+            </label>
+          </div>
+          <div class="ko-acc-actions">
+            <button type="button" class="ko-acc-btn" data-ko-ov-save-details>Save details</button>
+            <span data-ko-ov-details-status class="ko-acc-muted"></span>
+          </div>`;
+        const lenderHost = detailsHost.querySelector<HTMLElement>('[data-ko-overview-lender-host]');
+        if (lenderHost) {
+          const persistOverviewLender = (value: string, lenderId?: string, lenderOtherName?: string) => {
+            if (overviewLenderSaveTimerRef.current != null) {
+              window.clearTimeout(overviewLenderSaveTimerRef.current);
+            }
+            overviewLenderSaveTimerRef.current = window.setTimeout(async () => {
+              if (!value) return;
+              try {
+                const t = await getTokenRef.current();
+                if (!t) return;
+                const updated = await casesApi.update(t, caseId, {
+                  selectedLender: value,
+                  ...(lenderId ? { lenderId } : {}),
+                  ...(lenderOtherName ? { lenderOtherName } : {}),
+                });
+                paintOverviewLenderRow(idoc, caseId, updated.data.selectedLender || value);
+                pushOpenCaseDetail(updated.data);
+              } catch {
+                // Header already shows the pick; Save details can retry persistence.
+              }
+            }, 250);
+          };
+          overviewLenderSelectRef.current = mountLenderSelect(lenderHost, {
+            nameAttr: 'data-ko-ov="lender"',
+            placeholder: 'Search lenders…',
+            initialValue: row.selectedLender ?? '',
+            searchFn: searchLendersForSelect,
+            onChange: (value, selection) => {
+              paintOverviewLenderRow(idoc, caseId, value);
+              persistOverviewLender(value, selection?.lenderId, selection?.lenderOtherName);
+            },
+          });
+        }
+        detailsHost.querySelector('[data-ko-ov-save-details]')?.addEventListener('click', async () => {
+          const status = detailsHost.querySelector<HTMLElement>('[data-ko-ov-details-status]');
+          const loanRaw = detailsHost.querySelector<HTMLInputElement>('#ko-ov-loan')?.value ?? '';
+          const valueRaw = detailsHost.querySelector<HTMLInputElement>('#ko-ov-value')?.value ?? '';
+          const termRaw = detailsHost.querySelector<HTMLInputElement>('#ko-ov-term')?.value ?? '';
+          const lender = overviewLenderSelectRef.current?.getValue() ?? '';
+          if (overviewLenderSaveTimerRef.current != null) {
+            window.clearTimeout(overviewLenderSaveTimerRef.current);
+            overviewLenderSaveTimerRef.current = null;
+          }
+          if (status) status.textContent = 'Saving…';
+          try {
+            const t = await getTokenRef.current();
+            if (!t) throw new Error('Not authenticated');
+            const updated = await casesApi.update(t, caseId, {
+              loanAmount: loanRaw ? Number(loanRaw) : undefined,
+              propertyValue: valueRaw ? Number(valueRaw) : undefined,
+              termYears: termRaw ? Number(termRaw) : undefined,
+              ...(lender ? { selectedLender: lender } : {}),
+            });
+            if (caseDetailRef.current[caseId]) {
+              caseDetailRef.current[caseId].selectedLender = lender || undefined;
+            }
+            paintOverviewLenderRow(idoc, caseId, lender || updated.data.selectedLender);
+            markFactsStale(caseId, {
+              loanAmount: loanRaw ? Number(loanRaw) : updated.data.loanAmount,
+              propertyValue: valueRaw ? Number(valueRaw) : updated.data.propertyValue,
+              termYears: termRaw ? Number(termRaw) : updated.data.termYears,
+            });
+            await new Promise((resolve) => window.setTimeout(resolve, 180));
+            try {
+              const fresh = await casesApi.get(t, caseId);
+              paintStaleBanner(idoc, caseId, fresh.data);
+              pushOpenCaseDetail(fresh.data);
+            } catch {
+              paintStaleBanner(idoc, caseId);
+              pushOpenCaseDetail(updated.data);
+            }
+            if (status) status.textContent = 'Saved.';
+          } catch (err) {
+            if (status) {
+              status.textContent = formatApiError(err, { fallback: 'Could not save details.' });
+            }
+          }
+        });
+      }
+
+      if (propertyHost) {
+        const stored = readCaseProperty(caseId);
+        let homes = listClientProperties(row.clientId ?? '');
+        try {
+          if (row.clientId) {
+            const listed = await clientsApi.listProperties(token, row.clientId);
+            if (listed.data?.length) {
+              homes = listed.data.map((home) => ({
+                id: home.id,
+                clientId: home.clientId,
+                caseId,
+                postcode: home.postcode,
+                line1:
+                  home.address && typeof home.address === 'object' && 'line1' in home.address
+                    ? String((home.address as { line1?: string }).line1 ?? '')
+                    : undefined,
+                value: home.currentValue != null ? String(home.currentValue) : undefined,
+              }));
+            }
+          }
+        } catch {
+          // Local property list still paints if the properties endpoint is down.
+        }
+        const summary = formatPropertySummary(row.factFind);
+        const postcode = row.property?.postcode || stored?.postcode || '';
+        const line1 = stored?.line1 || '';
+        const list =
+          homes.length === 0
+            ? `<p class="ko-acc-muted">No property on this client yet.</p>`
+            : `<ul style="margin:0 0 12px;padding:0;list-style:none;display:flex;flex-direction:column;gap:8px">${homes
+                .map(
+                  (home) =>
+                    `<li style="padding:10px 12px;border:1px solid #e4e4e7;border-radius:10px;background:#fff"><strong>${esc(home.postcode)}</strong>${home.line1 ? ` · ${esc(home.line1)}` : ''}</li>`,
+                )
+                .join('')}</ul>`;
+        propertyHost.innerHTML = `
+          ${list}
+          <div class="ko-acc-grid">
+            ${fieldHtml('ko-ov-postcode', 'Postcode', 'text', esc(postcode), 'autocomplete="postal-code" placeholder="SW1A 2AA"')}
+            ${fieldHtml('ko-ov-line1', 'Address line', 'text', esc(line1 || (summary.address !== 'Not recorded yet' ? summary.address : '')), 'placeholder="Optional"')}
+            <label class="ko-acc-field">Recorded type<input value="${esc(summary.type)}" readonly /></label>
+            <label class="ko-acc-field">Recorded value<input value="${esc(summary.value)}" readonly /></label>
+          </div>
+          <div class="ko-acc-actions">
+            <button type="button" class="ko-acc-btn" data-ko-ov-save-property>Save property</button>
+            <span data-ko-ov-property-status class="ko-acc-muted"></span>
+          </div>
+          <p class="ko-acc-muted">No Properties list in nav. This home stays on the client and this case.</p>`;
+        propertyHost.querySelector('[data-ko-ov-save-property]')?.addEventListener('click', async () => {
+          const status = propertyHost.querySelector<HTMLElement>('[data-ko-ov-property-status]');
+          const pc = propertyHost.querySelector<HTMLInputElement>('#ko-ov-postcode')?.value.trim() ?? '';
+          const line = propertyHost.querySelector<HTMLInputElement>('#ko-ov-line1')?.value.trim() ?? '';
+          if (!pc) {
+            if (status) status.textContent = 'Postcode is required.';
+            return;
+          }
+          upsertCaseProperty({
+            id: caseId,
+            clientId: row.clientId ?? '',
+            caseId,
+            postcode: pc,
+            line1: line,
+            value: summary.value !== '—' ? summary.value : undefined,
+          });
+          if (status) status.textContent = 'Saved on this device.';
+          try {
+            const t = await getTokenRef.current();
+            if (!t) return;
+            if (row.clientId) {
+              const created = await clientsApi.createProperty(t, row.clientId, {
+                postcode: pc,
+                address: line ? { line1: line } : undefined,
+              });
+              await casesApi.update(t, caseId, { propertyId: created.data.id });
+            }
+            if (!row.factFind?.completedAt) {
+              await casesApi.upsertFactFind(t, caseId, {
+                propertyDetails: { postcode: pc, addressLine1: line },
+              });
+            }
+            if (status) status.textContent = 'Saved.';
+          } catch {
+            if (status) status.textContent = 'Saved on this device.';
+          }
+        });
+      }
+
+      const localDraft = readCaseOpsDraft(caseId);
+      const draft: CaseOpsDraft = {
+        ...localDraft,
+        aipAt: isoToDateInput(row.aipAt) || localDraft.aipAt,
+        submittedAt: isoToDateInput(row.submittedAt) || localDraft.submittedAt,
+        offerIssuedAt: isoToDateInput(row.offerIssuedAt) || localDraft.offerIssuedAt,
+        offerExpiresAt: isoToDateInput(row.offerExpiresAt) || localDraft.offerExpiresAt,
+        exchangeAt: isoToDateInput(row.exchangeAt) || localDraft.exchangeAt,
+        completionAt: isoToDateInput(row.completionAt) || localDraft.completionAt,
+        rateType: row.rateType || localDraft.rateType,
+        monthlyPayment:
+          row.monthlyPayment != null ? String(row.monthlyPayment) : localDraft.monthlyPayment,
+        initialRateEndsAt: isoToDateInput(row.initialRateEndsAt) || localDraft.initialRateEndsAt,
+        chargeType: row.chargeType || localDraft.chargeType,
+        isOffset: row.isOffset ?? localDraft.isOffset,
+      };
+      const dateFields: Array<[keyof CaseOpsDraft, string, string]> = [
+        ['aipAt', 'AIP', 'date'],
+        ['submittedAt', 'Submitted', 'date'],
+        ['offerIssuedAt', 'Offer issued', 'date'],
+        ['offerExpiresAt', 'Offer end', 'date'],
+        ['exchangeAt', 'Exchange', 'date'],
+        ['completionAt', 'Completion', 'date'],
+      ];
+      if (datesHost) {
+        datesHost.innerHTML = `
+          <div class="ko-acc-grid">
+            ${dateFields
+              .map(
+                ([key, label, type]) =>
+                  fieldHtml(`ko-ov-${key}`, label, type, esc(String(draft[key] ?? '')), `data-ko-ops="${key}"`),
+              )
+              .join('')}
+          </div>
+          <div class="ko-acc-actions">
+            <button type="button" class="ko-acc-btn" data-ko-ov-save-ops>Save dates</button>
+            <span data-ko-ov-ops-status class="ko-acc-muted"></span>
+          </div>`;
+      }
+      if (accountHost) {
+        const rate = esc(String(draft.rateType ?? ''));
+        accountHost.innerHTML = `
+          <div class="ko-acc-grid">
+            <label class="ko-acc-field">Rate type
+              <select data-ko-ops="rateType">
+                <option value="">Select…</option>
+                <option value="Fixed"${rate === 'Fixed' ? ' selected' : ''}>Fixed</option>
+                <option value="Tracker"${rate === 'Tracker' ? ' selected' : ''}>Tracker</option>
+                <option value="Discount"${rate === 'Discount' ? ' selected' : ''}>Discount</option>
+              </select>
+            </label>
+            ${fieldHtml('ko-ov-payment', 'Monthly payment (£)', 'number', esc(String(draft.monthlyPayment ?? '')), 'data-ko-ops="monthlyPayment" min="0" step="0.01"')}
+            ${fieldHtml('ko-ov-rate-end', 'Initial rate ends', 'date', esc(String(draft.initialRateEndsAt ?? '')), 'data-ko-ops="initialRateEndsAt"')}
+            ${fieldHtml('ko-ov-charge', 'Charge type', 'text', esc(String(draft.chargeType ?? '')), 'data-ko-ops="chargeType" placeholder="First / second"')}
+            <label class="ko-acc-field" style="flex-direction:row;align-items:center;gap:8px;font-size:13px;font-weight:500;color:#52525b">
+              <input type="checkbox" data-ko-ops="isOffset" ${draft.isOffset ? 'checked' : ''} /> Offset
+            </label>
+          </div>
+          <div class="ko-acc-actions">
+            <button type="button" class="ko-acc-btn" data-ko-ov-save-account>Save account</button>
+            <span data-ko-ov-account-status class="ko-acc-muted"></span>
+          </div>`;
+      }
+
+      const saveOps = (scope: HTMLElement | null, statusSel: string) => {
+        if (!scope) return;
+        scope.querySelector('button')?.addEventListener('click', () => {
+          const current = readCaseOpsDraft(caseId);
+          scope.querySelectorAll<HTMLInputElement | HTMLSelectElement>('[data-ko-ops]').forEach((el) => {
+            const key = el.getAttribute('data-ko-ops') as keyof CaseOpsDraft;
+            if (!key) return;
+            if (el instanceof HTMLInputElement && el.type === 'checkbox') {
+              current[key] = el.checked as never;
+            } else {
+              current[key] = el.value as never;
+            }
+          });
+          writeCaseOpsDraft(caseId, current);
+          const status = scope.querySelector<HTMLElement>(statusSel);
+          if (status) status.textContent = 'Saved on this device.';
+          paintRadarCards(idoc);
+          void (async () => {
+            try {
+              const auth = await getTokenRef.current();
+              if (!auth) return;
+              await casesApi.update(auth, caseId, {
+                aipAt: dateInputToIso(current.aipAt ?? ''),
+                submittedAt: dateInputToIso(current.submittedAt ?? ''),
+                offerIssuedAt: dateInputToIso(current.offerIssuedAt ?? ''),
+                offerExpiresAt: dateInputToIso(current.offerExpiresAt ?? ''),
+                exchangeAt: dateInputToIso(current.exchangeAt ?? ''),
+                completionAt: dateInputToIso(current.completionAt ?? ''),
+                rateType: current.rateType?.trim() || null,
+                monthlyPayment: current.monthlyPayment ? Number(current.monthlyPayment) : null,
+                initialRateEndsAt: dateInputToIso(current.initialRateEndsAt ?? ''),
+                chargeType: current.chargeType?.trim() || null,
+                isOffset: Boolean(current.isOffset),
+              });
+              if (status) status.textContent = 'Saved.';
+              void queryClient.invalidateQueries({ queryKey: dashboardBootstrapQueryKey });
+            } catch {
+              // Dates remain on this device if PATCH is rejected.
+            }
+          })();
+        });
+      };
+      saveOps(datesHost, '[data-ko-ov-ops-status]');
+      saveOps(accountHost, '[data-ko-ov-account-status]');
+
+      if (notesHost) {
+        const apiNotes = row.notes ?? [];
+        const entries =
+          apiNotes.length > 0
+            ? apiNotes
+                .slice()
+                .reverse()
+                .map((note) => ({
+                  at: note.createdAt
+                    ? new Date(note.createdAt).toLocaleString('en-GB')
+                    : note.source,
+                  body: note.body,
+                  source: note.source,
+                  tag: note.tag,
+                }))
+            : parseNoteThread(row.adviserNotes ?? '').map((entry) => ({
+                ...entry,
+                source: 'ADVISER',
+                tag: undefined as string | undefined,
+              }));
+        const cards =
+          entries.length === 0
+            ? `<p class="ko-acc-muted">No notes yet. Add one so Research can advance.</p>`
+            : entries
+                .map((entry) => {
+                  const badge =
+                    entry.source === 'INTEL'
+                      ? '<span class="ko-acc-muted">Mortgage Intel</span>'
+                      : entry.tag === 'amend' || entry.source === 'SYSTEM'
+                        ? '<span class="ko-acc-muted">System</span>'
+                        : '';
+                  return `<article class="ko-note-card">${badge}<p class="ko-note-meta">${esc(entry.at)}</p><p class="ko-note-body">${esc(entry.body)}</p></article>`;
+                })
+                .join('');
+        notesHost.innerHTML = `
+          <div style="display:flex;flex-direction:column;gap:8px">${cards}</div>
+          <label class="ko-acc-field">Add note
+            <textarea data-ko-ov-note rows="3" placeholder="Timestamped. Does not overwrite earlier notes."></textarea>
+          </label>
+          <div class="ko-acc-actions">
+            <button type="button" class="ko-acc-btn" data-ko-ov-add-note>Add note</button>
+            <span data-ko-ov-note-status class="ko-acc-muted"></span>
+          </div>`;
+        notesHost.querySelector('[data-ko-ov-add-note]')?.addEventListener('click', async () => {
+          const status = notesHost.querySelector<HTMLElement>('[data-ko-ov-note-status]');
+          const body = notesHost.querySelector<HTMLTextAreaElement>('[data-ko-ov-note]')?.value ?? '';
+          if (!body.trim()) {
+            if (status) status.textContent = 'Write a note first.';
+            return;
+          }
+          if (status) status.textContent = 'Saving…';
+          try {
+            const t = await getTokenRef.current();
+            if (!t) throw new Error('Not authenticated');
+            try {
+              await casesApi.createNote(t, caseId, { body: body.trim() });
+            } catch {
+              // Fall through to adviserNotes so Research → DIP still unlocks.
+            }
+            const nextNotes = appendNoteThread(row.adviserNotes ?? '', body);
+            await casesApi.update(t, caseId, { adviserNotes: nextNotes });
+            if (caseDetailRef.current[caseId]) {
+              caseDetailRef.current[caseId].adviserNotes = nextNotes;
+            }
+            row.adviserNotes = nextNotes;
+            const list = notesHost.querySelector('div');
+            const article = idoc.createElement('article');
+            article.className = 'ko-note-card';
+            const stamp = new Date().toLocaleString('en-GB');
+            article.innerHTML = `<p class="ko-note-meta">${esc(stamp)}</p><p class="ko-note-body">${esc(body.trim())}</p>`;
+            if (list) {
+              const empty = list.querySelector('.ko-acc-muted');
+              empty?.remove();
+              list.prepend(article);
+            }
+            const ta = notesHost.querySelector<HTMLTextAreaElement>('[data-ko-ov-note]');
+            if (ta) ta.value = '';
+            if (status) status.textContent = 'Saved.';
+            updateCompliancePanel(idoc, caseId, row.stage);
+          } catch (err) {
+            if (status) {
+              status.textContent = formatApiError(err, { fallback: 'Could not save note.' });
+            }
+          }
+        });
+      }
+      paintStaleBanner(idoc, caseId, row);
+      paintOutstandingRequests(
+        idoc,
+        caseId,
+        row.infoRequests?.map((item) => item.documentType || 'document'),
+      );
+    } catch {
+      // Overview extras are additive; leave prototype rows in place if the case fetch fails.
+    }
+  }
+
   function updateCompliancePanel(idoc: Document, caseId: string, apiStage: string) {
     const compCard = idoc.querySelector<HTMLElement>('.cd-comp-card');
     if (!compCard) return;
@@ -3209,20 +3988,35 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
     }
 
     const next = NEXT_STAGE[apiStage as CaseStage];
-    // Products panel + advance controls stay mounted in the archived bridge
-    // (visually hidden) so stage sync still works without showing the old UI.
+    // Advance controls stay in the archived bridge so the Compliance phases UI is unchanged.
     const mountTarget =
       compCard.querySelector<HTMLElement>('[data-comp-bridge]') ?? compCard;
+    const overviewHost = idoc.querySelector<HTMLElement>(
+      `#caseview-overview-${caseId} [data-ko-overview-products]`,
+    );
+    const productsAcc = idoc.querySelector<HTMLElement>(
+      `#caseview-overview-${caseId} [data-ko-acc-products]`,
+    );
+    overviewHost?.querySelectorAll('.ko-products-panel').forEach((el) => el.remove());
+    if (overviewHost) overviewHost.hidden = true;
+    if (productsAcc) productsAcc.hidden = true;
+    void mountCaseOverviewPanels(idoc, caseId);
+    wireComplianceRequestButtons(idoc, caseId);
 
     // Record products during Fact-Find / Research so RESEARCH → DIP can pass checklist.
     if (apiStage === 'FACT_FIND' || apiStage === 'RESEARCH') {
-      void mountResearchProductsPanel(mountTarget, caseId, apiStage).then(() => {
+      const productsHost = overviewHost ?? mountTarget;
+      if (overviewHost) overviewHost.hidden = false;
+      if (productsAcc) productsAcc.hidden = false;
+      void mountResearchProductsPanel(productsHost, caseId, apiStage).then(() => {
         appendAdvanceControls(mountTarget, caseId, apiStage, next);
+        wireComplianceRequestButtons(idoc, caseId);
       });
       return;
     }
 
     appendAdvanceControls(mountTarget, caseId, apiStage, next);
+    wireComplianceRequestButtons(idoc, caseId);
   }
 
   function appendAdvanceControls(
@@ -3345,17 +4139,24 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
     caseId: string,
     apiStage: string,
   ) {
+    mountTarget.querySelectorAll('.ko-products-panel').forEach((el) => el.remove());
     const panel = document.createElement('div');
     panel.className = 'ko-products-panel';
-    panel.style.cssText =
-      'margin-top:20px;padding-top:20px;border-top:1px solid #f4f4f5;font-family:\'DM Sans\',sans-serif';
+    const onOverview = Boolean(mountTarget.closest('[data-ko-overview-products]'));
+    panel.style.cssText = onOverview
+      ? "font-family:'DM Sans',sans-serif"
+      : "margin-top:20px;padding-top:20px;border-top:1px solid #f4f4f5;font-family:'DM Sans',sans-serif";
     panel.innerHTML = `<p style="margin:0;font-size:13px;color:#71717a">Loading products…</p>`;
     mountTarget.appendChild(panel);
 
     const esc = (s: string) =>
       s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
+    let lenderSelect: ReturnType<typeof mountLenderSelect> | null = null;
+
     const refresh = async () => {
+      lenderSelect?.destroy();
+      lenderSelect = null;
       try {
         const token = await getTokenRef.current();
         if (!token) throw new Error('Not authenticated');
@@ -3365,8 +4166,9 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
         ]);
         const products = productsRes.data ?? [];
         const notes = caseRes.data.adviserNotes ?? '';
+        const hasNotes = notes.trim().length > 0 || (caseRes.data.notes?.length ?? 0) > 0;
         const selectedCount = products.filter((p) => p.isSelected).length;
-        const ready = products.length >= 3 && selectedCount >= 1 && notes.trim().length > 0;
+        const ready = products.length >= 3 && selectedCount >= 1 && hasNotes;
 
         caseDetailRef.current[caseId] = {
           ...caseDetailRef.current[caseId],
@@ -3377,8 +4179,12 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
           adviserNotes: caseRes.data.adviserNotes,
           stage: caseRes.data.stage,
         };
+        paintOverviewLenderRow(panel.ownerDocument, caseId, caseRes.data.selectedLender);
+        overviewLenderSelectRef.current?.setValue(caseRes.data.selectedLender ?? '');
+        pushOpenCaseDetail(caseRes.data);
 
         const checklist =
+          panel.ownerDocument.querySelector(`#caseview-compliance-${caseId} .cd-comp-checklist`) ??
           mountTarget.closest('.cd-comp-card')?.querySelector('.cd-comp-checklist') ??
           mountTarget.querySelector('.cd-comp-checklist');
         if (checklist && (apiStage === 'FACT_FIND' || apiStage === 'RESEARCH')) {
@@ -3392,17 +4198,19 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
               label: 'Recommended product selected',
             },
             {
-              ok: notes.trim().length > 0,
+              ok: hasNotes,
               label: 'Adviser recommendation notes written',
             },
           ];
           checklist.innerHTML = items
             .map(
               (item) =>
-                `<li class="cd-comp-check-item"><input type="checkbox" class="cd-comp-check" ${item.ok ? 'checked' : ''} disabled aria-label="${esc(item.label)}"><span>${esc(item.label)}</span></li>`,
+                `<li class="cd-comp-check-item" style="display:flex;align-items:center;gap:8px"><input type="checkbox" class="cd-comp-check" ${item.ok ? 'checked' : ''} disabled aria-label="${esc(item.label)}"><span style="flex:1">${esc(item.label)}</span></li>`,
             )
             .join('');
         }
+        paintOutstandingRequests(panel.ownerDocument, caseId);
+        wireComplianceRequestButtons(panel.ownerDocument, caseId);
 
         const rows =
           products.length === 0
@@ -3420,8 +4228,8 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
           </p>
           ${rows}
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
-            <label style="display:flex;flex-direction:column;gap:4px;font-size:11px;font-weight:600;color:#71717a">Lender
-              <input data-ko-prod="lender" type="text" placeholder="e.g. NatWest" style="padding:8px 10px;border:1px solid #e4e4e7;border-radius:8px;font-size:13px;color:#18181b" />
+            <label style="display:flex;flex-direction:column;gap:4px;font-size:11px;font-weight:600;color:#71717a;grid-column:1/-1;position:relative;z-index:2">Lender
+              <div data-ko-lender-select-host></div>
             </label>
             <label style="display:flex;flex-direction:column;gap:4px;font-size:11px;font-weight:600;color:#71717a">Product name
               <input data-ko-prod="product" type="text" placeholder="e.g. 5yr Fixed" style="padding:8px 10px;border:1px solid #e4e4e7;border-radius:8px;font-size:13px;color:#18181b" />
@@ -3432,17 +4240,28 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
             <label style="display:flex;flex-direction:column;gap:4px;font-size:11px;font-weight:600;color:#71717a">Fee (£)
               <input data-ko-prod="fee" type="number" step="1" placeholder="999" style="padding:8px 10px;border:1px solid #e4e4e7;border-radius:8px;font-size:13px;color:#18181b" />
             </label>
+            <label style="display:flex;flex-direction:column;gap:4px;font-size:11px;font-weight:600;color:#71717a">Product type
+              <input data-ko-prod="productType" type="text" placeholder="Fixed / Tracker" style="padding:8px 10px;border:1px solid #e4e4e7;border-radius:8px;font-size:13px;color:#18181b" />
+            </label>
+            <label style="display:flex;flex-direction:column;gap:4px;font-size:11px;font-weight:600;color:#71717a">Initial term (months)
+              <input data-ko-prod="termMonths" type="number" min="1" placeholder="60" style="padding:8px 10px;border:1px solid #e4e4e7;border-radius:8px;font-size:13px;color:#18181b" />
+            </label>
+            <label style="display:flex;flex-direction:column;gap:4px;font-size:11px;font-weight:600;color:#71717a;grid-column:1/-1">ERC summary
+              <input data-ko-prod="erc" type="text" placeholder="e.g. 5/4/3/2/1%" style="padding:8px 10px;border:1px solid #e4e4e7;border-radius:8px;font-size:13px;color:#18181b" />
+            </label>
           </div>
           <label style="display:flex;align-items:center;gap:8px;margin:0 0 10px;font-size:12px;color:#52525b">
             <input data-ko-prod="selected" type="checkbox" /> Mark as recommended product
           </label>
-          <button type="button" data-ko-prod-add style="margin-bottom:16px;padding:8px 14px;background:#A552E4;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">Add product</button>
-          <label style="display:flex;flex-direction:column;gap:4px;font-size:11px;font-weight:600;color:#71717a">Adviser recommendation notes
-            <textarea data-ko-prod="notes" rows="3" placeholder="Why this product is suitable…" style="padding:8px 10px;border:1px solid #e4e4e7;border-radius:8px;font-size:13px;color:#18181b;resize:vertical;font-family:inherit">${esc(notes)}</textarea>
-          </label>
-          <button type="button" data-ko-prod-notes style="margin-top:8px;padding:8px 14px;background:#fff;color:#18181b;border:1px solid #e4e4e7;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">Save notes</button>
+          <button type="button" data-ko-prod-add style="margin-bottom:8px;padding:8px 14px;background:#A552E4;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">Add product</button>
+          <p style="margin:0 0 8px;font-size:12px;color:#71717a;line-height:1.45">Recommendation notes are in the <strong>Notes</strong> accordion on Overview. Compliance still needs notes, 3+ products, and one selected.</p>
           <p data-ko-prod-status style="margin:8px 0 0;font-size:12px;color:#71717a;min-height:16px"></p>
         `;
+
+        const lenderHost = panel.querySelector<HTMLElement>('[data-ko-lender-select-host]');
+        if (lenderHost) {
+          lenderSelect = mountLenderSelect(lenderHost, { searchFn: searchLendersForSelect });
+        }
 
         const statusEl = panel.querySelector<HTMLElement>('[data-ko-prod-status]');
         const setStatus = (text: string, color = '#71717a') => {
@@ -3461,7 +4280,39 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
               const t = await getTokenRef.current();
               if (!t) throw new Error('Not authenticated');
               await casesApi.updateProduct(t, caseId, productId, { isSelected: true });
+              const selected = products.find((p) => p.id === productId);
+              const snapshot = {
+                loanAmount: caseRes.data.loanAmount,
+                propertyValue: caseRes.data.propertyValue,
+                termYears: caseRes.data.termYears,
+                lender: selected?.lenderName,
+                product: selected?.productName,
+              };
+              const wasStale = Boolean(readStale(caseId)?.stale);
+              clearStale(caseId, snapshot);
+              if (wasStale) {
+                const amendBody = `[amend] Re-selected ${selected?.lenderName ?? 'lender'} ${selected?.productName ?? ''}`.trim();
+                try {
+                  await casesApi.createNote(t, caseId, { body: amendBody, tag: 'amend' });
+                } catch {
+                  // Best-effort CaseNote; adviserNotes dual-write still covers the gate.
+                }
+                try {
+                  const note = appendNoteThread(caseRes.data.adviserNotes ?? '', amendBody);
+                  await casesApi.update(t, caseId, { adviserNotes: note });
+                } catch {
+                  // Selection still saved; note is best-effort.
+                }
+              } else {
+                markRecommendationSnapshot(caseId, snapshot);
+              }
               await refresh();
+              try {
+                const fresh = await casesApi.get(t, caseId);
+                paintStaleBanner(panel.ownerDocument, caseId, fresh.data);
+              } catch {
+                paintStaleBanner(panel.ownerDocument, caseId);
+              }
             } catch (err) {
               setStatus(formatApiError(err, { fallback: 'Could not select product.' }), '#DC2626');
               btn.disabled = false;
@@ -3488,11 +4339,15 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
         });
 
         panel.querySelector<HTMLButtonElement>('[data-ko-prod-add]')?.addEventListener('click', async () => {
-          const lender = panel.querySelector<HTMLInputElement>('[data-ko-prod="lender"]')?.value.trim() ?? '';
+          const selection = lenderSelect?.getSelection();
+          const lender = selection?.lenderName || panel.querySelector<HTMLInputElement>('[data-ko-prod="lender"]')?.value.trim() || '';
           const productName =
             panel.querySelector<HTMLInputElement>('[data-ko-prod="product"]')?.value.trim() ?? '';
           const rateRaw = panel.querySelector<HTMLInputElement>('[data-ko-prod="rate"]')?.value ?? '';
           const feeRaw = panel.querySelector<HTMLInputElement>('[data-ko-prod="fee"]')?.value ?? '';
+          const productType = panel.querySelector<HTMLInputElement>('[data-ko-prod="productType"]')?.value.trim();
+          const termMonthsRaw = panel.querySelector<HTMLInputElement>('[data-ko-prod="termMonths"]')?.value.trim();
+          const ercSummary = panel.querySelector<HTMLInputElement>('[data-ko-prod="erc"]')?.value.trim();
           const isSelected =
             panel.querySelector<HTMLInputElement>('[data-ko-prod="selected"]')?.checked ?? false;
           if (!lender || !productName) {
@@ -3503,36 +4358,40 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
           try {
             const t = await getTokenRef.current();
             if (!t) throw new Error('Not authenticated');
-            await casesApi.createProduct(t, caseId, {
+            const created = await casesApi.createProduct(t, caseId, {
               lenderName: lender,
               productName,
               rate: rateRaw ? Number(rateRaw) : undefined,
               fee: feeRaw ? Number(feeRaw) : undefined,
               isSelected,
+              ...(selection?.lenderId ? { lenderId: selection.lenderId } : {}),
+              ...(selection?.lenderOtherName ? { lenderOtherName: selection.lenderOtherName } : {}),
+              ...(productType ? { productType } : {}),
+              ...(termMonthsRaw ? { initialTermMonths: Number(termMonthsRaw) } : {}),
+              ...(ercSummary ? { ercSummary } : {}),
             });
+            writeProductExtras(created.data.id, {
+              productType,
+              initialTermMonths: termMonthsRaw,
+              ercSummary,
+            });
+            if (isSelected) {
+              markRecommendationSnapshot(caseId, {
+                loanAmount: caseRes.data.loanAmount,
+                propertyValue: caseRes.data.propertyValue,
+                termYears: caseRes.data.termYears,
+                lender,
+                product: productName,
+              });
+            }
             await refresh();
           } catch (err) {
             setStatus(formatApiError(err, { fallback: 'Could not add product.' }), '#DC2626');
           }
         });
-
-        panel.querySelector<HTMLButtonElement>('[data-ko-prod-notes]')?.addEventListener('click', async () => {
-          const value = panel.querySelector<HTMLTextAreaElement>('[data-ko-prod="notes"]')?.value ?? '';
-          setStatus('Saving notes…', '#f59e0b');
-          try {
-            const t = await getTokenRef.current();
-            if (!t) throw new Error('Not authenticated');
-            await casesApi.update(t, caseId, { adviserNotes: value });
-            if (caseDetailRef.current[caseId]) {
-              caseDetailRef.current[caseId].adviserNotes = value;
-            }
-            await refresh();
-            setStatus('Notes saved.', '#0F6E56');
-          } catch (err) {
-            setStatus(formatApiError(err, { fallback: 'Could not save notes.' }), '#DC2626');
-          }
-        });
       } catch (err) {
+        lenderSelect?.destroy();
+        lenderSelect = null;
         panel.innerHTML = `<p style="margin:0;font-size:13px;color:#DC2626">${esc(
           formatApiError(err, { fallback: 'Could not load products.' }),
         )}</p>`;
@@ -3543,6 +4402,16 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
   }
 
   function renderProductRow(p: ProductConsidered, esc: (s: string) => string) {
+    const extras = readProductExtras(p.id);
+    const extraBits = [
+      p.productType || extras?.productType,
+      (p.initialTermMonths != null ? String(p.initialTermMonths) : extras?.initialTermMonths)
+        ? `${p.initialTermMonths ?? extras?.initialTermMonths} mo`
+        : '',
+      p.ercSummary || extras?.ercSummary,
+    ]
+      .filter(Boolean)
+      .join(' · ');
     const rate = p.rate != null ? `${p.rate}%` : '—';
     const fee = p.fee != null ? `£${p.fee}` : '—';
     const selected = p.isSelected
@@ -3551,7 +4420,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
     return `<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border:1px solid #e4e4e7;border-radius:10px;background:${p.isSelected ? '#F5EEFA' : '#fff'}">
       <div style="min-width:0">
         <div style="font-size:13px;font-weight:600;color:#18181b">${esc(p.lenderName)} · ${esc(p.productName)}</div>
-        <div style="font-size:12px;color:#71717a;margin-top:2px">Rate ${esc(rate)} · Fee ${esc(fee)}</div>
+        <div style="font-size:12px;color:#71717a;margin-top:2px">Rate ${esc(rate)} · Fee ${esc(fee)}${extraBits ? ` · ${esc(extraBits)}` : ''}</div>
       </div>
       <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
         ${selected}
@@ -3908,7 +4777,11 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
               if (!token) return;
               const fresh = await documentsApi.list(token, { caseId: activeCaseId, page: 1, perPage: 100 });
               const idoc = iframeRef.current?.contentDocument;
-              if (idoc) renderDocsTable(idoc, fresh.data, activeCaseId);
+              if (idoc) {
+                renderDocsTable(idoc, fresh.data, activeCaseId);
+                fulfilInfoRequests(activeCaseId, doc.documentType);
+                paintOutstandingRequests(idoc, activeCaseId);
+              }
             } catch {
               // Non-critical — table will refresh on next case open.
             }

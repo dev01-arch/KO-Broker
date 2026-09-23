@@ -10,8 +10,8 @@
  *    percentage points, so bps are divided by 100 here.
  *  - Backend's overview omits the effective-new series, so the four-card
  *    scaffold is built here and each card fills in if its series is present.
- *  - Backend's feedStatuses omit FCA lending stats, so the three-source
- *    Data sources scaffold is built here; Last retrieved fills in if present.
+ *  - Data sources scaffold is built here so BoE / HMLR / FCA lender sync
+ *    always render; Last retrieved fills in from feedStatuses when present.
  */
 
 import type {
@@ -85,22 +85,22 @@ const OVERVIEW_CARDS = [
   },
 ] as const;
 
-/** Prototype shows three source cards; FCA stays empty until Backend exposes it. */
+/** Three source cards: BoE rates, HMLR prices, FCA lender directory (PRD-16). */
 const OVERVIEW_FEEDS = [
   {
     feedId: 'BOE_RATES',
     label: 'Bank of England — quoted rates',
-    cadence: 'Monthly',
+    cadence: 'Daily ingest',
   },
   {
     feedId: 'HMLR_PRICES',
     label: 'HM Land Registry — price paid',
-    cadence: 'Monthly',
+    cadence: 'Daily ingest',
   },
   {
-    feedId: 'FCA_LENDING',
-    label: 'FCA — mortgage lending stats',
-    cadence: 'Quarterly',
+    feedId: 'FCA_LENDERS',
+    label: 'FCA — lender directory',
+    cadence: 'Monthly',
   },
 ] as const;
 

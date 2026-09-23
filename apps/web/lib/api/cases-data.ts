@@ -229,6 +229,15 @@ export async function getCaseForOrg(orgId: string, id: string) {
             fulfilledAt: true,
           },
         },
+        property: {
+          select: {
+            id: true,
+            postcode: true,
+            address: true,
+            type: true,
+            currentValue: true,
+          },
+        },
         _count: { select: { messages: true, documents: true } },
       },
     });

@@ -9,6 +9,7 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test:formulas": "node --experimental-strip-types --test lib/calculators/formulas.test.ts",
+    "test:lenders": "node --experimental-strip-types --test lib/lenders/directory.test.ts lib/cases/overview-ops.test.ts lib/cases/prd16-store.test.ts",
     "test:clients-import": "node --experimental-strip-types --test lib/api/clients-import-logic.test.ts lib/clients/import-parse.test.ts",
     "test:security": "pnpm --filter @ko/db exec tsx --tsconfig ../../apps/web/tsconfig.json --test ../../apps/web/lib/auth/portalAuth.test.ts ../../apps/web/lib/security-fixes.test.ts",
     "test": "pnpm run test:formulas && pnpm run test:security",

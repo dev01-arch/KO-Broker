@@ -1125,6 +1125,29 @@ tbody tr:hover td{background:var(--surface)}
 #tab-case-detail .cd-doc-status--inactive{background:#F2F4F7;color:#344054}
 #tab-case-detail .cd-doc-status--inactive .cd-doc-status-dot{background:#98A2B3}
 #tab-case-detail .cd-body{display:flex;flex-direction:column;gap:24px}
+#tab-case-detail .ko-acc-stack{display:flex;flex-direction:column;gap:12px;width:100%}
+#tab-case-detail .ko-acc{border:1px solid #e4e4e7;border-radius:12px;background:#fff;overflow:visible}
+#tab-case-detail .ko-acc > summary{list-style:none;cursor:pointer;font-family:'Syne',sans-serif;font-size:16px;font-weight:700;color:#18181b;padding:16px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+#tab-case-detail .ko-acc > summary::-webkit-details-marker{display:none}
+#tab-case-detail .ko-acc > summary::after{content:'▾';color:#71717a;font-size:12px;flex-shrink:0}
+#tab-case-detail .ko-acc[open] > summary::after{content:'▴'}
+#tab-case-detail .ko-acc-body{padding:0 20px 20px;display:flex;flex-direction:column;gap:16px}
+#tab-case-detail .ko-acc-muted{margin:0;font-family:'DM Sans',sans-serif;font-size:13px;color:#a1a1aa}
+#tab-case-detail .ko-acc-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+#tab-case-detail .ko-acc-field{display:flex;flex-direction:column;gap:4px;font-family:'DM Sans',sans-serif;font-size:11px;font-weight:600;color:#71717a}
+#tab-case-detail .ko-acc-field input,#tab-case-detail .ko-acc-field select,#tab-case-detail .ko-acc-field textarea{padding:8px 10px;border:1px solid #e4e4e7;border-radius:8px;font-size:13px;color:#18181b;font-family:'DM Sans',sans-serif;background:#fff}
+#tab-case-detail .ko-acc-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+#tab-case-detail .ko-acc-btn{padding:8px 14px;background:#0F6E56;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif}
+#tab-case-detail .ko-acc-btn--ghost{background:#fff;color:#18181b;border:1px solid #e4e4e7}
+#tab-case-detail .ko-stale-banner{margin:0 0 16px;padding:12px 14px;border:1px solid #F5D9A8;background:#FFF8EB;border-radius:12px;display:flex;gap:12px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap}
+#tab-case-detail .ko-stale-banner p{margin:0;font-size:13px;color:#92400E;line-height:1.45;font-family:'DM Sans',sans-serif}
+#tab-case-detail .ko-outstanding{margin:10px 0 0;padding:8px 10px;border:1px solid #F5D9A8;background:#FFF8EB;border-radius:8px;font-size:12px;color:#92400E;line-height:1.4}
+#tab-case-detail .ko-note-card{border:1px solid #e4e4e7;border-radius:10px;padding:10px 12px;background:#fafafa}
+#tab-case-detail .ko-note-meta{font-size:11px;color:#71717a;margin:0 0 4px;font-family:'DM Sans',sans-serif}
+#tab-case-detail .ko-note-body{font-size:13px;color:#18181b;margin:0;white-space:pre-wrap;font-family:'DM Sans',sans-serif;line-height:1.45}
+@media(max-width:900px){
+#tab-case-detail .ko-acc-grid{grid-template-columns:1fr}
+}
 #tab-case-detail .cd-details-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
 #tab-case-detail .cd-details-col{display:flex;flex-direction:column;gap:12px}
 #tab-case-detail .cd-details-title{font-family:'Syne',sans-serif;font-size:16px;font-weight:700;color:#18181b;margin:0 0 4px}
@@ -1166,6 +1189,7 @@ body.embedded #tab-case-detail{background:transparent}
 #tab-case-detail .cd-header{flex-wrap:wrap}
 #tab-case-detail .cd-name-row{flex-wrap:wrap}
 #tab-case-detail .cd-client-name{white-space:normal}
+#tab-case-detail .ko-overview-products{padding:16px}
 }
 @media(max-width:560px){#tab-case-detail .cd-timeline-track{height:auto;min-height:360px}#tab-case-detail .cd-timeline-events{grid-auto-flow:row;grid-auto-columns:unset;grid-template-columns:1fr;row-gap:40px}#tab-case-detail .cd-timeline-line{display:none}}
 .case-detail-header{background:var(--white);border-bottom:1px solid var(--ink-20);padding:16px 28px;display:flex;align-items:center;gap:14px}
@@ -1676,6 +1700,8 @@ body.ff-open .dash-main{overflow:hidden!important;height:100%!important;max-heig
 .ff-field-label{display:block;font-size:13px;font-weight:600;color:#71717a;margin-bottom:6px}
 .ff-req{color:#f87171;margin-left:2px}
 .ff-box-wrap{display:flex;align-items:center;height:40px;border-radius:10px;border:1px solid #e4e4e7;background:#fff;overflow:hidden;transition:border-color .2s,box-shadow .2s}
+.ff-box-wrap--lender{overflow:visible;height:auto;min-height:40px;display:block;border:none;background:transparent;box-shadow:none}
+.ff-box-wrap--lender:focus-within{border:none;box-shadow:none}
 .ff-box-wrap:focus-within{border-color:#0F6E56;box-shadow:0 0 0 3px rgba(15,110,86,.12)}
 .ff-box-wrap.ff-invalid{border-color:#DC2626;box-shadow:0 0 0 3px rgba(220,38,38,.12)}
 .ff-box-pfx{padding:0 12px;font-size:13px;font-weight:600;color:#71717a;border-right:1px solid #e4e4e7;background:#f4f4f5;height:100%;display:flex;align-items:center;flex-shrink:0}
@@ -2143,6 +2169,26 @@ body.ff-open .dash-main{overflow:hidden!important;height:100%!important;max-heig
               <div class="ov-kpi-val" data-ov-kpi-val>11</div>
               <div class="ov-kpi-trend" data-ov-kpi-trend><span style="cursor:pointer;text-decoration:underline" onclick="showTab('messages')">3 from clients ↗</span></div>
             </div>
+            <button type="button" class="ov-kpi-card ov-kpi-card--cases" data-ko-radar="offers14" style="text-align:left;cursor:pointer;font:inherit;color:inherit" onclick="window.koApplyRadarFilter && window.koApplyRadarFilter(window.__koRadarOffers||[], 'offers14')">
+              <div class="ov-kpi-top">
+                <div class="ov-kpi-copy">
+                  <div class="ov-kpi-title">Offers ending</div>
+                  <div class="ov-kpi-hint">Next 14 days</div>
+                </div>
+              </div>
+              <div class="ov-kpi-val" data-ko-radar-val="offers14">0</div>
+              <div class="ov-kpi-trend">Open in Cases ↗</div>
+            </button>
+            <button type="button" class="ov-kpi-card ov-kpi-card--pipeline" data-ko-radar="rates90" style="text-align:left;cursor:pointer;font:inherit;color:inherit" onclick="window.koApplyRadarFilter && window.koApplyRadarFilter(window.__koRadarRates||[], 'rates90')">
+              <div class="ov-kpi-top">
+                <div class="ov-kpi-copy">
+                  <div class="ov-kpi-title">Rates ending</div>
+                  <div class="ov-kpi-hint">Next 90 days</div>
+                </div>
+              </div>
+              <div class="ov-kpi-val" data-ko-radar-val="rates90">0</div>
+              <div class="ov-kpi-trend">Open in Cases ↗</div>
+            </button>
               </div>
             </div>
 
@@ -2696,6 +2742,8 @@ body.ff-open .dash-main{overflow:hidden!important;height:100%!important;max-heig
                 <svg viewBox="0 0 16 16" fill="none"><path d="M8 2l1.8 3.6L14 6.3l-2.8 2.7.7 4L8 11.2 4.1 13l.7-4L2 6.3l4.2-.7L8 2Z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>
                 Product Picked
               </button>
+              <button type="button" class="cs-chip-btn" id="cs-filter-offers" aria-pressed="false">Offers ending</button>
+              <button type="button" class="cs-chip-btn" id="cs-filter-rates" aria-pressed="false">Rates ending</button>
             </div>
           </div>
 
@@ -4688,6 +4736,8 @@ function switchCasesView(v) {
     var termRaw = parseInt(document.getElementById('nc-term').value, 10);
     var propertyValue = parseFloat(document.getElementById('nc-asset-value').value) || undefined;
     var loanAmount = parseFloat(document.getElementById('nc-loan-sum').value) || undefined;
+    var postcode = (document.getElementById('nc-postcode')?.value || '').trim();
+    var addressLine1 = (document.getElementById('nc-address-line')?.value || '').trim();
     var typeMap = {
       residential: 'PURCHASE',
       btl: 'BTL',
@@ -4722,6 +4772,8 @@ function switchCasesView(v) {
           propertyValue: propertyValue,
           loanAmount: loanAmount,
           termYears: termRaw > 0 ? termRaw : undefined,
+          postcode: postcode || undefined,
+          addressLine1: addressLine1 || undefined,
         },
       },
       window.location.origin,
@@ -4841,6 +4893,11 @@ function switchCasesView(v) {
   const filterAmount = document.getElementById('cs-filter-amount');
   const filterUnread = document.getElementById('cs-filter-unread');
   const filterProduct = document.getElementById('cs-filter-product');
+  const filterOffers = document.getElementById('cs-filter-offers');
+  const filterRates = document.getElementById('cs-filter-rates');
+  window.__koRadarCaseIds = null;
+  window.__koRadarOffers = [];
+  window.__koRadarRates = [];
   const cards = () => tab.querySelectorAll('.cs-case-card');
   const rows = () => tab.querySelectorAll('.cs-table-row');
 
@@ -4864,6 +4921,10 @@ function switchCasesView(v) {
       }
       if (needUnread && !el.hasAttribute('data-unread')) return false;
       if (needProduct && !el.hasAttribute('data-product')) return false;
+      if (window.__koRadarCaseIds !== null && Array.isArray(window.__koRadarCaseIds)) {
+        const id = el.getAttribute('data-case-id');
+        if (!id || window.__koRadarCaseIds.indexOf(id) < 0) return false;
+      }
       return true;
     };
 
@@ -4885,6 +4946,42 @@ function switchCasesView(v) {
   });
   filterUnread?.addEventListener('click', () => toggleChip(filterUnread));
   filterProduct?.addEventListener('click', () => toggleChip(filterProduct));
+  const clearRadarFilter = () => {
+    window.__koRadarCaseIds = null;
+    filterOffers?.classList.remove('is-active');
+    filterRates?.classList.remove('is-active');
+    filterOffers?.setAttribute('aria-pressed', 'false');
+    filterRates?.setAttribute('aria-pressed', 'false');
+    applyCasesFilters();
+  };
+  filterOffers?.addEventListener('click', () => {
+    if (filterOffers.classList.contains('is-active')) {
+      clearRadarFilter();
+      return;
+    }
+    window.koApplyRadarFilter(window.__koRadarOffers || [], 'offers14');
+  });
+  filterRates?.addEventListener('click', () => {
+    if (filterRates.classList.contains('is-active')) {
+      clearRadarFilter();
+      return;
+    }
+    window.koApplyRadarFilter(window.__koRadarRates || [], 'rates90');
+  });
+
+  window.koApplyRadarFilter = function (caseIds, kind) {
+    window.__koRadarCaseIds = Array.isArray(caseIds) ? caseIds : [];
+    if (filterOffers) {
+      filterOffers.classList.toggle('is-active', kind === 'offers14');
+      filterOffers.setAttribute('aria-pressed', kind === 'offers14' ? 'true' : 'false');
+    }
+    if (filterRates) {
+      filterRates.classList.toggle('is-active', kind === 'rates90');
+      filterRates.setAttribute('aria-pressed', kind === 'rates90' ? 'true' : 'false');
+    }
+    if (typeof showTab === 'function') showTab('cases');
+    applyCasesFilters();
+  };
 
   function renderCasesAdviserFilter(advisers, options) {
     if (!filterAdviser) return;
@@ -5419,6 +5516,10 @@ function cdPhaseItemActions(item, phaseId) {
   if (actions.includes('confirm')) {
     const encodedName = encodeURIComponent(item.name || '');
     parts.push(`<button type="button" class="cd-phase-btn cd-phase-btn--amber" onclick="event.stopPropagation();openConfirmOfflineModal('${phaseId}',${item.n},decodeURIComponent('${encodedName}'))">Confirm offline</button>`);
+  }
+  if (!isComplianceItemDone(item)) {
+    const reqLabel = String(item.name || 'supporting documents').replace(/"/g, '');
+    parts.push(`<button type="button" class="cd-phase-btn cd-phase-btn--ghost" data-ko-request-check="${reqLabel}">Request</button>`);
   }
   return parts.join('');
 }
@@ -6228,6 +6329,7 @@ function renderCaseDocuments(c) {
             ${docsTh('Uploaded by')}
             ${docsTh('Date')}
             ${docsTh('Status')}
+            ${docsTh('Request')}
           </tr>
         </thead>
         <tbody id="cd-docs-table-body">${rows}</tbody>
@@ -6332,7 +6434,7 @@ function openCase(id) {
         </div>
         <div class="cd-header-actions">
           <button type="button" class="cd-market-intel-btn" onclick="openMarketIntel('${id}')">Market intel</button>
-          <button type="button" class="cd-factfind-btn" onclick="openFactFindWizard('${id}')">Launch Fact Find Form</button>
+          <button type="button" class="cd-factfind-btn" onclick="requestOpenFactFind('${id}')">Launch Fact Find Form</button>
         </div>
       </div>
       <div class="cd-progress-rail">
@@ -6362,25 +6464,63 @@ function openCase(id) {
         </button>
       </div>
       <div id="caseview-overview-${id}" class="cd-body">
-        <div class="cd-details-grid">
-          <div class="cd-details-col">
-            <h2 class="cd-details-title">Client Details</h2>
-            ${detailRow('Name', c.client)}
-            ${detailRow('Email', c.email)}
-            ${detailRow('Phone', c.phone)}
-            ${detailRow('Employment', c.employment)}
-            ${detailRow('Income', c.income)}
-            ${detailRow('Property', c.property)}
-          </div>
-          <div class="cd-details-col">
-            <h2 class="cd-details-title">Case Details</h2>
-            ${detailRow('Reference', c.ref)}
-            ${detailRow('Transaction type', c.type)}
-            ${detailRow('Loan amount', loanAmount)}
-            ${detailRow('LTV', caseLtv)}
-            ${detailRow('Lender', c.lender)}
-            ${detailRow('Adviser', caseAdviser)}
-          </div>
+        <div class="ko-acc-stack">
+          <details class="ko-acc" open>
+            <summary>Details</summary>
+            <div class="ko-acc-body">
+              <div class="cd-details-grid">
+                <div class="cd-details-col">
+                  <h2 class="cd-details-title">Client Details</h2>
+                  ${detailRow('Name', c.client)}
+                  ${detailRow('Email', c.email)}
+                  ${detailRow('Phone', c.phone)}
+                  ${detailRow('Employment', c.employment)}
+                  ${detailRow('Income', c.income)}
+                  ${detailRow('Property', c.property)}
+                </div>
+                <div class="cd-details-col">
+                  <h2 class="cd-details-title">Case Details</h2>
+                  ${detailRow('Reference', c.ref)}
+                  ${detailRow('Transaction type', c.type)}
+                  ${detailRow('Loan amount', loanAmount)}
+                  ${detailRow('LTV', caseLtv)}
+                  ${detailRow('Lender', c.lender)}
+                  ${detailRow('Adviser', caseAdviser)}
+                </div>
+              </div>
+              <div data-ko-overview-details-edit></div>
+            </div>
+          </details>
+          <details class="ko-acc">
+            <summary>Property</summary>
+            <div class="ko-acc-body" data-ko-overview-property>
+              <p class="ko-acc-muted">Property on this case. A remortgage will reuse this home once the property record ships.</p>
+            </div>
+          </details>
+          <details class="ko-acc">
+            <summary>Dates</summary>
+            <div class="ko-acc-body" data-ko-overview-dates>
+              <p class="ko-acc-muted">AIP, offer and completion dates for this case.</p>
+            </div>
+          </details>
+          <details class="ko-acc">
+            <summary>Account</summary>
+            <div class="ko-acc-body" data-ko-overview-account>
+              <p class="ko-acc-muted">Rate type, monthly payment and initial-rate end.</p>
+            </div>
+          </details>
+          <details class="ko-acc" data-ko-acc-products hidden>
+            <summary>Products considered</summary>
+            <div class="ko-acc-body">
+              <div class="ko-overview-products" data-ko-overview-products hidden></div>
+            </div>
+          </details>
+          <details class="ko-acc" open>
+            <summary>Notes</summary>
+            <div class="ko-acc-body" data-ko-overview-notes>
+              <p class="ko-acc-muted">Adviser notes for this case.</p>
+            </div>
+          </details>
         </div>
         <div class="cd-timeline-block">
           <h2 class="cd-timeline-title">Timeline</h2>
@@ -7417,6 +7557,7 @@ function calcRun() {
       adviser: adviserName,
       caseAdviser: adviserName,
       lender: detail.selectedLender || 'TBC',
+      apiType: detail.type || '',
       client: clientName,
       email: client.email || '—',
       phone: client.phone || '—',
@@ -8222,6 +8363,7 @@ calcRun();
     form: null,
     idx: 0,
     done: false,
+    isAmend: false,
     dir: 1,
     caseId: null,
     _uid: 0,
@@ -8782,6 +8924,8 @@ calcRun();
       },
       propertyValue: ffPickNumberLike(property, ['propertyValue', 'value']),
       mortgageRequired: ffPickNumberLike(property, ['mortgageRequired', 'loanAmount']),
+      caseType: ffPickString(personal, ['caseType']) || base.caseType,
+      hasExistingMortgage: Boolean(mortgages.hasExistingMortgage) || Boolean(ffPickString(mortgages, ['lenderName', 'existingMortgageLender'])),
       existingMortgageLender: ffPickString(mortgages, ['lenderName', 'existingMortgageLender']),
       existingMortgageBalance: ffPickNumberLike(mortgages, ['balance', 'existingMortgageBalance']),
       goals: ffPickString(preferences, ['goals', 'notes', 'summary']),
@@ -8792,18 +8936,41 @@ calcRun();
   function ffHydrateFromStored(caseId) {
     const c = caseId ? cases[caseId] : null;
     const stored = c?.factFind;
-    if (!stored || typeof stored !== 'object') return ffInitForm();
-
-    const formBlob = stored.personalDetails?.portalFactFindForm;
-    if (formBlob && typeof formBlob === 'object') {
-      const base = ffInitForm();
-      return { ...base, ...formBlob };
+    let form = ffInitForm();
+    if (stored && typeof stored === 'object') {
+      const formBlob = stored.personalDetails?.portalFactFindForm;
+      if (formBlob && typeof formBlob === 'object') {
+        form = { ...form, ...formBlob };
+      } else {
+        form = ffMapDetailsToForm(stored);
+      }
     }
-
-    return ffMapDetailsToForm(stored);
+    return ffApplyLiveCaseType(form, caseId);
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────────
+  function ffNeedsExistingMortgage(type) {
+    return ['REMORTGAGE', 'FURTHER_ADVANCE', 'PRODUCT_TRANSFER'].includes(type);
+  }
+  function ffApiTypeFromLiveCase(caseId) {
+    const live = caseId && typeof cases !== 'undefined' ? cases[caseId] : null;
+    if (!live) return '';
+    if (live.apiType && /^[A-Z_]+$/.test(live.apiType)) return live.apiType;
+    const fromLabel = {
+      Purchase: 'PURCHASE',
+      Remortgage: 'REMORTGAGE',
+      BTL: 'BTL',
+      'Further advance': 'FURTHER_ADVANCE',
+      'Product transfer': 'PRODUCT_TRANSFER',
+    };
+    return fromLabel[live.type] || '';
+  }
+  function ffApplyLiveCaseType(form, caseId) {
+    const type = ffApiTypeFromLiveCase(caseId) || form.caseType || 'PURCHASE';
+    const next = { ...form, caseType: type };
+    if (ffNeedsExistingMortgage(type)) next.hasExistingMortgage = true;
+    return next;
+  }
   const ffIsSE   = s => ['SELF_EMPLOYED_SOLE','SELF_EMPLOYED_LTD','PARTNERSHIP'].includes(s);
   const ffLTV    = (pv,mr) => { const p=parseFloat((pv||'').replace(/,/g,'')),m=parseFloat((mr||'').replace(/,/g,'')); return (!p||!m)?null:Math.round((m/p)*1000)/10; };
   const ffAddrMo = d => { if(!d)return 0; const [mm,yyyy]=d.split('/').map(Number); if(!mm||!yyyy)return 0; const f=new Date(yyyy,mm-1,1),n=new Date(); return (n.getFullYear()-f.getFullYear())*12+(n.getMonth()-f.getMonth()); };
@@ -8860,8 +9027,9 @@ calcRun();
     {id:'c2-sa302',s:'Income — Client 2',l:'SA302 / net profit — last 3 years (Client 2)',t:'sa302-group',tgt:'client2Income',si:f=>f.hasJointApplicant&&ffIsSE(f.client2Employment.employmentStatus)},
     {id:'fin-cards',s:'Financial Commitments',l:'Please add all credit cards',t:'credit-cards',sub:'Credit limit, outstanding balance and monthly payment for each'},
     {id:'fin-loans',s:'Financial Commitments',l:'Please add all loans',t:'loans',sub:'Personal loans, secured loans, hire purchase — leave blank if none'},
-    {id:'fin-mortgage',s:'Financial Commitments',l:'Please provide the existing mortgage details',t:'mortgage-group',si:f=>['REMORTGAGE','FURTHER_ADVANCE'].includes(f.caseType)||f.hasExistingMortgage},
-    {id:'prop-toggle',s:'Property Details',l:'Is this a purchase or an existing property?',t:'pills',p:'propertyToggle',aa:true,opts:[{v:'PURCHASE',l:'Purchase'},{v:'EXISTING',l:'Existing property'}],si:f=>!['REMORTGAGE','FURTHER_ADVANCE'].includes(f.caseType)},
+    {id:'fin-has-mortgage',s:'Financial Commitments',l:'Does the client have an existing mortgage?',t:'yesno',p:'hasExistingMortgage',sub:'Answer Yes if they are remortgaging, taking a further advance, or keeping a mortgage on this or another property.',si:f=>!ffNeedsExistingMortgage(f.caseType)},
+    {id:'fin-mortgage',s:'Financial Commitments',l:'Please provide the existing mortgage details',t:'mortgage-group',sub:'Lender, balance, rate and early repayment charge',si:f=>ffNeedsExistingMortgage(f.caseType)||f.hasExistingMortgage===true},
+    {id:'prop-toggle',s:'Property Details',l:'Is this a purchase or an existing property?',t:'pills',p:'propertyToggle',aa:true,opts:[{v:'PURCHASE',l:'Purchase'},{v:'EXISTING',l:'Existing property'}],si:f=>!ffNeedsExistingMortgage(f.caseType)},
     {id:'prop-values',s:'Property Details',l:'Property value and mortgage required',t:'property-value-group',sub:'LTV is auto-calculated in real time'},
     {id:'prop-deposit',s:'Property Details',l:'What is the source of deposit?',t:'pills',p:'depositSource',aa:true,opts:[{v:'SAVINGS',l:'Personal savings'},{v:'GIFT',l:'Gift (donor)'},{v:'HELP_TO_BUY',l:'Help to Buy ISA'},{v:'SHARED_EQUITY',l:'Shared equity'},{v:'EQUITY_RELEASE',l:'Equity release'},{v:'OTHER',l:'Other'}],si:f=>f.propertyToggle==='PURCHASE'},
     {id:'prop-terms',s:'Property Details',l:'What are the mortgage terms?',t:'property-terms-group'},
@@ -8975,11 +9143,22 @@ calcRun();
   }
 
   // ── Open / close ──────────────────────────────────────────────────────────
-  window.openFactFindWizard = function (caseId) {
+  window.requestOpenFactFind = function (caseId) {
+    var live = caseId && typeof cases !== 'undefined' ? cases[caseId] : null;
+    var done = !!(live && live.factFind && live.factFind.completedAt);
+    if (done) {
+      var ok = window.confirm('This action will be recorded in the audit log. If a product is already selected, the recommendation may be marked stale. Continue?');
+      if (!ok) return;
+    }
+    window.openFactFindWizard(caseId, { isAmend: done });
+  };
+
+  window.openFactFindWizard = function (caseId, opts) {
     ff.caseId = caseId || null;
     ff.form   = ffHydrateFromStored(ff.caseId);
     ff.idx    = 0;
     ff.done   = false;
+    ff.isAmend = !!(opts && opts.isAmend);
     ff.submitting = false;
     ff.pendingSubmitRequestId = null;
     ff.dir    = 1;
@@ -9129,6 +9308,7 @@ calcRun();
     ff.form = ffSet(ff.form, path, value);
     ffSaveIndicator();
   }
+  window.ffUpd = ffUpd;
 
   function ffBuildPayload(markComplete) {
     const payload = {
@@ -9137,6 +9317,7 @@ calcRun();
       },
     };
     if (markComplete) payload.markComplete = true;
+    if (ff.isAmend) payload.isAmend = true;
     return payload;
   }
 
@@ -9211,7 +9392,9 @@ calcRun();
       ov.innerHTML = ffCompHTML();
       ov.querySelector('#ff-comp-close').addEventListener('click', ffClose);
       ov.querySelector('#ff-comp-reset').addEventListener('click', () => {
-        ff.form = ffInitForm(); ff.idx = 0; ff.done = false; ff.dir = 1; ffRender();
+        var ok = window.confirm('This action will be recorded in the audit log. If a product is already selected, the recommendation may be marked stale. Continue?');
+        if (!ok) return;
+        ff.idx = 0; ff.done = false; ff.isAmend = true; ff.dir = 1; ffRender();
       });
       ffHideUploadFloat();
       return;
@@ -9670,7 +9853,7 @@ calcRun();
         const loans = f.loans||[];
         return `<div id="ff-loans-list">${loans.map((l,i)=>`<div class="ff-list-card"><div class="ff-list-header"><span class="ff-list-title">Loan ${i+1}</span>${loans.length>1?`<button type="button" class="ff-list-remove" data-rmv-loan="${esc(l.id)}">✕</button>`:''}</div><div class="ff-grid-3">${bSelVal('Type',[['PERSONAL','Personal'],['SECURED','Secured'],['HIRE_PURCHASE','Hire purchase']],l.type,'data-loan-id="'+esc(l.id)+'" data-loan-field="type"')}${bInpPfxVal('Outstanding balance','£',l.balance,'8,500',false,'data-loan-id="'+esc(l.id)+'" data-loan-field="balance"')}${bInpPfxVal('Monthly payment','£',l.monthlyPayment,'210',false,'data-loan-id="'+esc(l.id)+'" data-loan-field="monthlyPayment"')}</div></div>`).join('')}<button type="button" class="ff-add-btn" id="ff-add-loan"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Add loan</button></div>`;
       }
-      case 'mortgage-group': return `<div class="ff-grid-2">${bInp('Lender name','existingMortgageLender','Nationwide Building Society',true)}${bInp('Account number','existingMortgageAccountNo','**** 4821')}${bInpPfx('Outstanding balance','existingMortgageBalance','£','185,000',true)}${bInpPfx('Monthly payment','existingMortgageMonthly','£','1,050')}${bInp('Current rate','existingMortgageRate','4.89%')}${bInp('Product end date (MM/YYYY)','existingMortgageProductEnd','08/2026')}${bInpPfx('Early repayment charge','existingMortgageERC','£','2,400')}${bInp('ERC until (MM/YYYY)','existingMortgageERCUntil','08/2026')}</div>`;
+      case 'mortgage-group': return `<div class="ff-grid-2"><div style="grid-column:1/-1"><label class="ff-field-label">Lender name<span class="ff-req">*</span></label><div class="ff-box-wrap ff-box-wrap--lender" data-ko-ff-lender-host data-initial="${esc(f.existingMortgageLender||'')}"></div></div>${bInp('Account number','existingMortgageAccountNo','**** 4821')}${bInpPfx('Outstanding balance','existingMortgageBalance','£','185,000',true)}${bInpPfx('Monthly payment','existingMortgageMonthly','£','1,050')}${bInp('Current rate','existingMortgageRate','4.89%')}${bInp('Product end date (MM/YYYY)','existingMortgageProductEnd','08/2026')}${bInpPfx('Early repayment charge','existingMortgageERC','£','2,400')}${bInp('ERC until (MM/YYYY)','existingMortgageERCUntil','08/2026')}</div>`;
       case 'property-value-group': {
         const ltv = ffLTV(f.propertyValue, f.mortgageRequired);
         const lbl = f.propertyToggle==='EXISTING'?'Valuation':'Purchase price';
@@ -9809,7 +9992,8 @@ calcRun();
           const boolPaths=['hasJointApplicant','hasExistingMortgage'];
           ffUpd(path, boolPaths.includes(path) ? (yn==='yes'||yn==='YES') : yn);
         }
-        if(solo && aa) setTimeout(ffGoNext,350); else { ffRenderCard(); ffUpdateHdr(); }
+        if(path==='hasExistingMortgage') { ffRenderCard(); ffUpdateHdr(); }
+        else if(solo && aa) setTimeout(ffGoNext,350); else { ffRenderCard(); ffUpdateHdr(); }
       });
     });
 
@@ -9897,6 +10081,9 @@ calcRun();
     });
 
     ffRenderFieldErrors(card);
+    try {
+      window.parent.postMessage({ type: 'ko:fact-find-card' }, window.location.origin);
+    } catch (err) {}
   }
 
   // ── Completion screen ─────────────────────────────────────────────────────
@@ -9918,7 +10105,7 @@ calcRun();
             ${caseRef!=='—'?`<div class="ff-comp-row"><span class="ff-comp-row-lbl">Case reference</span><span class="ff-comp-row-val">${esc(caseRef)}</span></div>`:''}
             <div class="ff-comp-row"><span class="ff-comp-row-lbl">Next stage</span><span class="ff-comp-row-val ff-comp-stage">RESEARCH</span></div>
           </div>
-          <button type="button" id="ff-comp-reset" class="ff-comp-reset">Start new fact-find</button>
+          <button type="button" id="ff-comp-reset" class="ff-comp-reset">Amend fact-find</button>
         </div>
       </div>`;
   }
@@ -9977,6 +10164,16 @@ calcRun();
         <div class="nc-field">
           <label for="nc-loan-sum">Loan Sum (£)</label>
           <input type="number" class="nc-input" id="nc-loan-sum" min="0" value="" placeholder="0" oninput="updateNCLtv()">
+        </div>
+      </div>
+      <div class="nc-row-2">
+        <div class="nc-field">
+          <label for="nc-postcode">Property postcode</label>
+          <input type="text" class="nc-input" id="nc-postcode" autocomplete="postal-code" placeholder="SW1A 2AA">
+        </div>
+        <div class="nc-field">
+          <label for="nc-address-line">Address (optional)</label>
+          <input type="text" class="nc-input" id="nc-address-line" placeholder="14 Maple Avenue">
         </div>
       </div>
       <div class="nc-ltv-banner" id="nc-ltv-banner">Auto-calculated LTV: <span id="nc-ltv-value">0%</span></div>

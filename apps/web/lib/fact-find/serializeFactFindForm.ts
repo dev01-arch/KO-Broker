@@ -124,7 +124,12 @@ export function serializeFactFindForm(
     rentalIncome: form.rentalIncomeStep5,
   };
 
-  const existingMortgages: Record<string, unknown> = form.hasExistingMortgage
+  const caseType = String(form.caseType || '');
+  const hasExistingMortgage =
+    Boolean(form.hasExistingMortgage) ||
+    ['REMORTGAGE', 'FURTHER_ADVANCE', 'PRODUCT_TRANSFER'].includes(caseType);
+
+  const existingMortgages: Record<string, unknown> = hasExistingMortgage
     ? {
         hasExistingMortgage: true,
         lenderName: form.existingMortgageLender,
@@ -180,12 +185,16 @@ export function expandFactFindUpsertPayload(payload: {
   existingMortgages?: Record<string, unknown>;
   clientPreferences?: Record<string, unknown>;
   markComplete?: boolean;
+  isAmend?: boolean;
 }) {
   const formBlob = payload.personalDetails?.portalFactFindForm;
   if (formBlob && typeof formBlob === 'object' && !Array.isArray(formBlob)) {
-    return serializeFactFindForm(formBlob as FactFindFormState, {
-      markComplete: payload.markComplete,
-    });
+    return {
+      ...serializeFactFindForm(formBlob as FactFindFormState, {
+        markComplete: payload.markComplete,
+      }),
+      ...(payload.isAmend ? { isAmend: true as const } : {}),
+    };
   }
   return payload;
 }

@@ -116,8 +116,13 @@ jobs:
           # Health endpoint check
           curl --fail --retry 3 --retry-delay 5 "$PROD_URL/api/health" || true
 
-          # Test Cron endpoints using CRON_SECRET
+          # Test Cron endpoints using CRON_SECRET (PRD-16: all four jobs)
           if [ -n "${{ secrets.CRON_SECRET }}" ]; then
+            echo "Verifying Message Email Digests Cron..."
+            curl -s -X POST \
+              -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+              "$PROD_URL/api/cron/message-email-digests" | grep -q "ok" && echo "Digests cron verified" || echo "Warning: check digests cron log"
+
             echo "Verifying Bank of England Rate Ingest Cron..."
             curl -s -X POST \
               -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
@@ -127,4 +132,9 @@ jobs:
             curl -s -X POST \
               -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
               "$PROD_URL/api/cron/intelligence-prices" | grep -q "ok" && echo "Prices cron verified" || echo "Warning: check prices cron log"
+
+            echo "Verifying FCA Lender Sync Cron..."
+            curl -s -X POST \
+              -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+              "$PROD_URL/api/cron/lenders-fca" | grep -qE '"ok"|FCA_API' && echo "FCA lenders cron verified" || echo "Warning: check FCA lenders cron log"
           fi

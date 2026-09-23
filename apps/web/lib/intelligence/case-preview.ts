@@ -157,10 +157,14 @@ export async function assembleCasePreview(
   const caseLabel = `${caseRow.referenceNumber} — ${clientName}`;
 
   // ── postcode — PRD-16 W3: Property.postcode takes priority ────────────────
-  // Falls back to factFind JSON blobs for cases without a linked Property.
+  // Falls back to fact-find JSON blobs for cases without a linked Property.
+  const propertyDetails = asRecord(factFind?.propertyDetails);
   const postcodeValue =
     caseRow.property?.postcode?.trim() ||
-    extractPostcode(personalDetails, client.address);
+    extractPostcode(personalDetails, client.address) ||
+    (typeof propertyDetails.postcode === 'string' && propertyDetails.postcode.trim()
+      ? propertyDetails.postcode.trim()
+      : null);
 
   // ── propertyValue ──────────────────────────────────────────────────────────
   const propertyValue = caseRow.propertyValue ?? null;

@@ -195,6 +195,7 @@ async function seedIntelligence() {
   const feeds = [
     { feedId: 'BOE_RATES', lastSuccessAt: now, lastAttemptAt: now, lastError: null },
     { feedId: 'HMLR_PRICES', lastSuccessAt: now, lastAttemptAt: now, lastError: null },
+    { feedId: 'FCA_LENDERS', lastSuccessAt: now, lastAttemptAt: now, lastError: null },
     { feedId: 'POSTCODES_IO', lastSuccessAt: now, lastAttemptAt: now, lastError: null },
   ];
 
@@ -205,7 +206,7 @@ async function seedIntelligence() {
       update: f,
     });
   }
-  console.log('✅ Data feed status initialized for BOE_RATES, HMLR_PRICES, POSTCODES_IO');
+  console.log('✅ Data feed status initialized for BOE_RATES, HMLR_PRICES, FCA_LENDERS, POSTCODES_IO');
 }
 
 seedIntelligence()

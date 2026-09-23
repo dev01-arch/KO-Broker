@@ -188,6 +188,8 @@ export interface CaseSummary {
   termYears?: number;
   selectedLender?: string;
   selectedProduct?: string;
+  offerExpiresAt?: string;
+  initialRateEndsAt?: string;
   adviser: CaseAdviserRef | null;
   updatedAt: string;
   _count: {
@@ -211,12 +213,83 @@ export interface FactFind {
   updatedAt: string;
 }
 
+export interface CaseNote {
+  id: string;
+  caseId: string;
+  body: string;
+  tag?: string;
+  source: string;
+  authorUserId?: string;
+  author?: { id: string; firstName: string | null; lastName: string | null };
+  createdAt: string;
+}
+
+export interface CaseInfoRequest {
+  id: string;
+  clientId: string;
+  checklistItemId?: string;
+  documentType?: string;
+  messageId?: string;
+  status: string;
+  fulfilledDocumentId?: string;
+  createdAt: string;
+  fulfilledAt?: string;
+}
+
+export interface CasePropertyRef {
+  id: string;
+  postcode: string;
+  address?: unknown;
+  type?: string;
+  currentValue?: number;
+}
+
+export interface ClientProperty {
+  id: string;
+  clientId: string;
+  postcode: string;
+  address?: Record<string, unknown> | null;
+  type: string;
+  tenure?: string | null;
+  currentValue?: number | null;
+  monthlyRent?: number | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LenderRow {
+  id: string;
+  name: string;
+  normalizedName: string;
+  status: string;
+  source: string;
+}
+
 export interface Case extends CaseSummary {
   selectedRate?: number;
   selectedFee?: number;
   adviserNotes?: string;
   assignedAdviserId?: string;
   createdAt: string;
+  propertyId?: string;
+  lenderId?: string;
+  lenderOtherName?: string;
+  aipAt?: string;
+  submittedAt?: string;
+  offerIssuedAt?: string;
+  offerExpiresAt?: string;
+  exchangeAt?: string;
+  completionAt?: string;
+  rateType?: string;
+  monthlyPayment?: number;
+  initialRateEndsAt?: string;
+  chargeType?: string;
+  isOffset?: boolean;
+  recommendationStaleAt?: string;
+  recommendationStaleReason?: string;
+  property?: CasePropertyRef;
+  notes?: CaseNote[];
+  infoRequests?: CaseInfoRequest[];
   client: CaseClientRef & {
     referenceNumber: string;
     phone?: string;
@@ -240,15 +313,25 @@ export interface ProductConsidered {
   isSelected: boolean;
   reasonNotSelected?: string;
   createdAt: string;
+  lenderId?: string;
+  lenderOtherName?: string;
+  productType?: string;
+  initialTermMonths?: number;
+  ercSummary?: string;
 }
 
 export interface CreateProductConsideredInput {
-  lenderName: string;
+  lenderName?: string;
   productName: string;
   rate?: number;
   fee?: number;
   isSelected?: boolean;
   reasonNotSelected?: string;
+  lenderId?: string;
+  lenderOtherName?: string;
+  productType?: string;
+  initialTermMonths?: number;
+  ercSummary?: string;
 }
 
 export interface UpdateProductConsideredInput {
@@ -258,6 +341,11 @@ export interface UpdateProductConsideredInput {
   fee?: number | null;
   isSelected?: boolean;
   reasonNotSelected?: string | null;
+  lenderId?: string | null;
+  lenderOtherName?: string | null;
+  productType?: string | null;
+  initialTermMonths?: number | null;
+  ercSummary?: string | null;
 }
 
 /** Minimal case row embedded on client detail responses. */
@@ -276,6 +364,7 @@ export interface Client extends Omit<ClientSummary, '_count'> {
   portalEnabled: boolean;
   vulnerabilityNotes?: string;
   cases: ClientCaseSummary[];
+  properties?: ClientProperty[];
   _count: {
     messages: number;
     documents: number;
@@ -344,6 +433,8 @@ export interface ListCasesParams {
   type?: CaseType;
   clientId?: string;
   adviserId?: string;
+  offerEndingWithinDays?: number;
+  rateEndingWithinDays?: number;
 }
 
 export interface CreateCaseInput {
@@ -352,6 +443,8 @@ export interface CreateCaseInput {
   propertyValue?: number;
   loanAmount?: number;
   termYears?: number;
+  postcode?: string;
+  propertyId?: string;
 }
 
 export interface UpdateCaseInput {
@@ -365,6 +458,20 @@ export interface UpdateCaseInput {
   selectedFee?: number;
   adviserNotes?: string;
   assignedAdviserId?: string | null;
+  propertyId?: string | null;
+  lenderId?: string | null;
+  lenderOtherName?: string | null;
+  aipAt?: string | null;
+  submittedAt?: string | null;
+  offerIssuedAt?: string | null;
+  offerExpiresAt?: string | null;
+  exchangeAt?: string | null;
+  completionAt?: string | null;
+  rateType?: string | null;
+  monthlyPayment?: number | null;
+  initialRateEndsAt?: string | null;
+  chargeType?: string | null;
+  isOffset?: boolean | null;
 }
 
 export interface UpsertFactFindInput {
@@ -376,6 +483,7 @@ export interface UpsertFactFindInput {
   existingMortgages?: Record<string, unknown>;
   clientPreferences?: Record<string, unknown>;
   markComplete?: boolean;
+  isAmend?: boolean;
 }
 
 // ─── Core fetch wrapper ───────────────────────────────────────────────────────
@@ -590,6 +698,28 @@ export const clientsApi = {
 
   delete(token: string, id: string) {
     return apiFetch<{ deleted: boolean }>(`/api/clients/${id}`, token, { method: 'DELETE' });
+  },
+
+  listProperties(token: string, clientId: string) {
+    return apiFetch<ClientProperty[]>(`/api/clients/${clientId}/properties`, token);
+  },
+
+  createProperty(
+    token: string,
+    clientId: string,
+    input: {
+      postcode: string;
+      address?: Record<string, unknown>;
+      type?: 'RESIDENTIAL' | 'BTL' | 'OTHER';
+      tenure?: string;
+      currentValue?: number;
+      monthlyRent?: number;
+    },
+  ) {
+    return apiFetch<ClientProperty>(`/api/clients/${clientId}/properties`, token, {
+      method: 'POST',
+      body: JSON.stringify(input),
+    });
   },
 };
 
@@ -860,6 +990,8 @@ export const casesApi = {
     if (params.type) qs.set('type', params.type);
     if (params.clientId) qs.set('clientId', params.clientId);
     if (params.adviserId) qs.set('adviserId', params.adviserId);
+    if (params.offerEndingWithinDays) qs.set('offerEndingWithinDays', String(params.offerEndingWithinDays));
+    if (params.rateEndingWithinDays) qs.set('rateEndingWithinDays', String(params.rateEndingWithinDays));
     const query = qs.toString() ? `?${qs}` : '';
     return apiFetch<CaseSummary[]>(`/api/cases${query}`, token);
   },
@@ -924,6 +1056,48 @@ export const casesApi = {
 
   timeline(token: string, id: string) {
     return apiFetch<TimelineEntry[]>(`/api/cases/${id}/timeline`, token);
+  },
+
+  listNotes(token: string, caseId: string) {
+    return apiFetch<CaseNote[]>(`/api/cases/${caseId}/notes`, token);
+  },
+
+  createNote(token: string, caseId: string, input: { body: string; tag?: string }) {
+    return apiFetch<CaseNote>(`/api/cases/${caseId}/notes`, token, {
+      method: 'POST',
+      body: JSON.stringify(input),
+    });
+  },
+
+  listInfoRequests(token: string, caseId: string) {
+    return apiFetch<CaseInfoRequest[]>(`/api/cases/${caseId}/info-requests`, token);
+  },
+
+  createInfoRequest(
+    token: string,
+    caseId: string,
+    input: {
+      documentType?: DocumentType;
+      checklistItemId?: string;
+      body?: string;
+      channel?: MessageChannel;
+    },
+  ) {
+    return apiFetch<{ infoRequest: CaseInfoRequest; delivery?: unknown }>(
+      `/api/cases/${caseId}/info-requests`,
+      token,
+      {
+        method: 'POST',
+        body: JSON.stringify(input),
+      },
+    );
+  },
+};
+
+export const lendersApi = {
+  search(token: string, q?: string) {
+    const qs = q?.trim() ? `?q=${encodeURIComponent(q.trim())}` : '';
+    return apiFetch<LenderRow[]>(`/api/lenders${qs}`, token);
   },
 };
 
@@ -1210,6 +1384,8 @@ export interface DashboardBootstrapPayload {
   clients: ClientSummary[];
   cases: CaseSummary[];
   advisers: AdviserRecord[];
+  offersEnding14d?: number;
+  ratesEnding90d?: number;
 }
 
 // ─── Dashboard bootstrap ───────────────────────────────────────────────────────

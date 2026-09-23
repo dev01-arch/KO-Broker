@@ -53,7 +53,7 @@ export const TAG_GROUPS: TagGroup[] = [
     { tag: 'Settings', color: '#F59E0B', description: 'Organization configuration and third-party integrations.' },
     { tag: 'Portal', color: '#F43F5E', description: 'Client portal onboarding, authentication, fact-find, and messaging.' },
     { tag: 'System', color: '#6B7280', description: 'Health checks and infrastructure endpoints.' },
-    { tag: 'Intelligence', color: '#0F6E56', description: 'Mortgage Intelligence — BoE rate benchmarks, HMLR price aggregates, case snapshots, and insight generation. PRD-15.' },
+    { tag: 'Intelligence', color: '#0F6E56', description: 'Mortgage Intelligence — BoE rate benchmarks, HMLR price aggregates, FCA lender directory, case snapshots, and insight generation. PRD-15 / PRD-16.' },
 ];
 
 // ── Endpoint definitions ──────────────────────────────────────────────────────
@@ -1355,6 +1355,74 @@ export const ENDPOINTS: EndpointDef[] = [
 
     {
         method: 'GET',
+        path: '/api/cron/message-email-digests',
+        summary: 'Process delayed client message digest emails (GET / Vercel Cron)',
+        description: 'Vercel Cron scheduled endpoint (daily at 06:00 UTC). Sends batched email notifications for unread adviser messages. Processes up to 50 due digests per run. Protected by CRON_SECRET in production.',
+        auth: false,
+        tags: ['System'],
+        params: [
+            { name: 'authorization', in: 'body', required: false, type: 'string', description: 'Bearer <CRON_SECRET> header required in production', example: 'Bearer cron_secret_abc123' },
+        ],
+        responses: [
+            { status: 200, description: 'Digest run completed', example: { ok: true, processed: 3, skipped: 1 } },
+            { status: 401, description: 'Unauthorized — invalid CRON_SECRET', example: { error: 'Unauthorized' } },
+            { status: 503, description: 'CRON_SECRET is required in production', example: { error: 'CRON_SECRET is required in production' } },
+        ],
+    },
+
+    {
+        method: 'POST',
+        path: '/api/cron/message-email-digests',
+        summary: 'Manually trigger message email digests',
+        description: 'Manual or webhook trigger for delayed client message digest emails. Protected by CRON_SECRET in production.',
+        auth: false,
+        tags: ['System'],
+        params: [
+            { name: 'authorization', in: 'body', required: false, type: 'string', description: 'Bearer <CRON_SECRET> header required in production', example: 'Bearer cron_secret_abc123' },
+        ],
+        responses: [
+            { status: 200, description: 'Digest run completed', example: { ok: true, processed: 0, skipped: 0 } },
+            { status: 401, description: 'Unauthorized', example: { error: 'Unauthorized' } },
+            { status: 503, description: 'CRON_SECRET required in production', example: { error: 'CRON_SECRET is required in production' } },
+        ],
+    },
+
+    {
+        method: 'GET',
+        path: '/api/cron/lenders-fca',
+        summary: 'Sync lender directory from FCA FS Register (GET / Vercel Cron)',
+        description: 'Vercel Cron scheduled endpoint (monthly, 1st at 06:00 UTC). Verifies existing lenders by FRN, discovers new mortgage firms, and marks long-absent FCA lenders INACTIVE (32-day grace; never if referenced by an active case or product). Updates DataFeedStatus for FCA_LENDERS. Requires FCA_API_EMAIL and FCA_API_KEY. Protected by CRON_SECRET in production.',
+        auth: false,
+        tags: ['Intelligence'],
+        params: [
+            { name: 'authorization', in: 'body', required: false, type: 'string', description: 'Bearer <CRON_SECRET> header required in production', example: 'Bearer cron_secret_abc123' },
+        ],
+        responses: [
+            { status: 200, description: 'Ingest succeeded or no-op', example: { ok: true, feedStatus: 'success', verified: 180, inserted: 2, deactivated: 0 } },
+            { status: 401, description: 'Unauthorized — invalid CRON_SECRET', example: { error: 'Unauthorized' } },
+            { status: 503, description: 'Missing CRON_SECRET or FCA API credentials', example: { ok: false, error: 'FCA_API_EMAIL and FCA_API_KEY are required. Register for a free key at https://register.fca.org.uk/developer/s/' } },
+        ],
+    },
+
+    {
+        method: 'POST',
+        path: '/api/cron/lenders-fca',
+        summary: 'Manually trigger FCA lender directory sync',
+        description: 'Manual or webhook trigger for the monthly FCA FS Register lender ingest. Protected by CRON_SECRET in production. Returns HTTP 503 if FCA_API_EMAIL or FCA_API_KEY is unset.',
+        auth: false,
+        tags: ['Intelligence'],
+        params: [
+            { name: 'authorization', in: 'body', required: false, type: 'string', description: 'Bearer <CRON_SECRET> header required in production', example: 'Bearer cron_secret_abc123' },
+        ],
+        responses: [
+            { status: 200, description: 'Ingest succeeded or no-op', example: { ok: true, feedStatus: 'no-op' } },
+            { status: 401, description: 'Unauthorized', example: { error: 'Unauthorized' } },
+            { status: 503, description: 'Missing CRON_SECRET or FCA API credentials', example: { ok: false, error: 'FCA_API_EMAIL and FCA_API_KEY are required. Register for a free key at https://register.fca.org.uk/developer/s/' } },
+        ],
+    },
+
+    {
+        method: 'GET',
         path: '/api/intelligence/overview',
         summary: 'Market overview (4 Rate Cards & Signal)',
         description: 'Returns cached BoE rate benchmarks (4 cards: 2yr fixed, 5yr fixed, variable 75% LTV, and effective new 2yr fixed), 12-month changes in basis points, market signal (IMPROVING/STABLE/WORSENING), and data feed health statuses. Reads purely from local database cache with zero live HTTP calls.',
@@ -1377,6 +1445,7 @@ export const ENDPOINTS: EndpointDef[] = [
                         feedStatuses: [
                             { feedId: 'BOE_RATES', lastSuccessAt: '2026-09-08T07:00:00.000Z', lastAttemptAt: '2026-09-08T07:00:00.000Z', lastError: null, isStale: false },
                             { feedId: 'HMLR_PRICES', lastSuccessAt: '2026-09-08T08:00:00.000Z', lastAttemptAt: '2026-09-08T08:00:00.000Z', lastError: null, isStale: false },
+                            { feedId: 'FCA_LENDERS', lastSuccessAt: '2026-09-01T06:00:00.000Z', lastAttemptAt: '2026-09-01T06:00:00.000Z', lastError: null, isStale: false },
                         ],
                     },
                 },
