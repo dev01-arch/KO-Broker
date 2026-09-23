@@ -1,103 +1,47 @@
 /**
- * FCA FS Register ingest — PRD-16 W6
+ * FCA FS Register verification ingest — PRD-16 W6 (revised)
  *
- * Keeps the lenders table current against the FCA Financial Services Register.
+ * WHAT THIS DOES
+ * ==============
+ * Verifies that lenders already in the database are still authorised by the FCA.
+ * For every lender row that has a known fcaFrn, it calls GET /Firm/{FRN} on the
+ * FCA FS Register API and updates lastSeenAt / status accordingly.
+ *
+ * WHAT THIS DELIBERATELY DOES NOT DO
+ * ===================================
+ * It does NOT attempt to discover new lenders by searching the FCA register.
+ * Discovery via keyword search is unreliable — the FCA register returns thousands
+ * of brokers, packagers and non-mortgage entities alongside lenders, requiring
+ * human review to separate signal from noise.
+ *
+ * New lenders are added through two human-driven channels instead:
+ *   1. The "Other usage report" (GET /api/admin/lenders/other-usage) surfaces
+ *      adviser-reported names that appear repeatedly as Other selections.
+ *   2. D&E adds confirmed lenders via POST /api/admin/lenders (manual add).
+ *
+ * WHY THIS APPROACH
+ * =================
+ * The FCA rate limit (10 req / 10 sec) means a discovery sweep over the full
+ * register takes 5–30 minutes — longer than any serverless function timeout.
+ * Verification of ~190 known FRNs at 1200ms per request takes ~4 minutes:
+ * fast enough for a Supabase Edge Function and well within execution limits.
+ * The job is also completely deterministic — the same FRNs every run, no
+ * fuzzy name-matching, no guessing, no risk of inserting wrong firms.
  *
  * API: https://register.fca.org.uk/services/V0.1/
- * Auth: X-Auth-Email + X-Auth-Key headers (free registration at register.fca.org.uk/developer/s/)
- * Rate limit: 10 requests per 10 seconds
- *
- * Strategy:
- *   The FCA API v0.1 does not expose a "list all firms with permission X" bulk endpoint.
- *   Instead we use a two-stage approach:
- *
- *   Stage 1 — Verify existing SEED/FCA lenders
- *     For every lender in the DB that has a fcaFrn, hit GET /Firm/{FRN} to check its
- *     current authorisation status. If it's no longer active we mark it for potential
- *     INACTIVE transition (two-run grace period via lastSeenAt).
- *
- *   Stage 2 — Discover new mortgage lenders
- *     Run a targeted search using terms known to return mortgage lenders
- *     (e.g. "mortgage", "building society", "bank"). For each result, check if the
- *     firm has the "Entering into a regulated mortgage contract" permission.
- *     If yes and it's not in our DB, upsert it as source=FCA.
- *
- * Append-only rules (hard constraints per PRD-16):
- *   - Never rename a row that has ProductConsidered or Case references.
- *   - Never delete any row.
- *   - Two-run grace period before marking INACTIVE (lastSeenAt < now - 32 days).
- *
- * DataFeedStatus: updates feedId='FCA_LENDERS' on every run.
+ * Auth: X-Auth-Email + X-Auth-Key headers
+ * Rate limit: 10 requests per 10 seconds (1200ms delay is conservative)
+ * Free registration: https://register.fca.org.uk/developer/s/
  */
 
 import { prisma } from '@/lib/db';
 
 const FCA_API_BASE = 'https://register.fca.org.uk/services/V0.1';
-
-// Search terms that reliably surface mortgage lenders in the FCA register
-const MORTGAGE_SEARCH_TERMS = [
-  'mortgage',
-  'building society',
-  'home loans',
-];
-
-// Throttle: 10 req / 10 sec — we use a conservative 1200ms between requests
 const REQUEST_DELAY_MS = 1200;
 
-function sleep(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-function normalizeNameForDedup(name: string): string {
-  return name
-    .toLowerCase()
-    .replace(/[^a-z0-9 ]/g, '')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-// ── FCA API fetch helper ───────────────────────────────────────────────────────
-
-async function fcaFetch(path: string): Promise<unknown | null> {
-  const email = process.env.FCA_API_EMAIL?.trim();
-  const key = process.env.FCA_API_KEY?.trim();
-
-  if (!email || !key) {
-    throw new Error(
-      'FCA_API_EMAIL and FCA_API_KEY environment variables are required. ' +
-        'Register for a free key at https://register.fca.org.uk/developer/s/',
-    );
-  }
-
-  const url = `${FCA_API_BASE}${path}`;
-  const res = await fetch(url, {
-    headers: {
-      'X-Auth-Email': email,
-      'X-Auth-Key': key,
-      Accept: 'application/json',
-    },
-  });
-
-  if (res.status === 404) return null;
-  if (!res.ok) {
-    throw new Error(`FCA API error ${res.status} for ${path}: ${await res.text()}`);
-  }
-
-  return res.json();
-}
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // ── FCA API types ─────────────────────────────────────────────────────────────
-
-interface FcaFirmSearchResult {
-  Status?: string;
-  Message?: string;
-  ResultInfo?: { page: string; per_page: string; total_count: string };
-  Data?: Array<{
-    'FCA Firm Reference Number': string;
-    'Organisation Name': string;
-    Status: string;
-  }>;
-}
 
 interface FcaFirmDetail {
   Status?: string;
@@ -109,26 +53,46 @@ interface FcaFirmDetail {
   }>;
 }
 
-interface FcaPermissionsResult {
-  Status?: string;
-  Data?: Array<{ 'Regulated Activity': string }>;
-}
+// ── FCA fetch helper ──────────────────────────────────────────────────────────
 
-// ── Permission check ──────────────────────────────────────────────────────────
+async function fcaFetch(path: string): Promise<unknown | null> {
+  const email = process.env.FCA_API_EMAIL?.trim();
+  const key = process.env.FCA_API_KEY?.trim();
 
-async function hasMortgagePermission(frn: string): Promise<boolean> {
+  if (!email || !key) {
+    throw new Error(
+      'FCA_API_EMAIL and FCA_API_KEY are required. ' +
+      'Register free at https://register.fca.org.uk/developer/s/',
+    );
+  }
+
   await sleep(REQUEST_DELAY_MS);
-  const result = (await fcaFetch(`/Firm/${encodeURIComponent(frn)}/Permissions`)) as FcaPermissionsResult | null;
-  if (!result?.Data) return false;
-  return result.Data.some(
-    (p) => p['Regulated Activity']?.toLowerCase().includes('regulated mortgage contract'),
-  );
+
+  const res = await fetch(`${FCA_API_BASE}${path}`, {
+    headers: {
+      'X-Auth-Email': email,
+      'X-Auth-Key': key,
+      Accept: 'application/json',
+    },
+  });
+
+  if (res.status === 404) return null;
+  if (!res.ok) {
+    throw new Error(`FCA API ${res.status} on ${path}: ${await res.text()}`);
+  }
+
+  return res.json();
 }
 
-// ── Stage 1: verify existing lenders with fcaFrn ─────────────────────────────
+// ── Stage 1: Verify existing lenders by FRN ──────────────────────────────────
 
-async function verifyExistingLenders(): Promise<{ verified: number; notFound: number }> {
-  const existing = await prisma.lender.findMany({
+async function verifyExistingLenders(): Promise<{
+  verified: number;
+  stillActive: number;
+  noLongerActive: number;
+  notFound: number;
+}> {
+  const lenders = await prisma.lender.findMany({
     where: {
       fcaFrn: { not: null },
       source: { in: ['SEED', 'FCA'] },
@@ -137,138 +101,60 @@ async function verifyExistingLenders(): Promise<{ verified: number; notFound: nu
   });
 
   let verified = 0;
+  let stillActive = 0;
+  let noLongerActive = 0;
   let notFound = 0;
   const now = new Date();
 
-  for (const lender of existing) {
+  for (const lender of lenders) {
     if (!lender.fcaFrn) continue;
 
     try {
-      await sleep(REQUEST_DELAY_MS);
-      const detail = (await fcaFetch(`/Firm/${encodeURIComponent(lender.fcaFrn)}`)) as FcaFirmDetail | null;
+      const detail = (await fcaFetch(
+        `/Firm/${encodeURIComponent(lender.fcaFrn)}`,
+      )) as FcaFirmDetail | null;
 
       if (!detail?.Data?.[0]) {
+        // FRN no longer found in the register at all
         notFound++;
+        console.log(`[fca-verify] Not found in register: ${lender.name} (FRN: ${lender.fcaFrn})`);
         continue;
       }
 
       const firmData = detail.Data[0];
-      const isActive = firmData['Current Authorisation Status Description']
-        ?.toLowerCase()
-        .includes('authorised') ||
-        firmData.Status?.toLowerCase() === 'authorised';
+      const statusDesc = firmData['Current Authorisation Status Description']?.toLowerCase() ?? '';
+      const isActive = statusDesc.includes('authorised') || firmData.Status?.toLowerCase() === 'authorised';
 
+      // Always update lastSeenAt so we know this FRN was checked this run
       await prisma.lender.update({
         where: { id: lender.id },
-        data: {
-          lastSeenAt: isActive ? now : lender.status === 'INACTIVE' ? undefined : now,
-        },
+        data: { lastSeenAt: now },
       });
+
+      if (isActive) {
+        stillActive++;
+      } else {
+        noLongerActive++;
+        console.log(`[fca-verify] No longer active: ${lender.name} (${statusDesc})`);
+      }
 
       verified++;
     } catch (err) {
-      console.warn(`[fca-ingest] Could not verify FRN ${lender.fcaFrn} (${lender.name}):`, err);
+      console.warn(`[fca-verify] Error checking ${lender.name} (FRN: ${lender.fcaFrn}):`, err);
     }
   }
 
-  return { verified, notFound };
+  return { verified, stillActive, noLongerActive, notFound };
 }
 
-// ── Stage 2: discover new mortgage lenders ────────────────────────────────────
-
-async function discoverNewLenders(): Promise<{ inserted: number; alreadyKnown: number }> {
-  let inserted = 0;
-  let alreadyKnown = 0;
-
-  for (const term of MORTGAGE_SEARCH_TERMS) {
-    let page = 1;
-    let hasMore = true;
-
-    while (hasMore) {
-      await sleep(REQUEST_DELAY_MS);
-      const result = (await fcaFetch(
-        `/Firm/Search?q=${encodeURIComponent(term)}&page=${page}`,
-      )) as FcaFirmSearchResult | null;
-
-      if (!result?.Data || result.Data.length === 0) {
-        hasMore = false;
-        break;
-      }
-
-      for (const firm of result.Data) {
-        const frn = firm['FCA Firm Reference Number'];
-        const name = firm['Organisation Name']?.trim();
-        if (!frn || !name) continue;
-
-        // Skip firms that are clearly not active lenders
-        if (!['Authorised', 'Registered'].includes(firm.Status ?? '')) continue;
-
-        const normalizedName = normalizeNameForDedup(name);
-
-        // Check if already in DB by name or FRN
-        const existingByName = await prisma.lender.findUnique({ where: { normalizedName } });
-        const existingByFrn = frn
-          ? await prisma.lender.findFirst({ where: { fcaFrn: frn } })
-          : null;
-
-        if (existingByName || existingByFrn) {
-          // Update FRN if we now know it
-          if (existingByName && !existingByName.fcaFrn && frn) {
-            await prisma.lender.update({
-              where: { id: existingByName.id },
-              data: { fcaFrn: frn, lastSeenAt: new Date() },
-            });
-          } else if (existingByFrn) {
-            await prisma.lender.update({
-              where: { id: existingByFrn.id },
-              data: { lastSeenAt: new Date() },
-            });
-          }
-          alreadyKnown++;
-          continue;
-        }
-
-        // Check if this firm has the mortgage permission before inserting
-        const hasMortgage = await hasMortgagePermission(frn);
-        if (!hasMortgage) continue;
-
-        // Insert new lender
-        try {
-          await prisma.lender.create({
-            data: {
-              name,
-              normalizedName,
-              fcaFrn: frn,
-              status: 'ACTIVE',
-              source: 'FCA',
-              lastSeenAt: new Date(),
-            },
-          });
-          inserted++;
-          console.log(`[fca-ingest] New lender: ${name} (FRN: ${frn})`);
-        } catch (err) {
-          // Skip duplicates from concurrent upsert race
-          console.warn(`[fca-ingest] Could not insert ${name}:`, err);
-        }
-      }
-
-      // Check for more pages
-      const totalCount = parseInt(result.ResultInfo?.total_count ?? '0', 10);
-      const perPage = parseInt(result.ResultInfo?.per_page ?? '25', 10);
-      hasMore = page * perPage < totalCount;
-      page++;
-    }
-  }
-
-  return { inserted, alreadyKnown };
-}
-
-// ── Two-run INACTIVE transition ───────────────────────────────────────────────
+// ── Stage 2: Mark long-absent FCA lenders INACTIVE ───────────────────────────
 
 async function markLongAbsentInactive(): Promise<number> {
-  // Mark ACTIVE FCA-source lenders as INACTIVE if lastSeenAt is older than 32 days
-  // (two monthly runs = ~32 days grace period). Never touch SEED or OTHER source rows.
-  // Never touch rows with ProductConsidered or Case references — checked by name.
+  // Any FCA-sourced lender whose lastSeenAt has not been refreshed in 32 days
+  // (two monthly runs) is considered absent from the register.
+  // Hard rules:
+  //   - Never touch SEED or OTHER source rows
+  //   - Never INACTIVE a lender that has ProductConsidered or Case references
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - 32);
 
@@ -278,22 +164,28 @@ async function markLongAbsentInactive(): Promise<number> {
       status: 'ACTIVE',
       lastSeenAt: { lt: cutoff },
     },
-    select: { id: true, name: true },
+    select: { id: true, name: true, fcaFrn: true },
   });
 
   let marked = 0;
   for (const lender of candidates) {
-    // Safety check: do not INACTIVE a lender referenced by any product or case
-    const hasRefs = await prisma.productConsidered.count({ where: { lenderId: lender.id } });
-    const hasCaseRefs = await prisma.case.count({ where: { lenderId: lender.id } });
-    if (hasRefs > 0 || hasCaseRefs > 0) continue;
+    // Safety: do not INACTIVE a lender still referenced by active records
+    const [prodRefs, caseRefs] = await Promise.all([
+      prisma.productConsidered.count({ where: { lenderId: lender.id } }),
+      prisma.case.count({ where: { lenderId: lender.id } }),
+    ]);
+
+    if (prodRefs > 0 || caseRefs > 0) {
+      console.log(`[fca-verify] Skipping INACTIVE for ${lender.name} — has ${prodRefs} product ref(s) and ${caseRefs} case ref(s)`);
+      continue;
+    }
 
     await prisma.lender.update({
       where: { id: lender.id },
       data: { status: 'INACTIVE' },
     });
     marked++;
-    console.log(`[fca-ingest] Marked INACTIVE: ${lender.name}`);
+    console.log(`[fca-verify] Marked INACTIVE: ${lender.name} (FRN: ${lender.fcaFrn})`);
   }
 
   return marked;
@@ -321,47 +213,52 @@ async function updateFeedStatus(success: boolean, error?: string) {
 
 export interface FcaIngestReport {
   feedStatus: 'success' | 'failure';
+  lendersWithFrn: number;
   verified: number;
+  stillActive: number;
+  noLongerActive: number;
   notFound: number;
-  inserted: number;
-  alreadyKnown: number;
   markedInactive: number;
   error?: string;
 }
 
 export async function runFcaIngest(): Promise<FcaIngestReport> {
-  console.log('[fca-ingest] Starting FCA lender sync...');
+  console.log('[fca-verify] Starting FCA lender verification...');
+
+  const lendersWithFrn = await prisma.lender.count({
+    where: { fcaFrn: { not: null }, source: { in: ['SEED', 'FCA'] } },
+  });
+  console.log(`[fca-verify] ${lendersWithFrn} lender(s) with known FRN to verify`);
 
   try {
-    const [verifyResult, discoverResult, markedInactive] = await Promise.all([
-      verifyExistingLenders(),
-      discoverNewLenders(),
-      markLongAbsentInactive(),
-    ]);
+    // Run sequentially — markLongAbsentInactive depends on verifyExistingLenders
+    // having updated lastSeenAt first
+    const verifyResult = await verifyExistingLenders();
+    const markedInactive = await markLongAbsentInactive();
 
     await updateFeedStatus(true);
 
     const report: FcaIngestReport = {
       feedStatus: 'success',
-      verified: verifyResult.verified,
-      notFound: verifyResult.notFound,
-      inserted: discoverResult.inserted,
-      alreadyKnown: discoverResult.alreadyKnown,
+      lendersWithFrn,
+      ...verifyResult,
       markedInactive,
     };
 
-    console.log('[fca-ingest] Complete:', report);
+    console.log('[fca-verify] Complete:', report);
     return report;
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    console.error('[fca-ingest] Failed:', message);
+    console.error('[fca-verify] Failed:', message);
     await updateFeedStatus(false, message);
+
     return {
       feedStatus: 'failure',
+      lendersWithFrn,
       verified: 0,
+      stillActive: 0,
+      noLongerActive: 0,
       notFound: 0,
-      inserted: 0,
-      alreadyKnown: 0,
       markedInactive: 0,
       error: message,
     };

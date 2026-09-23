@@ -3,16 +3,21 @@
  *
  * Vercel Cron job: monthly on the 1st at 06:00 UTC (configured in vercel.json).
  *
- * Keeps the lenders table current against the FCA FS Register:
- *   - Verifies existing lenders with known FRNs are still authorised
- *   - Discovers new mortgage lenders via FCA search
- *   - Marks long-absent FCA lenders as INACTIVE (32-day grace period)
- *   - Updates DataFeedStatus feedId='FCA_LENDERS'
+ * SCOPE: Verification only — not discovery.
+ * Checks that lenders already in the database with a known FCA FRN are still
+ * authorised. Updates lastSeenAt and marks long-absent FCA lenders INACTIVE
+ * after a 32-day grace period.
+ *
+ * New lenders are NOT discovered automatically. They are added manually via:
+ *   GET  /api/admin/lenders/other-usage  — surfaces repeated Other selections
+ *   POST /api/admin/lenders             — D&E manually adds a confirmed lender
+ *
+ * See Doc/PRD-16-FCA-Lender-Maintenance.md for the full operational guide.
  *
  * Requires env vars: FCA_API_EMAIL, FCA_API_KEY
- * Register free at: https://register.fca.org.uk/developer/s/
+ * Free registration: https://register.fca.org.uk/developer/s/
  *
- * Protected by Authorization: Bearer CRON_SECRET (same pattern as other cron routes).
+ * Protected by Authorization: Bearer CRON_SECRET (same pattern as other crons).
  */
 
 import { NextRequest, NextResponse } from 'next/server';
