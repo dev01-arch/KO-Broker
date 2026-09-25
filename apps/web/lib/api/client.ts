@@ -86,6 +86,11 @@ export interface ApiSuccessResponse<T> {
     perPage?: number;
     delivery?: MessageDeliveryMeta;
     broadcastCount?: number;
+    pendingReview?: number;
+    active?: number;
+    legacy?: number;
+    inactive?: number;
+    withFrn?: number;
   };
 }
 
@@ -263,6 +268,37 @@ export interface LenderRow {
   normalizedName: string;
   status: string;
   source: string;
+}
+
+export type AdminLenderStatus = 'ACTIVE' | 'LEGACY' | 'INACTIVE';
+export type AddLenderStatus = 'ACTIVE' | 'LEGACY';
+
+export interface AdminLenderRow {
+  id: string;
+  name: string;
+  normalizedName: string;
+  fcaFrn: string | null;
+  status: AdminLenderStatus | string;
+  source: string;
+  lastSeenAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LenderOtherUsageRow {
+  name: string;
+  normalizedName: string;
+  count: number;
+  alreadyInDirectory: boolean;
+  firstSeen: string;
+  lastSeen: string;
+  caseRefs: string[];
+}
+
+export interface AddLenderInput {
+  name: string;
+  fcaFrn?: string;
+  status?: AddLenderStatus;
 }
 
 export interface Case extends CaseSummary {
@@ -1098,6 +1134,24 @@ export const lendersApi = {
   search(token: string, q?: string) {
     const qs = q?.trim() ? `?q=${encodeURIComponent(q.trim())}` : '';
     return apiFetch<LenderRow[]>(`/api/lenders${qs}`, token);
+  },
+};
+
+/** ADMIN-only lender maintenance. Advisers keep using lendersApi.search. */
+export const lendersAdminApi = {
+  list(token: string) {
+    return apiFetch<AdminLenderRow[]>('/api/admin/lenders', token);
+  },
+
+  otherUsage(token: string) {
+    return apiFetch<LenderOtherUsageRow[]>('/api/admin/lenders/other-usage', token);
+  },
+
+  add(token: string, input: AddLenderInput) {
+    return apiFetch<AdminLenderRow>('/api/admin/lenders', token, {
+      method: 'POST',
+      body: JSON.stringify(input),
+    });
   },
 };
 

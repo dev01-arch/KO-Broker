@@ -4,7 +4,9 @@ import { useAuth } from '@clerk/nextjs';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   settingsApi,
+  lendersAdminApi,
   requireAuthToken,
+  type AddLenderInput,
   type ApiSuccessResponse,
   type CreateAdviserInput,
   type OrgIntegrations,
@@ -22,6 +24,8 @@ function useToken() {
 export const integrationsQueryKey = ['settings', 'integrations'] as const;
 export const messagingQueryKey = ['settings', 'messaging'] as const;
 export const advisersQueryKey = ['settings', 'advisers'] as const;
+export const adminLendersQueryKey = ['settings', 'admin-lenders'] as const;
+export const lenderOtherUsageQueryKey = ['settings', 'lender-other-usage'] as const;
 
 const DEFAULT_INTEGRATIONS: ApiSuccessResponse<OrgIntegrations> = {
   success: true,
@@ -179,6 +183,53 @@ export function useResendAdviserInvite() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: advisersQueryKey });
+    },
+  });
+}
+
+export function useAdminLenders(options?: { enabled?: boolean }) {
+  const getToken = useToken();
+  return useQuery({
+    queryKey: adminLendersQueryKey,
+    enabled: options?.enabled ?? true,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    queryFn: async () => {
+      const token = await requireAuthToken(getToken);
+      return lendersAdminApi.list(token);
+    },
+  });
+}
+
+export function useLenderOtherUsage(options?: { enabled?: boolean }) {
+  const getToken = useToken();
+  return useQuery({
+    queryKey: lenderOtherUsageQueryKey,
+    enabled: options?.enabled ?? true,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    queryFn: async () => {
+      const token = await requireAuthToken(getToken);
+      return lendersAdminApi.otherUsage(token);
+    },
+  });
+}
+
+export function useAddLender() {
+  const getToken = useToken();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: AddLenderInput) => {
+      const token = await requireAuthToken(getToken);
+      return lendersAdminApi.add(token, input);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: adminLendersQueryKey });
+      qc.invalidateQueries({ queryKey: lenderOtherUsageQueryKey });
     },
   });
 }

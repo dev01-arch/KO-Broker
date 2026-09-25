@@ -887,6 +887,101 @@ export const ENDPOINTS: EndpointDef[] = [
         ],
     },
 
+    {
+        method: 'GET',
+        path: '/api/lenders',
+        summary: 'Search lender directory',
+        description: 'Returns up to 20 ACTIVE and LEGACY lenders matching the query. The Other sentinel is always last. INACTIVE lenders are excluded. Any authenticated org member may call this — used by adviser lender search.',
+        auth: true,
+        tags: ['Settings'],
+        params: [
+            { name: 'q', in: 'query', required: false, type: 'string', description: 'Optional name search', example: 'clydes' },
+        ],
+        responses: [
+            {
+                status: 200,
+                description: 'Matching lenders',
+                example: {
+                    success: true,
+                    data: [
+                        { id: 'cm1', name: 'Clydesdale Bank PLC', normalizedName: 'clydesdale bank plc', status: 'ACTIVE', source: 'SEED' },
+                        { id: 'cm-other', name: 'Other', normalizedName: 'other', status: 'ACTIVE', source: 'OTHER' },
+                    ],
+                },
+            },
+            { status: 401, description: 'Not authenticated', example: { success: false, error: { code: 'UNAUTHORIZED', message: 'You must be signed in' } } },
+        ],
+    },
+    {
+        method: 'GET',
+        path: '/api/admin/lenders',
+        summary: 'List all lenders (admin)',
+        description: 'ADMIN only. Lists every lender including INACTIVE, with FRN and lastSeenAt. Used by D&E monthly maintenance. Does not change adviser search.',
+        auth: true,
+        tags: ['Settings'],
+        responses: [
+            {
+                status: 200,
+                description: 'Full directory with counts',
+                example: {
+                    success: true,
+                    data: [
+                        { id: 'cm1', name: 'Perenna', normalizedName: 'perenna', fcaFrn: '956868', status: 'ACTIVE', source: 'SEED', lastSeenAt: '2026-09-01T06:00:00.000Z' },
+                    ],
+                    meta: { total: 190, active: 185, legacy: 4, inactive: 1, withFrn: 14 },
+                },
+            },
+            { status: 403, description: 'Requires ADMIN', example: { success: false, error: { code: 'FORBIDDEN', message: 'Admin role required' } } },
+        ],
+    },
+    {
+        method: 'POST',
+        path: '/api/admin/lenders',
+        summary: 'Add a confirmed lender (admin)',
+        description: 'ADMIN only. Inserts a lender after D&E confirms the firm on the FCA register. The name is immediately available on GET /api/lenders. Duplicate names and FRNs return 409. INACTIVE rows cannot be re-added; reactivate the existing row instead.',
+        auth: true,
+        tags: ['Settings'],
+        params: [
+            { name: 'name', in: 'body', required: true, type: 'string', description: 'Exact name from the FCA register', example: 'Perenna' },
+            { name: 'fcaFrn', in: 'body', required: false, type: 'string', description: '6–7 digit FCA Firm Reference Number', example: '956868' },
+            { name: 'status', in: 'body', required: false, type: 'string', description: 'ACTIVE or LEGACY. Defaults to ACTIVE.', enum: ['ACTIVE', 'LEGACY'] },
+        ],
+        responses: [
+            {
+                status: 201,
+                description: 'Lender created',
+                example: {
+                    success: true,
+                    data: { id: 'cm...', name: 'Perenna', normalizedName: 'perenna', fcaFrn: '956868', status: 'ACTIVE', source: 'SEED' },
+                },
+            },
+            { status: 409, description: 'Name or FRN already exists', example: { success: false, error: { code: 'CONFLICT', message: 'A lender with this name already exists: "Perenna" (status: INACTIVE). If it is INACTIVE, update it instead of adding a duplicate.' } } },
+            { status: 403, description: 'Requires ADMIN', example: { success: false, error: { code: 'FORBIDDEN', message: 'Admin role required' } } },
+        ],
+    },
+    {
+        method: 'GET',
+        path: '/api/admin/lenders/other-usage',
+        summary: 'Other-usage discovery report (admin)',
+        description: 'ADMIN only. Ranked free-text names from ProductConsidered.lenderOtherName when advisers selected Other. Focus on alreadyInDirectory=false and count ≥ 3. Discovery is human-driven; the FCA cron does not search for new firms.',
+        auth: true,
+        tags: ['Settings'],
+        responses: [
+            {
+                status: 200,
+                description: 'Ranked Other names for this org',
+                example: {
+                    success: true,
+                    data: [
+                        { name: 'Perenna', normalizedName: 'perenna', count: 5, alreadyInDirectory: false, firstSeen: '2026-07-14T10:22:00.000Z', lastSeen: '2026-09-02T14:05:00.000Z', caseRefs: ['KOF-2026-0041'] },
+                    ],
+                    meta: { total: 2, pendingReview: 1 },
+                },
+            },
+            { status: 403, description: 'Requires ADMIN', example: { success: false, error: { code: 'FORBIDDEN', message: 'Admin role required' } } },
+        ],
+    },
+
     // ── Settings & Integrations ─────────────────────────────────────────────────
     {
         method: 'GET',
@@ -1390,15 +1485,15 @@ export const ENDPOINTS: EndpointDef[] = [
     {
         method: 'GET',
         path: '/api/cron/lenders-fca',
-        summary: 'Sync lender directory from FCA FS Register (GET / Vercel Cron)',
-        description: 'Vercel Cron scheduled endpoint (monthly, 1st at 06:00 UTC). Verifies existing lenders by FRN, discovers new mortgage firms, and marks long-absent FCA lenders INACTIVE (32-day grace; never if referenced by an active case or product). Updates DataFeedStatus for FCA_LENDERS. Requires FCA_API_EMAIL and FCA_API_KEY. Protected by CRON_SECRET in production.',
+        summary: 'Verify lender FRNs from FCA FS Register (GET / Vercel Cron)',
+        description: 'Vercel Cron scheduled endpoint (monthly, 1st at 06:00 UTC). Verification only: checks existing lenders that have an FRN, updates lastSeenAt, and marks long-absent FCA lenders INACTIVE (32-day grace; never if referenced by an active case or product). Does not discover new firms. New names are added by D&E via POST /api/admin/lenders after reviewing GET /api/admin/lenders/other-usage. Updates DataFeedStatus for FCA_LENDERS. Requires FCA_API_EMAIL and FCA_API_KEY. Protected by CRON_SECRET in production.',
         auth: false,
         tags: ['Intelligence'],
         params: [
             { name: 'authorization', in: 'body', required: false, type: 'string', description: 'Bearer <CRON_SECRET> header required in production', example: 'Bearer cron_secret_abc123' },
         ],
         responses: [
-            { status: 200, description: 'Ingest succeeded or no-op', example: { ok: true, feedStatus: 'success', verified: 180, inserted: 2, deactivated: 0 } },
+            { status: 200, description: 'Verification completed', example: { ok: true, feedStatus: 'success', lendersWithFrn: 12, verified: 12, stillActive: 11, noLongerActive: 1, notFound: 0, markedInactive: 0 } },
             { status: 401, description: 'Unauthorized — invalid CRON_SECRET', example: { error: 'Unauthorized' } },
             { status: 503, description: 'Missing CRON_SECRET or FCA API credentials', example: { ok: false, error: 'FCA_API_EMAIL and FCA_API_KEY are required. Register for a free key at https://register.fca.org.uk/developer/s/' } },
         ],
@@ -1407,8 +1502,8 @@ export const ENDPOINTS: EndpointDef[] = [
     {
         method: 'POST',
         path: '/api/cron/lenders-fca',
-        summary: 'Manually trigger FCA lender directory sync',
-        description: 'Manual or webhook trigger for the monthly FCA FS Register lender ingest. Protected by CRON_SECRET in production. Returns HTTP 503 if FCA_API_EMAIL or FCA_API_KEY is unset.',
+        summary: 'Manually trigger FCA lender FRN verification',
+        description: 'Manual or webhook trigger for the monthly FCA FS Register verification (no automated discovery). Protected by CRON_SECRET in production. Returns HTTP 503 if FCA_API_EMAIL or FCA_API_KEY is unset.',
         auth: false,
         tags: ['Intelligence'],
         params: [

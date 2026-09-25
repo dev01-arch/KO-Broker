@@ -9,6 +9,7 @@ import {
   Building2,
   CheckCircle2,
   CreditCard,
+  Landmark,
   Loader2,
   LogOut,
   MessageSquare,
@@ -19,6 +20,7 @@ import {
 } from 'lucide-react';
 import { SystemStatusPanel } from '@/components/dashboard/system-status-panel';
 import { BillingSettingsSection } from '@/components/dashboard/billing-settings-section';
+import { LenderDirectorySettingsSection } from '@/components/dashboard/lender-directory-settings-section';
 import {
   emptyIntegrationsDraft,
   emptyMessagingDraft,
@@ -40,7 +42,7 @@ import { useOrgRole } from '@/hooks/use-org';
 /** Hidden from the UI — code retained for future admin tooling. */
 const SHOW_ARCHIVED_SECTIONS = false;
 
-type SettingsSection = 'organization' | 'messaging' | 'billing' | 'account';
+type SettingsSection = 'organization' | 'lenders' | 'messaging' | 'billing' | 'account';
 
 const SETTINGS_SECTIONS: {
   id: SettingsSection;
@@ -55,6 +57,13 @@ const SETTINGS_SECTIONS: {
     icon: Building2,
     containerBg: '#E9FCFF',
     iconColor: '#00B8D9',
+  },
+  {
+    id: 'lenders',
+    label: 'Lender directory',
+    icon: Landmark,
+    containerBg: '#e5efff',
+    iconColor: '#2B7FFF',
   },
   {
     id: 'billing',
@@ -145,7 +154,7 @@ export function IntegrationsSettingsPanel({
   // Advisers only see Messaging + Account. Hide team/billing unless confirmed ADMIN.
   // While role is unknown, keep admin sections visible if we started on them (avoids flicker).
   const visibleSettingsSections = SETTINGS_SECTIONS.filter((section) => {
-    if (section.id === 'organization' || section.id === 'billing') {
+    if (section.id === 'organization' || section.id === 'billing' || section.id === 'lenders') {
       return !roleReady || isAdmin;
     }
     return true;
@@ -161,6 +170,7 @@ export function IntegrationsSettingsPanel({
     if (billingNotice) return 'billing';
     if (
       sectionParam === 'organization' ||
+      sectionParam === 'lenders' ||
       sectionParam === 'messaging' ||
       sectionParam === 'billing' ||
       sectionParam === 'account'
@@ -207,7 +217,11 @@ export function IntegrationsSettingsPanel({
   // Hard redirect: advisers never stay on team/billing (wait until role is known).
   useEffect(() => {
     if (!roleReady || isAdmin) return;
-    if (activeSection === 'organization' || activeSection === 'billing') {
+    if (
+      activeSection === 'organization' ||
+      activeSection === 'billing' ||
+      activeSection === 'lenders'
+    ) {
       setActiveSection('messaging');
     }
   }, [roleReady, isAdmin, activeSection]);
@@ -827,6 +841,8 @@ export function IntegrationsSettingsPanel({
     switch (activeSection) {
       case 'organization':
         return organizationSection;
+      case 'lenders':
+        return <LenderDirectorySettingsSection />;
       case 'billing':
         return (
           <BillingSettingsSection
