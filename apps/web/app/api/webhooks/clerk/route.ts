@@ -3,6 +3,7 @@ import { headers } from 'next/headers';
 import { WebhookEvent } from '@clerk/nextjs/server';
 import { prisma } from '@/lib/db';
 import { NextResponse } from 'next/server';
+import { invalidateCachedAuthUser } from '@/lib/auth/user-cache';
 
 interface UserCreatedData {
   id: string;
@@ -100,6 +101,7 @@ export async function POST(req: Request) {
           lastName: existingPendingUser.lastName || last_name,
         },
       });
+      invalidateCachedAuthUser({ clerkId: id, userId: existingPendingUser.id });
     } else {
       await prisma.user.upsert({
         where: { clerkId: id },
@@ -116,6 +118,7 @@ export async function POST(req: Request) {
           role: 'ADVISER',
         },
       });
+      invalidateCachedAuthUser({ clerkId: id });
     }
   }
 
@@ -154,6 +157,7 @@ export async function POST(req: Request) {
           orgId: org.id,
         },
       });
+      invalidateCachedAuthUser({ clerkId: clerkUserId });
     }
   }
 

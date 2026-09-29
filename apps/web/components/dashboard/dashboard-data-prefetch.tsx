@@ -3,11 +3,14 @@
 import { useAuth } from '@clerk/nextjs';
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef } from 'react';
-import { dashboardApi, requireAuthToken, settingsApi } from '@/lib/api/client';
+import { dashboardApi, messagesApi, complianceApi, requireAuthToken, settingsApi } from '@/lib/api/client';
 import {
   dashboardBootstrapQueryKey,
+  dashboardPipelineQueryKey,
   seedDashboardQueryCache,
 } from '@/hooks/use-dashboard-bootstrap';
+import { complianceOverviewQueryKey } from '@/hooks/use-compliance';
+import { messagesQueryKey } from '@/hooks/use-messages';
 import {
   advisersQueryKey,
   integrationsQueryKey,
@@ -47,6 +50,13 @@ export function DashboardDataPrefetch() {
     void (async () => {
       try {
         const token = await requireAuthToken(getToken);
+        void queryClient
+          .fetchQuery({
+            queryKey: dashboardPipelineQueryKey,
+            queryFn: () => dashboardApi.pipeline(token),
+            staleTime: 5 * 60 * 1000,
+          })
+          .catch(() => null);
         // Deduped with useDashboardBootstrap via the shared query key.
         const response = await queryClient.fetchQuery({
           queryKey: dashboardBootstrapQueryKey,
@@ -57,7 +67,7 @@ export function DashboardDataPrefetch() {
         writeDashboardBootstrapSnapshot(response);
 
         // Defer settings warm so cold API compiles don't compete with first dashboard paint.
-        const warmSettings = () => {
+        const warmSecondary = () => {
           void Promise.all([
             queryClient
               .fetchQuery({
@@ -80,12 +90,27 @@ export function DashboardDataPrefetch() {
                 staleTime: 5 * 60 * 1000,
               })
               .catch(() => null),
+            queryClient
+              .fetchQuery({
+                queryKey: complianceOverviewQueryKey,
+                queryFn: () => complianceApi.getOverview(token),
+                staleTime: 5 * 60 * 1000,
+              })
+              .catch(() => null),
+            queryClient
+              .fetchQuery({
+                queryKey: messagesQueryKey({ unreadOnly: true, page: 1, perPage: 50 }),
+                queryFn: () =>
+                  messagesApi.list(token, { unreadOnly: true, page: 1, perPage: 50 }),
+                staleTime: 10_000,
+              })
+              .catch(() => null),
           ]);
         };
         if (typeof window !== 'undefined' && typeof window.requestIdleCallback === 'function') {
-          window.requestIdleCallback(warmSettings, { timeout: 8000 });
+          window.requestIdleCallback(warmSecondary, { timeout: 8000 });
         } else {
-          setTimeout(warmSettings, 4000);
+          setTimeout(warmSecondary, 4000);
         }
       } catch {
         // Prefetch is best-effort; hooks will fetch on mount.

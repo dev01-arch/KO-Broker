@@ -15,6 +15,7 @@ import { clientsQueryKey, useClients, useCreateClient } from '@/hooks/use-client
 import { advisersQueryKey, useAdvisers } from '@/hooks/use-settings';
 import {
   useDashboardBootstrap,
+  useDashboardPipeline,
   LIVE_CLIENTS_QUERY,
   LIVE_CASES_QUERY,
   dashboardBootstrapQueryKey,
@@ -24,6 +25,7 @@ import { casesQueryKey, useCases, useCreateCase } from '@/hooks/use-cases';
 import { useAdviserVisibility, useIsAdmin, useOrgProfile, usePlanFeature } from '@/hooks/use-org';
 import { useUploadDocument } from '@/hooks/use-documents';
 import { useMarkMessageRead, useMessages, applyMessagesReadToCache } from '@/hooks/use-messages';
+import { getCachedSessionToken } from '@/lib/api/session-token';
 import { clearAuthenticated, getSessionUsername } from '@/lib/auth/demo-session';
 import {
   aiApi,
@@ -443,7 +445,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
 
   async function searchLendersForSelect(query: string): Promise<LenderSearchHit[]> {
     try {
-      const token = await getTokenRef.current();
+      const token = await getCachedSessionToken(() => getTokenRef.current());
       if (!token) return searchLenders(query);
       const res = await lendersApi.search(token, query);
       const rows = res.data ?? [];
@@ -487,6 +489,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
   const hubMetaRef = useRef<Record<string, { name: string; caseRef: string; caseSub: string; stage: string; type: 'client' | 'system' }>>({});
   const clientsDataRef = useRef<ClientSummary[]>([]);
   const casesDataRef = useRef<CaseSummary[]>([]);
+  const pipelineCasesRef = useRef<CaseSummary[]>([]);
   const advisersDataRef = useRef<AdviserRecord[]>([]);
   /** Newly created clients kept until bootstrap/list queries catch up (avoids sync wipe). */
   const pendingCreatedClientsRef = useRef<ClientSummary[]>([]);
@@ -640,6 +643,9 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
     useDashboardBootstrap({
       enabled: isPersonalDashboard,
     });
+  const { data: pipelineData } = useDashboardPipeline({
+    enabled: isPersonalDashboard && !bootstrapData?.data.cases,
+  });
 
   const { data: clientsData, isLoading: clientsLoading } = useClients(LIVE_CLIENTS_QUERY, {
     enabled: isPersonalDashboard && bootstrapError,
@@ -716,12 +722,15 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
   casesDataRef.current = isPersonalDashboard
     ? (bootstrapData?.data.cases ?? casesData?.data ?? [])
     : (casesData?.data ?? []);
+  if (pipelineData?.data) pipelineCasesRef.current = pipelineData.data;
   advisersDataRef.current = isPersonalDashboard
     ? (bootstrapData?.data.advisers ?? advisersData?.data ?? [])
     : (advisersData?.data ?? []);
   // Only treat as "loading" when we have nothing to show yet (cached data paints instantly).
   const hasLiveListData =
-    clientsDataRef.current.length > 0 || casesDataRef.current.length > 0;
+    clientsDataRef.current.length > 0 ||
+    casesDataRef.current.length > 0 ||
+    pipelineCasesRef.current.length > 0;
   clientsLoadingRef.current = isPersonalDashboard
     ? (bootstrapError ? clientsLoading : bootstrapLoading) && !hasLiveListData
     : clientsLoading && clientsDataRef.current.length === 0;
@@ -818,7 +827,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
     setMarkingAllNotifs(true);
     applyMessagesReadToCache(queryClient, ids);
     try {
-      const token = await getToken();
+      const token = await getCachedSessionToken(getToken);
       if (!token) return;
       await Promise.allSettled(ids.map((id) => messagesApi.markRead(token, id)));
     } finally {
@@ -909,16 +918,30 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
     postAdvisersSync();
   }, [postClientsSync, postCasesSync, postAdvisersSync]);
 
+  const overviewCasesNow = () =>
+    casesDataRef.current.length > 0 ? casesDataRef.current : pipelineCasesRef.current;
+
   const renderPersonalOverviewSections = useCallback((idoc: Document) => {
     if (!isPersonalDashboard) return;
     const root = idoc.querySelector<HTMLElement>('#tab-overview .ov-overview-sections');
     if (!root) return;
 
+    const cases = overviewCasesNow();
+    const stillLoading = clientsLoadingRef.current || casesLoadingRef.current;
+    if (cases.length === 0 && clientsDataRef.current.length === 0 && stillLoading) {
+      const iwin = idoc.defaultView as Window & {
+        koRenderLiveOverviewPipeline?: (cases: unknown[], options?: { loading?: boolean }) => void;
+      };
+      iwin?.koRenderLiveOverviewPipeline?.([], { loading: true });
+      return;
+    }
+
+    if (cases.length === 0 && clientsDataRef.current.length === 0) {
+      root.querySelectorAll('.ko-ov-live-block').forEach((el) => el.remove());
+      return;
+    }
+
     root.querySelectorAll('.ko-ov-live-block').forEach((el) => el.remove());
-
-    if (clientsDataRef.current.length === 0) return;
-
-    const cases = casesDataRef.current;
     type StageKey = 'lead' | 'factfind' | 'research' | 'application' | 'completion';
     const stageMap: Record<string, StageKey> = {
       ENQUIRY: 'lead',
@@ -1050,16 +1073,18 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
     if (!iframeWindow) return;
 
     const clientCount = clientsDataRef.current.length;
-    const caseCount = casesDataRef.current.length;
+    const overviewCases = overviewCasesNow();
+    const caseCount = overviewCases.length;
     const stillLoading = clientsLoadingRef.current || casesLoadingRef.current;
     const isEmpty = clientCount === 0 && caseCount === 0;
 
     if (stillLoading && isEmpty) {
-      // Keep prior content if any; do not blank KPIs to "…"
+      const idoc = iframeRef.current?.contentDocument;
+      if (idoc) renderPersonalOverviewSections(idoc);
       return;
     }
 
-    const pipelineValue = casesDataRef.current.reduce(
+    const pipelineValue = overviewCases.reduce(
       (sum, c) => sum + (Number(c.loanAmount) || 0),
       0,
     );
@@ -1142,6 +1167,14 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
         iwin.koRenderLiveOverviewPipeline?.(cases);
         iwin.koRenderCases?.(cases);
         iwin.koRenderClientsTable?.(clients);
+      } else if (clientsLoadingRef.current || casesLoadingRef.current) {
+        const iwin = idoc.defaultView as Window & {
+          koRenderLiveOverviewPipeline?: (cases: unknown[], options?: { loading?: boolean }) => void;
+        };
+        const earlyCases = overviewCasesNow();
+        iwin.koRenderLiveOverviewPipeline?.(earlyCases, {
+          loading: earlyCases.length === 0,
+        });
       } else if (!clientsLoadingRef.current && !casesLoadingRef.current) {
         // Confirmed empty org — show zeros. While loading, leave iframe self-hydrate alone.
         overview?.classList.add('ov-empty-mode');
@@ -1191,7 +1224,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
       if (isMockDemo) params.set('userName', 'Alex');
     }
     // Bust CDN/browser cache of the static prototype after UI-only HTML changes.
-    params.set('v', 'prd16-api-2');
+    params.set('v', 'prd16-pipeline-1');
     return `/live-demo-prototype-v2a.html?${params}`;
     // eslint-disable-next-line react-hooks/exhaustive-deps -- personal src intentionally ignores activeTab
   }, [isPersonalDashboard ? 'overview' : activeTab, overviewReady, isPersonalDashboard, isMockDemo]);
@@ -1299,50 +1332,64 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
     );
 
     // One-shot warm of recent case details (skip if already cached).
-    // Delayed + sequential so cold `/api/cases/[id]` compiles don't stall first paint.
+    // Idle + parallel so opening a case does not wait on a 2.5s queue.
     if (casePrefetchDoneRef.current) return;
     const cases = casesDataRef.current.slice(0, 4);
     if (cases.length === 0) return;
     casePrefetchDoneRef.current = true;
-    void (async () => {
-      try {
-        const token = await getToken();
-        if (!token) {
+
+    const warmCases = () => {
+      void (async () => {
+        try {
+          const token = await getCachedSessionToken(getToken);
+          if (!token) {
+            casePrefetchDoneRef.current = false;
+            return;
+          }
+          await Promise.all(
+            cases.map(async (c) => {
+              if (queryClient.getQueryData(['cases', c.id])) return;
+              try {
+                const result = await casesApi.get(token, c.id);
+                queryClient.setQueryData(['cases', c.id], result);
+              } catch {
+                // best-effort warm
+              }
+            }),
+          );
+          await Promise.all(
+            cases.slice(0, 3).map(async (c) => {
+              const tlKey = ['cases', c.id, 'timeline'] as const;
+              if (queryClient.getQueryData(tlKey)) return;
+              const tl = await casesApi.timeline(token, c.id).catch(() => null);
+              if (tl) queryClient.setQueryData(tlKey, tl);
+            }),
+          );
+          if (hasMessagesRef.current) {
+            await Promise.all(
+              cases.slice(0, 2).map(async (c) => {
+                const key = ['messages', 1, 100, c.id, '', false] as const;
+                if (queryClient.getQueryData(key)) return;
+                try {
+                  const msgs = await messagesApi.list(token, { caseId: c.id, perPage: 100 });
+                  queryClient.setQueryData(key, msgs);
+                } catch {
+                  // best-effort warm
+                }
+              }),
+            );
+          }
+        } catch {
           casePrefetchDoneRef.current = false;
-          return;
         }
-        await new Promise((r) => window.setTimeout(r, 2500));
-        for (const c of cases) {
-          if (queryClient.getQueryData(['cases', c.id])) continue;
-          try {
-            const result = await casesApi.get(token, c.id);
-            queryClient.setQueryData(['cases', c.id], result);
-          } catch {
-            // best-effort warm
-          }
-        }
-        for (const c of cases.slice(0, 3)) {
-          const tlKey = ['cases', c.id, 'timeline'] as const;
-          if (queryClient.getQueryData(tlKey)) continue;
-          const tl = await casesApi.timeline(token, c.id).catch(() => null);
-          if (tl) queryClient.setQueryData(tlKey, tl);
-        }
-        if (hasMessagesRef.current) {
-          for (const c of cases.slice(0, 2)) {
-            const key = ['messages', 1, 100, c.id, '', false] as const;
-            if (queryClient.getQueryData(key)) continue;
-            try {
-              const msgs = await messagesApi.list(token, { caseId: c.id, perPage: 100 });
-              queryClient.setQueryData(key, msgs);
-            } catch {
-              // best-effort warm
-            }
-          }
-        }
-      } catch {
-        casePrefetchDoneRef.current = false;
-      }
-    })();
+      })();
+    };
+
+    if (typeof window.requestIdleCallback === 'function') {
+      window.requestIdleCallback(warmCases, { timeout: 1500 });
+    } else {
+      window.setTimeout(warmCases, 400);
+    }
   }, [
     iframeLoaded,
     isPersonalDashboard,
@@ -1350,6 +1397,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
     clientsLoading,
     casesLoading,
     bootstrapData,
+    pipelineData,
     clientsData,
     casesData,
     advisersData,
@@ -1411,7 +1459,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
 
       void (async () => {
         try {
-          const token = await getTokenRef.current();
+          const token = await getCachedSessionToken(() => getTokenRef.current());
           if (!token) return;
           const gen = ++messagesListGenRef.current;
           const fresh = await messagesApi.list(token, { caseId, perPage: 100 });
@@ -1596,7 +1644,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
         const itemId = data.itemId;
         const caseId = data.caseId;
         try {
-          const token = await getToken();
+          const token = await getCachedSessionToken(getToken);
           if (!token) return;
           const updated = await complianceApi.completeItem(token, { caseId, itemId });
           queryClient.setQueryData(['compliance', 'case', caseId], updated);
@@ -1797,7 +1845,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
             }
           }
 
-          const token = await getToken();
+          const token = await getCachedSessionToken(getToken);
           if (!token) throw new Error('Not authenticated');
 
           // Fetch full case + secondary panels in parallel; paint each as it arrives.
@@ -1944,7 +1992,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
             });
             void (async () => {
               try {
-                const token = await getToken();
+                const token = await getCachedSessionToken(getToken);
                 if (!token) return;
                 await casesApi.upsertFactFind(token, created.id, {
                   propertyDetails: {
@@ -2022,7 +2070,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
         }
 
         try {
-          const token = await getToken();
+          const token = await getCachedSessionToken(getToken);
           if (!token) throw new Error('Not authenticated');
 
           const results = await Promise.allSettled(
@@ -2067,7 +2115,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
         };
 
         try {
-          const token = await getToken();
+          const token = await getCachedSessionToken(getToken);
           if (!token) throw new Error('Not authenticated');
           const { expandFactFindUpsertPayload } = await import('@/lib/fact-find/serializeFactFindForm');
           const payload = expandFactFindUpsertPayload(
@@ -2137,7 +2185,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
         };
 
         try {
-          const token = await getToken();
+          const token = await getCachedSessionToken(getToken);
           if (!token) throw new Error('Not authenticated');
 
           const filePayload = data.file as {
@@ -2477,7 +2525,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
       openConfirmDeleteModal(selectedIds.length, async () => {
         deleteBtn.disabled = true;
         try {
-          const token = await getTokenRef.current();
+          const token = await getCachedSessionToken(() => getTokenRef.current());
           if (!token) return;
           await Promise.all(selectedIds.map((id) => documentsApi.delete(token, id)));
           const fresh = await documentsApi.list(token, { caseId, page: 1, perPage: 100 });
@@ -2862,7 +2910,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
       addOptimisticMessage(threadKey, optimistic);
       renderMessagesThread(idoc, caseId);
       try {
-        const token = await getTokenRef.current();
+        const token = await getCachedSessionToken(() => getTokenRef.current());
         if (!token) {
           dropOptimisticMessage(threadKey, pendingId);
           renderMessagesThread(idoc, caseId);
@@ -3001,7 +3049,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
       return;
     }
     try {
-      const token = await getTokenRef.current();
+      const token = await getCachedSessionToken(() => getTokenRef.current());
       if (!token) return;
       const all = await messagesApi.list(token, { page: 1, perPage: 100 });
       const gen = ++messagesListGenRef.current;
@@ -3158,7 +3206,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
       return;
     }
     try {
-      const token = await getTokenRef.current();
+      const token = await getCachedSessionToken(() => getTokenRef.current());
       if (!token) return;
       const res = await aiApi.listReports(token, { page: 1, perPage: 100 });
       const tbody = idoc.getElementById('ai-rpt-table-body');
@@ -3260,7 +3308,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
       koRenderComplianceOverview?: (data: ComplianceOverviewPayload | null) => void;
     };
     try {
-      const token = await getTokenRef.current();
+      const token = await getCachedSessionToken(() => getTokenRef.current());
       if (!token) return;
       const res = await complianceApi.getOverview(token);
       queryClient.setQueryData(['compliance', 'overview'], res);
@@ -3391,7 +3439,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
         void (async () => {
           let match = local;
           try {
-            const token = await getTokenRef.current();
+            const token = await getCachedSessionToken(() => getTokenRef.current());
             if (token) {
               const listed = await casesApi.list(token, {
                 perPage: 100,
@@ -3449,14 +3497,14 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
       if (input) input.value = body;
     }
     try {
-      const token = await getTokenRef.current();
+      const token = await getCachedSessionToken(() => getTokenRef.current());
       if (!token) return;
       await casesApi.createInfoRequest(token, caseId, { documentType: mapped, body });
       if (idoc) paintOutstandingRequests(idoc, caseId);
     } catch {
       try {
         if (!hasMessagesRef.current) return;
-        const token = await getTokenRef.current();
+        const token = await getCachedSessionToken(() => getTokenRef.current());
         if (!token) return;
         await messagesApi.send(token, { body, caseId, sourceType: 'CASE_UPDATE' });
       } catch {
@@ -3503,7 +3551,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
       s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
     try {
-      const token = await getTokenRef.current();
+      const token = await getCachedSessionToken(() => getTokenRef.current());
       if (!token) return;
       const caseRes = await casesApi.get(token, caseId);
       const row = caseRes.data;
@@ -3547,7 +3595,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
             overviewLenderSaveTimerRef.current = window.setTimeout(async () => {
               if (!value) return;
               try {
-                const t = await getTokenRef.current();
+                const t = await getCachedSessionToken(() => getTokenRef.current());
                 if (!t) return;
                 const updated = await casesApi.update(t, caseId, {
                   selectedLender: value,
@@ -3584,7 +3632,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
           }
           if (status) status.textContent = 'Saving…';
           try {
-            const t = await getTokenRef.current();
+            const t = await getCachedSessionToken(() => getTokenRef.current());
             if (!t) throw new Error('Not authenticated');
             const updated = await casesApi.update(t, caseId, {
               loanAmount: loanRaw ? Number(loanRaw) : undefined,
@@ -3685,7 +3733,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
           });
           if (status) status.textContent = 'Saved on this device.';
           try {
-            const t = await getTokenRef.current();
+            const t = await getCachedSessionToken(() => getTokenRef.current());
             if (!t) return;
             if (row.clientId) {
               const created = await clientsApi.createProperty(t, row.clientId, {
@@ -3789,7 +3837,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
           paintRadarCards(idoc);
           void (async () => {
             try {
-              const auth = await getTokenRef.current();
+              const auth = await getCachedSessionToken(() => getTokenRef.current());
               if (!auth) return;
               await casesApi.update(auth, caseId, {
                 aipAt: dateInputToIso(current.aipAt ?? ''),
@@ -3867,7 +3915,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
           }
           if (status) status.textContent = 'Saving…';
           try {
-            const t = await getTokenRef.current();
+            const t = await getCachedSessionToken(() => getTokenRef.current());
             if (!t) throw new Error('Not authenticated');
             try {
               await casesApi.createNote(t, caseId, { body: body.trim() });
@@ -4052,7 +4100,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
       btn.style.opacity = '0.6';
       btn.textContent = 'Advancing…';
       try {
-        const token = await getTokenRef.current();
+        const token = await getCachedSessionToken(() => getTokenRef.current());
         if (!token) throw new Error('Not authenticated');
 
         const advanced = await complianceApi.advanceStage(token, {
@@ -4158,7 +4206,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
       lenderSelect?.destroy();
       lenderSelect = null;
       try {
-        const token = await getTokenRef.current();
+        const token = await getCachedSessionToken(() => getTokenRef.current());
         if (!token) throw new Error('Not authenticated');
         const [productsRes, caseRes] = await Promise.all([
           casesApi.listProducts(token, caseId),
@@ -4277,7 +4325,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
             btn.disabled = true;
             setStatus('Selecting…', '#f59e0b');
             try {
-              const t = await getTokenRef.current();
+              const t = await getCachedSessionToken(() => getTokenRef.current());
               if (!t) throw new Error('Not authenticated');
               await casesApi.updateProduct(t, caseId, productId, { isSelected: true });
               const selected = products.find((p) => p.id === productId);
@@ -4327,7 +4375,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
             btn.disabled = true;
             setStatus('Removing…', '#f59e0b');
             try {
-              const t = await getTokenRef.current();
+              const t = await getCachedSessionToken(() => getTokenRef.current());
               if (!t) throw new Error('Not authenticated');
               await casesApi.deleteProduct(t, caseId, productId);
               await refresh();
@@ -4356,7 +4404,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
           }
           setStatus('Saving product…', '#f59e0b');
           try {
-            const t = await getTokenRef.current();
+            const t = await getCachedSessionToken(() => getTokenRef.current());
             if (!t) throw new Error('Not authenticated');
             const created = await casesApi.createProduct(t, caseId, {
               lenderName: lender,
@@ -4542,7 +4590,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
     }
 
     try {
-      const token = await getTokenRef.current();
+      const token = await getCachedSessionToken(() => getTokenRef.current());
       if (!token) {
         if (rptBody) {
           rptBody.innerHTML = `<div class="cd-rpt-card" style="padding:24px;text-align:center;color:#ef4444;font-size:13px">Authentication required. Please sign in.</div>`;
@@ -4773,7 +4821,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
             setUploadModal(null);
             if (!activeCaseId) return;
             try {
-              const token = await getToken();
+              const token = await getCachedSessionToken(getToken);
               if (!token) return;
               const fresh = await documentsApi.list(token, { caseId: activeCaseId, page: 1, perPage: 100 });
               const idoc = iframeRef.current?.contentDocument;
@@ -4851,6 +4899,11 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
                   key={item.id}
                   type="button"
                   onClick={() => selectTab(item.id)}
+                  aria-label={
+                    item.id === 'messages' && notifUnread > 0
+                      ? `Messages, ${notifUnread} unread`
+                      : undefined
+                  }
                   className={`flex w-full items-center gap-2 self-stretch rounded-[32px] px-[14px] py-[6px] text-left text-[13px] font-medium transition-colors ${
                     isActive
                       ? 'border border-[#00B8D9] bg-[#E9FCFF] text-[#061F18]'
@@ -4873,7 +4926,14 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
                     ) : null}
                   </span>
                   <span>{item.label}</span>
-                  {item.badge ? (
+                  {item.id === 'messages' && notifUnread > 0 ? (
+                    <span
+                      className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold leading-none text-white"
+                      aria-hidden
+                    >
+                      {notifUnread > 99 ? '99+' : notifUnread}
+                    </span>
+                  ) : item.badge ? (
                     <span className="ml-auto rounded-full bg-brand-teal-700 px-2 py-0.5 text-[10px] font-bold tracking-wide text-white">
                       {item.badge}
                     </span>
@@ -5307,7 +5367,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
                             });
                             renderMessagesThread(idoc, caseId);
                             try {
-                              const token = await getTokenRef.current();
+                              const token = await getCachedSessionToken(() => getTokenRef.current());
                               if (!token) {
                                 dropOptimisticMessage(threadKey, pendingId);
                                 renderMessagesThread(idoc, caseId);
@@ -5344,7 +5404,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
                             if (!body) return;
                             if (input) input.value = '';
                             try {
-                              const token = await getTokenRef.current();
+                              const token = await getCachedSessionToken(() => getTokenRef.current());
                               if (!token) {
                                 window.alert('Authentication required. Please sign in and try again.');
                                 return;
@@ -5392,7 +5452,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
                                 if (unreadIds.includes(msg.id)) msg.isRead = true;
                               }
                               try {
-                                const token = await getTokenRef.current();
+                                const token = await getCachedSessionToken(() => getTokenRef.current());
                                 if (token) {
                                   await Promise.allSettled(
                                     unreadIds.map((id) => messagesApi.markRead(token, id)),
@@ -5446,7 +5506,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
                             }
                             renderHubThreadPanel(idoc, threadKey);
                             try {
-                              const token = await getTokenRef.current();
+                              const token = await getCachedSessionToken(() => getTokenRef.current());
                               if (!token) {
                                 dropOptimisticMessage(threadKey, pendingId);
                                 renderHubThreadPanel(idoc, threadKey);
@@ -5507,7 +5567,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
                             regenBtn.textContent = '↻ Regenerating…';
                             regenBtn.setAttribute('disabled', 'true');
                             try {
-                              const token = await getTokenRef.current();
+                              const token = await getCachedSessionToken(() => getTokenRef.current());
                               if (!token) return;
                               const result = await aiApi.regenerateSection(token, {
                                 reportId,
@@ -5543,7 +5603,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
                             approveBtn.textContent = 'Approving…';
                             approveBtn.setAttribute('disabled', 'true');
                             try {
-                              const token = await getTokenRef.current();
+                              const token = await getCachedSessionToken(() => getTokenRef.current());
                               if (!token) return;
                               const result = await aiApi.approveReport(token, reportId);
                               renderAiReportBody(idoc, caseId, result.data);
@@ -5571,7 +5631,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
                             exportBtnEl.textContent = 'Generating PDF…';
                             exportBtnEl.setAttribute('disabled', 'true');
                             try {
-                              const token = await getTokenRef.current();
+                              const token = await getCachedSessionToken(() => getTokenRef.current());
                               if (!token) {
                                 exportBtnEl.textContent = origText;
                                 exportBtnEl.removeAttribute('disabled');
@@ -5636,19 +5696,31 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
                 type="button"
                 onClick={() => selectTab(item.id)}
                 aria-current={isActive ? 'page' : undefined}
+                aria-label={
+                  item.id === 'messages' && notifUnread > 0
+                    ? `Messages, ${notifUnread} unread`
+                    : undefined
+                }
                 className={`flex flex-1 flex-col items-center justify-center gap-0.5 py-2 text-[10px] font-medium transition-colors ${
                   isActive ? 'text-[#00B8D9]' : 'text-[#71717a]'
                 }`}
               >
                 {'iconUrl' in item ? (
-                  <img
-                    src={item.iconUrl}
-                    alt=""
-                    width={22}
-                    height={22}
-                    className="h-[22px] w-[22px]"
-                    style={isActive ? { filter: MOBILE_ICON_ACTIVE_FILTER } : undefined}
-                  />
+                  <span className="relative">
+                    <img
+                      src={item.iconUrl}
+                      alt=""
+                      width={22}
+                      height={22}
+                      className="h-[22px] w-[22px]"
+                      style={isActive ? { filter: MOBILE_ICON_ACTIVE_FILTER } : undefined}
+                    />
+                    {item.id === 'messages' && notifUnread > 0 ? (
+                      <span className="absolute -top-1.5 -right-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-0.5 text-[9px] font-bold leading-none text-white" aria-hidden>
+                        {notifUnread > 9 ? '9+' : notifUnread}
+                      </span>
+                    ) : null}
+                  </span>
                 ) : Icon ? (
                   <Icon
                     className="h-[22px] w-[22px]"

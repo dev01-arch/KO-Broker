@@ -1,4 +1,5 @@
 import { ApiError } from '@/lib/api/client';
+import { getCachedSessionToken } from '@/lib/api/session-token';
 
 /** Standard API error codes — see API docs → Error codes. */
 export const API_ERROR_CODES = {
@@ -71,7 +72,7 @@ export function mapApiFieldsToForm<T extends Record<string, string>>(
 export async function requireAuthToken(
   getToken: () => Promise<string | null>,
 ): Promise<string> {
-  const token = await getToken();
+  const token = await getCachedSessionToken(getToken);
   if (!token) {
     throw new ApiError(API_ERROR_CODES.UNAUTHORIZED, DEFAULT_MESSAGES.UNAUTHORIZED, undefined, 401);
   }

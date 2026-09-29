@@ -6,11 +6,16 @@
  * Bearer session tokens when those headers are absent (cross-origin API).
  */
 
+import { cache } from 'react';
 import { headers } from 'next/headers';
 import { auth, currentUser } from '@clerk/nextjs/server';
 import { slugify } from '@ko/utils';
 import { prisma, type User, type Role } from '../db';
 import { createUserWithOrg, findUserByClerkId, linkExistingUserToNewOrg } from '@/lib/api/clients-data';
+import { isPrismaMissingColumnError } from '@/lib/api/prisma-errors';
+import { readCachedAuthUser, writeCachedAuthUser } from '@/lib/auth/user-cache';
+
+export { invalidateCachedAuthUser } from '@/lib/auth/user-cache';
 
 export class AuthError extends Error {
   code: 'UNAUTHORIZED' | 'FORBIDDEN' | 'NO_ORG';
@@ -54,6 +59,15 @@ const AUTH_USER_SELECT = {
   updatedAt: true,
 } as const;
 
+/** Visibility columns in the same query. Falls back if the database is unmigrated. */
+const AUTH_USER_SELECT_WITH_FLAGS = {
+  ...AUTH_USER_SELECT,
+  canViewAllClients: true,
+  canViewAccountDetails: true,
+  canViewAiSummaries: true,
+  invitePending: true,
+} as const;
+
 type AuthUserRow = {
   id: string;
   clerkId: string;
@@ -80,26 +94,59 @@ function toAuthUser(row: AuthUserRow): User {
   };
 }
 
-async function findUserByClerkIdForAuth(clerkId: string): Promise<User | null> {
+function userFromAuthRow(
+  row: AuthUserRow & {
+    canViewAllClients?: boolean;
+    canViewAccountDetails?: boolean;
+    canViewAiSummaries?: boolean;
+    invitePending?: boolean;
+  },
+): User {
+  return {
+    ...toAuthUser(row),
+    canViewAllClients: row.canViewAllClients ?? false,
+    canViewAccountDetails: row.canViewAccountDetails ?? false,
+    canViewAiSummaries: row.canViewAiSummaries ?? false,
+    invitePending: row.invitePending ?? false,
+  };
+}
+
+async function findAuthUser(
+  where: { clerkId: string } | { id: string },
+): Promise<User | null> {
+  try {
+    const row = await prisma.user.findUnique({
+      where,
+      select: AUTH_USER_SELECT_WITH_FLAGS,
+    });
+    return row ? userFromAuthRow(row) : null;
+  } catch (error) {
+    if (!isPrismaMissingColumnError(error)) throw error;
+  }
+
   const row = await prisma.user.findUnique({
-    where: { clerkId },
+    where,
     select: AUTH_USER_SELECT,
   });
-  return row ? toAuthUser(row) : null;
+  if (!row) return null;
+  return loadVisibilityFlags(toAuthUser(row));
+}
+
+async function findUserByClerkIdForAuth(clerkId: string): Promise<User | null> {
+  return findAuthUser({ clerkId });
 }
 
 async function findUserByIdForAuth(id: string): Promise<User | null> {
-  const row = await prisma.user.findUnique({
-    where: { id },
-    select: AUTH_USER_SELECT,
-  });
-  return row ? toAuthUser(row) : null;
+  return findAuthUser({ id });
 }
 
 /**
  * Optionally enrich visibility flags after migration. Never throws schema errors upward.
  */
 async function loadVisibilityFlags(user: User): Promise<User> {
+  const cached = readCachedAuthUser<User>(user.clerkId);
+  if (cached && cached.id === user.id) return cached;
+
   try {
     const flags = await prisma.user.findUnique({
       where: { id: user.id },
@@ -111,7 +158,9 @@ async function loadVisibilityFlags(user: User): Promise<User> {
       },
     });
     if (!flags) return user;
-    return { ...user, ...flags };
+    const next = { ...user, ...flags };
+    if (next.orgId) writeCachedAuthUser(next);
+    return next;
   } catch {
     return user;
   }
@@ -168,23 +217,33 @@ async function ensureDbUser(clerkId: string): Promise<User | null> {
 }
 
 /**
- * getCurrentUser() — reads headers (or Bearer), queries DB
+ * getCurrentUser() — reads headers (or Bearer), queries DB.
+ * Memoized for the request and for a short TTL so a dashboard burst
+ * does not repeat the user lookup.
  */
-export async function getCurrentUser(): Promise<User | null> {
+async function loadCurrentUser(): Promise<User | null> {
   const userId = await resolveClerkUserId();
   if (!userId) return null;
 
-  const existing = await findUserByClerkIdForAuth(userId);
-  if (existing) {
-    // Load per-adviser visibility switches (safe no-op if columns missing).
-    return loadVisibilityFlags(existing);
-  }
+  const cached = readCachedAuthUser<User>(userId);
+  if (cached?.orgId) return cached;
+
+  let existing = await findUserByClerkIdForAuth(userId);
 
   // === FRONTEND ADDITION: auto-provision on first API call ===
-  const provisioned = await ensureDbUser(userId);
-  return provisioned ? loadVisibilityFlags(provisioned) : null;
+  // Also covers a user row that exists but is not linked to an organisation yet.
+  if (!existing?.orgId) {
+    const provisioned = await ensureDbUser(userId);
+    existing = provisioned ?? existing;
+  }
   // === END FRONTEND ADDITION ===
+
+  if (!existing) return null;
+  if (existing.orgId) writeCachedAuthUser(existing);
+  return existing;
 }
+
+export const getCurrentUser = cache(loadCurrentUser);
 
 /**
  * requireAuth() — throws AuthError (401) if not authenticated, (403) if deactivated

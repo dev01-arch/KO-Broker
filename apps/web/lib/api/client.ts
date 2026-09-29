@@ -25,6 +25,7 @@ import {
   toIntelligenceOverview,
   toIntelligenceSnapshot,
 } from '@/lib/api/intelligence-adapters';
+import { clearCachedSessionToken } from '@/lib/api/session-token';
 
 export type {
   CreateIntelligenceSnapshotInput,
@@ -550,7 +551,32 @@ export async function apiRequest<T>(
   return response.data;
 }
 
+const inflightGets = new Map<string, Promise<ApiSuccessResponse<unknown>>>();
+
 async function apiFetch<T>(
+  path: string,
+  token: string,
+  options: RequestInit = {},
+): Promise<ApiSuccessResponse<T>> {
+  const method = (options.method ?? 'GET').toUpperCase();
+  // Identical GETs fired together (hook + dashboard warm) share one response.
+  const dedupeKey = method === 'GET' && !options.signal ? `${token}\n${path}` : '';
+  if (dedupeKey) {
+    const pending = inflightGets.get(dedupeKey);
+    if (pending) return pending as Promise<ApiSuccessResponse<T>>;
+  }
+
+  const request = performApiFetch<T>(path, token, options);
+  if (dedupeKey) {
+    inflightGets.set(dedupeKey, request as Promise<ApiSuccessResponse<unknown>>);
+    void request.finally(() => {
+      if (inflightGets.get(dedupeKey) === request) inflightGets.delete(dedupeKey);
+    });
+  }
+  return request;
+}
+
+async function performApiFetch<T>(
   path: string,
   token: string,
   options: RequestInit = {},
@@ -559,7 +585,7 @@ async function apiFetch<T>(
   // Passing an empty headers object from the caller signals this case.
   const isFormData = options.body instanceof FormData;
   const defaultHeaders: Record<string, string> = {
-    Authorization: `Bearer ${token}`,
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
   };
 
@@ -572,6 +598,10 @@ async function apiFetch<T>(
       ...(options.headers && !isFormData ? options.headers : {}),
     },
   });
+
+  if (res.status === 401) {
+    clearCachedSessionToken();
+  }
 
   if (res.type === 'opaqueredirect' || res.status === 301 || res.status === 302 || res.status === 307 || res.status === 308) {
     throw new ApiError(
@@ -617,10 +647,14 @@ async function apiFetchBlob(
     ...options,
     redirect: 'manual',
     headers: {
-      Authorization: `Bearer ${token}`,
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(options.headers ?? {}),
     },
   });
+
+  if (res.status === 401) {
+    clearCachedSessionToken();
+  }
 
   if (res.type === 'opaqueredirect' || res.status === 301 || res.status === 302 || res.status === 307 || res.status === 308) {
     throw new ApiError(
@@ -1447,6 +1481,11 @@ export interface DashboardBootstrapPayload {
 export const dashboardApi = {
   bootstrap(token: string) {
     return apiFetch<DashboardBootstrapPayload>('/api/dashboard/bootstrap', token);
+  },
+
+  /** Overview kanban cases. Lighter than bootstrap so the board can paint first. */
+  pipeline(token: string) {
+    return apiFetch<CaseSummary[]>('/api/dashboard/pipeline', token);
   },
 };
 

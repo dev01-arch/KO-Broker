@@ -1,7 +1,5 @@
-import { auth, currentUser } from '@clerk/nextjs/server';
-import { slugify } from '@ko/utils';
+import { getCurrentUser } from '@/lib/auth';
 import { apiUnauthorized, apiError } from '@/lib/api/responses';
-import { createUserWithOrg, findUserByClerkId, linkExistingUserToNewOrg } from '@/lib/api/clients-data';
 import { isPrismaConnectionError } from '@/lib/api/prisma-errors';
 
 type ApiAuthSuccess = {
@@ -13,63 +11,27 @@ type ApiAuthSuccess = {
     firstName: string | null;
     lastName: string | null;
     role: string;
+    isActive: boolean;
+    canViewAllClients: boolean;
+    canViewAccountDetails: boolean;
+    canViewAiSummaries: boolean;
   };
   orgId: string;
 };
 
 type ApiAuthResult = ApiAuthSuccess | { response: Response };
 
-function orgNameFromClerkUser(clerkUser: {
-  fullName: string | null;
-  firstName: string | null;
-  lastName: string | null;
-}) {
-  return (
-    clerkUser.fullName?.trim() ||
-    [clerkUser.firstName, clerkUser.lastName].filter(Boolean).join(' ') ||
-    'My Organisation'
-  );
-}
-
+/**
+ * Resolves the signed-in user for route handlers.
+ * Uses the same request-scoped user as getCurrentUser(), so a route that
+ * calls both does not hit Clerk or the database twice.
+ * Proxy middleware already verified the session and set x-user-id.
+ */
 export async function requireApiAuth(): Promise<ApiAuthResult> {
-  // Cross-origin dashboard (Vercel) → API (Render) sends session JWT as Bearer token.
-  const { userId, isAuthenticated } = await auth({ acceptsToken: 'session_token' });
-  if (!isAuthenticated || !userId) {
-    return { response: apiUnauthorized() };
-  }
-
   try {
-    let user = await findUserByClerkId(userId);
-
-    if (!user || !user.orgId) {
-      const clerkUser = await currentUser();
-      if (!clerkUser) {
-        return { response: apiUnauthorized() };
-      }
-
-      const email = clerkUser.emailAddresses[0]?.emailAddress;
-      if (!email) {
-        return {
-          response: apiError('FORBIDDEN', 'A verified email address is required', 403),
-        };
-      }
-
-      const orgName = orgNameFromClerkUser(clerkUser);
-      const baseSlug = slugify(orgName) || 'organisation';
-      const slug = `${baseSlug}-${userId.slice(-6).toLowerCase()}`;
-
-      if (!user) {
-        user = await createUserWithOrg({
-          clerkId: userId,
-          email,
-          firstName: clerkUser.firstName,
-          lastName: clerkUser.lastName,
-          orgName,
-          slug,
-        });
-      } else {
-        user = await linkExistingUserToNewOrg(user.id, { orgName, slug });
-      }
+    const user = await getCurrentUser();
+    if (!user) {
+      return { response: apiUnauthorized() };
     }
 
     const orgId = user.orgId;

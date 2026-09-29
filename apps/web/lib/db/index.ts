@@ -16,12 +16,24 @@ try {
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
+  prismaUrl: string | undefined;
 };
 
 let dbUrl = process.env.DATABASE_URL ?? '';
 if (dbUrl && !dbUrl.includes('connection_limit')) {
   const delim = dbUrl.includes('?') ? '&' : '?';
-  dbUrl = `${dbUrl}${delim}connection_limit=3&pool_timeout=60`;
+  // Dashboard bootstrap runs several queries at once. A pool of 3 queued
+  // those behind each other and made every API call wait.
+  dbUrl = `${dbUrl}${delim}connection_limit=10&pool_timeout=20`;
+}
+
+if (
+  process.env.NODE_ENV !== 'production' &&
+  globalForPrisma.prisma &&
+  globalForPrisma.prismaUrl !== dbUrl
+) {
+  void globalForPrisma.prisma.$disconnect();
+  globalForPrisma.prisma = undefined;
 }
 
 export const prisma =
@@ -30,6 +42,7 @@ export const prisma =
 
 if (process.env.NODE_ENV !== 'production') {
   globalForPrisma.prisma = prisma;
+  globalForPrisma.prismaUrl = dbUrl;
 }
 
 export { type User, type Organisation, type Role } from '@ko/db';

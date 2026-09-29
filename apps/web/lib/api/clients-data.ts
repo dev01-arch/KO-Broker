@@ -5,6 +5,7 @@ import { sendAdviserClientAssignedEmail, sendClientWelcomeEmail, type EmailDeliv
 import { generateReference } from '@ko/utils';
 import type { ClientType, ClientStatus, ClientCategoryFilter, EmploymentStatus } from '@ko/types';
 import { clientAssignedToAdviserWhere } from '@/lib/auth/adviser-scope';
+import { invalidateCachedAuthUser } from '@/lib/auth/user-cache';
 
 function shouldUseDevStore(error: unknown) {
   return process.env.NODE_ENV === 'development' && isPrismaConnectionError(error);
@@ -122,7 +123,7 @@ export async function linkExistingUserToNewOrg(
         plan: 'STARTER',
       },
     });
-    return await prisma.user.update({
+    const updated = await prisma.user.update({
       where: { id: userId },
       data: {
         orgId: org.id,
@@ -148,6 +149,8 @@ export async function linkExistingUserToNewOrg(
         role: true,
       },
     });
+    invalidateCachedAuthUser({ userId: updated.id, clerkId: updated.clerkId });
+    return updated;
   } catch (error) {
     if (!shouldUseDevStore(error)) throw error;
     throw error;

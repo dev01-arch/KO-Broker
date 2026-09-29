@@ -3774,13 +3774,14 @@ if (new URLSearchParams(window.location.search).get('embedded') === '1') {
   };
 
   /** Live pipeline/activity for personal overview (mirrors parent React renderer). */
-  window.koRenderLiveOverviewPipeline = function (caseList) {
+  window.koRenderLiveOverviewPipeline = function (caseList, options) {
     if (!isPersonalDashboard) return;
     var root = document.querySelector('#tab-overview .ov-overview-sections');
     if (!root) return;
+    var loading = Boolean(options && options.loading);
     root.querySelectorAll('.ko-ov-live-block').forEach(function (el) { el.remove(); });
     var cases = Array.isArray(caseList) ? caseList.slice() : [];
-    if (!cases.length && !(window.__koSnapshotClients && window.__koSnapshotClients.length)) return;
+    if (!cases.length && !loading && !(window.__koSnapshotClients && window.__koSnapshotClients.length)) return;
 
     var stageMap = {
       ENQUIRY: 'lead', FACT_FIND: 'factfind', RESEARCH: 'research',
@@ -3822,7 +3823,9 @@ if (new URLSearchParams(window.location.search).get('embedded') === '1') {
       var cardsWrap = document.createElement('div');
       cardsWrap.className = 'ov-pb-cards';
       if (!items.length) {
-        cardsWrap.innerHTML = '<div class="kb-card ov-kbcard" style="cursor:default;opacity:.86"><div><div class="kb-card-name">No cases yet</div><div class="kb-cc-ref">Create a case to populate this stage</div></div></div>';
+        cardsWrap.innerHTML = loading
+          ? '<div class="kb-card ov-kbcard" style="cursor:default;min-height:88px;background:rgba(255,255,255,.62)"></div>'
+          : '<div class="kb-card ov-kbcard" style="cursor:default;opacity:.86"><div><div class="kb-card-name">No cases yet</div><div class="kb-cc-ref">Create a case to populate this stage</div></div></div>';
       } else {
         cardsWrap.innerHTML = items.slice(0, 3).map(function (c) {
           var client = c.client || {};
@@ -3839,6 +3842,10 @@ if (new URLSearchParams(window.location.search).get('embedded') === '1') {
     kanbanSection.appendChild(board);
     pipelineBlock.appendChild(kanbanSection);
     root.appendChild(pipelineBlock);
+    if (loading) {
+      if (typeof window.koRefreshOverviewMobilePipeline === 'function') window.koRefreshOverviewMobilePipeline();
+      return;
+    }
 
     var recent = cases.slice().sort(function (a, b) {
       return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();

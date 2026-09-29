@@ -16,6 +16,7 @@ import { logAuditEvent } from '@/lib/compliance/audit';
 import { AcceptAdviserInviteSchema } from '@ko/types';
 import { headers } from 'next/headers';
 import { createClerkClient } from '@clerk/nextjs/server';
+import { invalidateCachedAuthUser } from '@/lib/auth/user-cache';
 
 async function syncClerkProfileName(
   clerkId: string,
@@ -170,6 +171,8 @@ export const POST = createHandler({
       });
 
       await prisma.user.delete({ where: { id: adviser.id } });
+      invalidateCachedAuthUser({ userId: adviser.id });
+      invalidateCachedAuthUser({ userId: existingClerkUser.id, clerkId });
 
       await logAuditEvent({
         orgId: adviser.orgId!,
@@ -210,6 +213,8 @@ export const POST = createHandler({
         lastName: platformLastName ?? undefined,
       },
     });
+
+    invalidateCachedAuthUser({ userId: adviser.id, clerkId });
 
     await logAuditEvent({
       orgId: adviser.orgId!,

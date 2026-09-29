@@ -4,8 +4,8 @@ import { serializeCaseSummary } from '@/lib/api/cases';
 import { serializeClientSummary } from '@/lib/api/clients';
 import { getOrgProfile, listInvitedAdvisersForOrg } from '@/lib/api/settings-data';
 import { maskCaseFinancials, maskClientFinancials } from '@/lib/auth';
-import { prisma } from '@/lib/db';
 import { caseAssignedToAdviserWhere } from '@/lib/auth/adviser-scope';
+import { prisma } from '@/lib/db';
 
 const DASHBOARD_LIST_PARAMS = { page: 1, perPage: 100 } as const;
 
@@ -27,44 +27,34 @@ export async function getDashboardBootstrap(orgId: string, user: BootstrapUser) 
   const in90Days = new Date(now);
   in90Days.setDate(in90Days.getDate() + 90);
 
-  // Adviser scope filter for radar counts (mirrors list scoping)
-  const adviserScope = isAdviserWithRestriction
-    ? caseAssignedToAdviserWhere(user.id)
-    : {};
+  const [org, clientsResult, casesResult, advisers] = await Promise.all([
+    getOrgProfile(orgId, user),
+    listClientsForOrg(orgId, {
+      ...DASHBOARD_LIST_PARAMS,
+      restrictToAdviserUserId: isAdviserWithRestriction ? user.id : undefined,
+    }),
+    listCasesForOrg(orgId, {
+      ...DASHBOARD_LIST_PARAMS,
+      restrictToAdviserUserId: isAdviserWithRestriction ? user.id : undefined,
+    }),
+    listInvitedAdvisersForOrg(orgId),
+  ]);
 
-  const activeStages = { stage: { notIn: ['COMPLETION', 'ARCHIVED'] as ('COMPLETION' | 'ARCHIVED')[] } };
-
-  const [org, clientsResult, casesResult, advisers, offersEnding14d, ratesEnding90d] =
-    await Promise.all([
-      getOrgProfile(orgId, user),
-      listClientsForOrg(orgId, {
-        ...DASHBOARD_LIST_PARAMS,
-        restrictToAdviserUserId: isAdviserWithRestriction ? user.id : undefined,
-      }),
-      listCasesForOrg(orgId, {
-        ...DASHBOARD_LIST_PARAMS,
-        restrictToAdviserUserId: isAdviserWithRestriction ? user.id : undefined,
-      }),
-      listInvitedAdvisersForOrg(orgId),
-      // PRD-16 W6: offers ending within 14 days
-      prisma.case.count({
-        where: {
-          orgId,
-          ...activeStages,
-          ...adviserScope,
-          offerExpiresAt: { gte: now, lte: in14Days },
-        },
-      }),
-      // PRD-16 W6: initial rate periods ending within 90 days
-      prisma.case.count({
-        where: {
-          orgId,
-          ...activeStages,
-          ...adviserScope,
-          initialRateEndsAt: { gte: now, lte: in90Days },
-        },
-      }),
-    ]);
+  const inWindow = (value: unknown, start: number, end: number) => {
+    if (!value || (typeof value !== 'string' && !(value instanceof Date))) return false;
+    const at = new Date(value).getTime();
+    return Number.isFinite(at) && at >= start && at <= end;
+  };
+  const offersEnding14d = casesResult.cases.filter((row) => {
+    if (row.stage === 'COMPLETION' || row.stage === 'ARCHIVED') return false;
+    const expires = 'offerExpiresAt' in row ? row.offerExpiresAt : undefined;
+    return inWindow(expires, now.getTime(), in14Days.getTime());
+  }).length;
+  const ratesEnding90d = casesResult.cases.filter((row) => {
+    if (row.stage === 'COMPLETION' || row.stage === 'ARCHIVED') return false;
+    const ends = 'initialRateEndsAt' in row ? row.initialRateEndsAt : undefined;
+    return inWindow(ends, now.getTime(), in90Days.getTime());
+  }).length;
 
   let clients = clientsResult.clients.map(serializeClientSummary);
   let cases = casesResult.cases.map(serializeCaseSummary);
@@ -95,4 +85,61 @@ export async function getDashboardBootstrap(orgId: string, user: BootstrapUser) 
       },
     },
   };
+}
+
+const PIPELINE_CASE_SELECT = {
+  id: true,
+  referenceNumber: true,
+  clientId: true,
+  type: true,
+  stage: true,
+  loanAmount: true,
+  ltv: true,
+  updatedAt: true,
+  offerExpiresAt: true,
+  initialRateEndsAt: true,
+  client: {
+    select: {
+      id: true,
+      clientType: true,
+      companyName: true,
+      firstName: true,
+      lastName: true,
+      email: true,
+    },
+  },
+} as const;
+
+/**
+ * Case rows for the overview kanban only.
+ * Skips client lists, adviser invites, and per-row message/document counts
+ * so the board can render before the full bootstrap finishes.
+ */
+export async function getDashboardPipeline(orgId: string, user: BootstrapUser) {
+  const isAdviserWithRestriction = user.role === 'ADVISER' && !user.canViewAllClients;
+  const hideAccountDetails = user.role === 'ADVISER' && !user.canViewAccountDetails;
+
+  const rows = await prisma.case.findMany({
+    where: {
+      orgId,
+      ...(isAdviserWithRestriction ? caseAssignedToAdviserWhere(user.id) : {}),
+    },
+    orderBy: { updatedAt: 'desc' },
+    take: DASHBOARD_LIST_PARAMS.perPage,
+    select: PIPELINE_CASE_SELECT,
+  });
+
+  let cases = rows.map((row) =>
+    serializeCaseSummary({
+      ...row,
+      adviser: null,
+      _count: { messages: 0, documents: 0 },
+    }),
+  );
+
+  if (hideAccountDetails) {
+    cases = cases.map((row) => maskCaseFinancials(row));
+  }
+
+  return cases;
 }

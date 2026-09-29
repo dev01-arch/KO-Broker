@@ -12,6 +12,7 @@ import { prisma } from '@/lib/db';
 import { logAuditEvent } from '@/lib/compliance/audit';
 import { UpdateAdviserVisibilitySchema } from '@ko/types';
 import { isPrismaMissingColumnError } from '@/lib/api/prisma-errors';
+import { invalidateCachedAuthUser } from '@/lib/auth/user-cache';
 
 // ── PATCH /api/settings/advisers/[id] ─────────────────────────────────────────
 
@@ -110,6 +111,8 @@ export const PATCH = createParamHandler({
     }
     // === END FRONTEND ADDITION ===
 
+    invalidateCachedAuthUser({ userId: id });
+
     await logAuditEvent({
       orgId: orgId!,
       userId: user?.id,
@@ -184,6 +187,8 @@ export const DELETE = createParamHandler({
       // === END FRONTEND ADDITION ===
       prisma.user.delete({ where: { id } }),
     ]);
+
+    invalidateCachedAuthUser({ userId: id, clerkId: adviser.clerkId });
 
     await logAuditEvent({
       orgId: orgId!,

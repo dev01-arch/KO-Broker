@@ -17,6 +17,7 @@ import { advisersQueryKey } from '@/hooks/use-settings';
 import { writeDashboardBootstrapSnapshot, readDashboardBootstrapSnapshot } from '@/lib/api/dashboard-cache';
 
 export const dashboardBootstrapQueryKey = ['dashboard', 'bootstrap'] as const;
+export const dashboardPipelineQueryKey = ['dashboard', 'pipeline'] as const;
 
 export const LIVE_CLIENTS_QUERY = { page: 1, perPage: 100 } as const;
 export const LIVE_CASES_QUERY = { page: 1, perPage: 100 } as const;
@@ -107,4 +108,18 @@ export function useDashboardBootstrap(options?: { enabled?: boolean }) {
   }, [query.data, queryClient]);
 
   return query;
+}
+
+/** Case rows for the overview kanban. Starts with sign-in and does not wait on bootstrap. */
+export function useDashboardPipeline(options?: { enabled?: boolean }) {
+  const getToken = useToken();
+  return useQuery({
+    queryKey: dashboardPipelineQueryKey,
+    enabled: options?.enabled ?? true,
+    staleTime: 5 * 60 * 1000,
+    queryFn: async () => {
+      const token = await requireAuthToken(getToken);
+      return dashboardApi.pipeline(token);
+    },
+  });
 }
