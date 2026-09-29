@@ -4764,7 +4764,10 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
           existingEmails={clientsDataRef.current.map((client) => client.email)}
           onClose={() => setImportClientsOpen(false)}
           onImported={(created) => {
-            if (created.length === 0) return;
+            if (created.length === 0) {
+              softInvalidateDashboardLists(queryClient);
+              return;
+            }
             applyImportedClientsToCache(queryClient, created);
             pendingCreatedClientsRef.current = [
               ...created,

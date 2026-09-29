@@ -69,6 +69,8 @@ export type ImportClientsDeps = {
   findMemberByEmail: (orgId: string, email: string) => Promise<ImportMemberRef | null>;
   /** Match a CRM adviser name such as "Olu Awonuga". Unmatched names do not fail the row. */
   findMemberByName?: (orgId: string, name: string) => Promise<ImportMemberRef | null>;
+  /** Fill adviser on a client that already exists and has none. Does not replace an adviser. */
+  assignExistingClientAdviser?: (orgId: string, email: string, memberId: string) => Promise<void>;
   createHomeProperty?: (
     orgId: string,
     clientId: string,
@@ -194,6 +196,60 @@ export function isValidImportEmail(email: string): boolean {
 }
 
 const ADVISER_TITLES = new Set(['mr', 'mrs', 'ms', 'miss', 'dr', 'prof', 'mx', 'sir', 'dame']);
+
+/** Lower-case, drop punctuation, and collapse spaces so "Olu  Awonuga" matches "olu awonuga". */
+export function normaliseAdviserName(raw: string): string {
+  return raw
+    .trim()
+    .toLowerCase()
+    .replace(/['’.]/g, '')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/** Keys for a display name, including "Last First" so either order can match. */
+export function adviserNameLookupKeys(raw: string): string[] {
+  const normalised = normaliseAdviserName(raw);
+  if (!normalised || normalised.includes('@')) return [];
+  const parts = normalised.split(' ').filter((part) => part && !ADVISER_TITLES.has(part));
+  if (parts.length < 2) return [];
+  const full = parts.join(' ');
+  const reversed = `${parts[parts.length - 1]} ${parts.slice(0, -1).join(' ')}`;
+  return full === reversed ? [full] : [full, reversed];
+}
+
+export type AdviserNameCandidate = {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  /** Every name this person is known by (account name and member record). */
+  names: string[];
+};
+
+/**
+ * Match a Clienttree adviser cell to one person from the advisers list.
+ * The account owner is included when their display name is one of the names.
+ * Two people with the same name are left unmatched.
+ */
+export function matchAdviserByName(
+  raw: string,
+  candidates: AdviserNameCandidate[],
+): AdviserNameCandidate | null {
+  const wanted = new Set(adviserNameLookupKeys(raw));
+  if (wanted.size === 0) return null;
+  const hits: AdviserNameCandidate[] = [];
+  const seen = new Set<string>();
+  for (const candidate of candidates) {
+    const keys = candidate.names.flatMap((name) => adviserNameLookupKeys(name));
+    if (!keys.some((key) => wanted.has(key))) continue;
+    if (seen.has(candidate.id)) continue;
+    seen.add(candidate.id);
+    hits.push(candidate);
+  }
+  return hits.length === 1 ? hits[0]! : null;
+}
 
 /** "Olu Awonuga" or "Awonuga, Olu" → first and last. Single-token names are not matched. */
 export function splitAdviserDisplayName(raw: string): { firstName: string; lastName: string } | null {
@@ -332,6 +388,31 @@ export async function runClientImport(
 
   const results: ImportClientRowResult[] = [];
   const pendingCreates: Array<Extract<PreparedImportRow, { ok: true }>> = [];
+  const memberCache = new Map<string, ImportMemberRef | null>();
+  const nameCache = new Map<string, ImportMemberRef | null>();
+
+  async function resolveMember(email: string): Promise<ImportMemberRef | null> {
+    const key = email.trim().toLowerCase();
+    if (memberCache.has(key)) return memberCache.get(key) ?? null;
+    const member = await deps.findMemberByEmail(orgId, key);
+    memberCache.set(key, member);
+    return member;
+  }
+
+  async function resolveAssignedMember(
+    row: Extract<PreparedImportRow, { ok: true }>,
+  ): Promise<ImportMemberRef | null> {
+    if (row.assignedAdviserEmail?.trim()) {
+      return resolveMember(row.assignedAdviserEmail);
+    }
+    const name = row.assignedAdviserName?.trim();
+    if (!name || !deps.findMemberByName) return null;
+    const key = name.toLowerCase();
+    if (nameCache.has(key)) return nameCache.get(key) ?? null;
+    const member = await deps.findMemberByName(orgId, name);
+    nameCache.set(key, member);
+    return member;
+  }
 
   for (const row of body.rows) {
     const prepared = prepareImportRow(row);
@@ -345,6 +426,10 @@ export async function runClientImport(
     }
 
     if (existingKeys.has(prepared.emailKey)) {
+      const existingAdviser = await resolveAssignedMember(prepared);
+      if (existingAdviser && deps.assignExistingClientAdviser) {
+        await deps.assignExistingClientAdviser(orgId, prepared.email, existingAdviser.id);
+      }
       results.push({ rowNumber: prepared.rowNumber, status: 'SKIPPED' });
       continue;
     }
@@ -362,20 +447,10 @@ export async function runClientImport(
     pendingCreates.push(prepared);
   }
 
-  const memberCache = new Map<string, ImportMemberRef | null>();
-
-  async function resolveMember(email: string): Promise<ImportMemberRef | null> {
-    const key = email.trim().toLowerCase();
-    if (memberCache.has(key)) return memberCache.get(key) ?? null;
-    const member = await deps.findMemberByEmail(orgId, key);
-    memberCache.set(key, member);
-    return member;
-  }
-
   for (let i = 0; i < pendingCreates.length; i += IMPORT_CHUNK_SIZE) {
     const chunk = pendingCreates.slice(i, i + IMPORT_CHUNK_SIZE);
     for (const row of chunk) {
-      let assignedMemberId: string | undefined;
+      let assignedMember: ImportMemberRef | null = null;
       if (row.assignedAdviserEmail?.trim()) {
         const member = await resolveMember(row.assignedAdviserEmail);
         if (!member) {
@@ -387,16 +462,15 @@ export async function runClientImport(
           seenInFile.delete(row.emailKey);
           continue;
         }
-        assignedMemberId = member.id;
-      } else if (row.assignedAdviserName?.trim() && deps.findMemberByName) {
-        const member = await deps.findMemberByName(orgId, row.assignedAdviserName);
-        if (member) assignedMemberId = member.id;
+        assignedMember = member;
+      } else if (row.assignedAdviserName?.trim()) {
+        assignedMember = await resolveAssignedMember(row);
       }
 
       try {
         const created = await deps.createClient(
           orgId,
-          { ...row.input, assignedMemberId },
+          { ...row.input, assignedMemberId: assignedMember?.id },
           { skipEmails },
         );
 
@@ -423,6 +497,15 @@ export async function runClientImport(
           status: 'CREATED',
           clientId: created.client.id,
           referenceNumber: created.client.referenceNumber,
+          ...(assignedMember
+            ? {
+                assignedMember: {
+                  id: assignedMember.id,
+                  firstName: assignedMember.firstName,
+                  lastName: assignedMember.lastName,
+                },
+              }
+            : {}),
         });
       } catch {
         results.push({

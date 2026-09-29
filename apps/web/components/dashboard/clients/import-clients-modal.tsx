@@ -58,7 +58,13 @@ function toClientSummary(row: PreviewImportRow, result: ImportClientsResult['res
     insurerName: row.payload.insurerName,
     status: 'PROSPECT',
     isVulnerable: false,
-    assignedMember: null,
+    assignedMember: result.assignedMember
+      ? {
+          id: result.assignedMember.id,
+          firstName: result.assignedMember.firstName,
+          lastName: result.assignedMember.lastName,
+        }
+      : null,
     _count: { cases: 0, messages: 0 },
   };
 }

@@ -475,6 +475,13 @@ export const ImportClientRowResultSchema = z.object({
   clientId: z.string().optional(),
   referenceNumber: z.string().optional(),
   fields: z.record(z.string()).optional(),
+  assignedMember: z
+    .object({
+      id: z.string(),
+      firstName: z.string(),
+      lastName: z.string(),
+    })
+    .optional(),
 });
 export type ImportClientRowResult = z.infer<typeof ImportClientRowResultSchema>;
 

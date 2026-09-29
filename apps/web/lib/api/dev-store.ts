@@ -1302,6 +1302,18 @@ export const devStore = {
       .map((client) => client.email);
   },
 
+  assignClientAdviserIfEmpty(orgId: string, email: string, memberId: string) {
+    const key = email.trim().toLowerCase();
+    return mutateStore((store) => {
+      const client = store.clients.find(
+        (row) => row.orgId === orgId && row.email.toLowerCase() === key && !row.assignedMemberId,
+      );
+      if (!client) return false;
+      client.assignedMemberId = memberId;
+      return true;
+    });
+  },
+
   findMemberByName(orgId: string, firstName: string, lastName: string) {
     const first = firstName.trim().toLowerCase();
     const last = lastName.trim().toLowerCase();

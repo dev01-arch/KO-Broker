@@ -6,6 +6,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { ImportClientsSchema } from '@ko/types';
 import {
+  matchAdviserByName,
   parseImportDateOfBirth,
   prepareImportRow,
   runClientImport,
@@ -185,6 +186,57 @@ describe('runClientImport', () => {
     assert.equal(result.failed, 1);
     assert.equal(result.created, 1);
     assert.equal(result.results[0]?.fields?.companyNumber, 'Company registration number is required');
+  });
+
+  it('matches the account owner and an adviser by the name shown in the advisers list', () => {
+    const owner = {
+      id: 'mem-owner',
+      email: 'owner@example.com',
+      firstName: 'Olu',
+      lastName: 'Example',
+      names: ['Olu Example', 'Admin User'],
+    };
+    const adviser = {
+      id: 'mem-adviser',
+      email: 'ada@example.com',
+      firstName: 'Ada',
+      lastName: 'Example',
+      names: ['Ada Example'],
+    };
+    assert.equal(matchAdviserByName('Olu Example', [owner, adviser])?.id, 'mem-owner');
+    assert.equal(matchAdviserByName('Mr Ada Example', [owner, adviser])?.id, 'mem-adviser');
+    assert.equal(matchAdviserByName('Example, Olu', [owner, adviser])?.id, 'mem-owner');
+    assert.equal(
+      matchAdviserByName('Ada Example', [
+        adviser,
+        { ...adviser, id: 'mem-other', email: 'other@example.com' },
+      ]),
+      null,
+    );
+  });
+
+  it('fills the adviser on a client that was imported earlier without one', async () => {
+    const assigned: string[] = [];
+    const deps = mockDeps({
+      listExistingEmails: async () => ['jane.adeyemi@example.com'],
+      findMemberByName: async () => ({
+        id: 'mem-olu',
+        email: 'olu@example.com',
+        firstName: 'Olu',
+        lastName: 'Example',
+      }),
+      assignExistingClientAdviser: async (_orgId, email, memberId) => {
+        assigned.push(`${email}:${memberId}`);
+      },
+    });
+    const result = await runClientImport('org-1', 'user-1', ImportClientsSchema.parse({
+      rows: [person({ assignedAdviserName: 'Olu Example' })],
+    }), deps);
+    assert.equal('error' in result, false);
+    if ('error' in result) return;
+    assert.equal(result.skipped, 1);
+    assert.equal(result.created, 0);
+    assert.deepEqual(assigned, ['jane.adeyemi@example.com:mem-olu']);
   });
 
   it('assigns a matching adviser name and still creates the client when unmatched', async () => {
