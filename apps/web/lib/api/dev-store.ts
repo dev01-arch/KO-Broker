@@ -1302,6 +1302,26 @@ export const devStore = {
       .map((client) => client.email);
   },
 
+  findMemberByName(orgId: string, firstName: string, lastName: string) {
+    const first = firstName.trim().toLowerCase();
+    const last = lastName.trim().toLowerCase();
+    const matches = loadStore().members.filter(
+      (member) =>
+        member.orgId === orgId &&
+        member.isActive &&
+        member.firstName.trim().toLowerCase() === first &&
+        member.lastName.trim().toLowerCase() === last,
+    );
+    if (matches.length !== 1) return null;
+    const member = matches[0]!;
+    return {
+      id: member.id,
+      email: member.email,
+      firstName: member.firstName,
+      lastName: member.lastName,
+    };
+  },
+
   findMemberByEmail(orgId: string, email: string) {
     const normalised = email.trim().toLowerCase();
     return (

@@ -23,7 +23,7 @@ function person(overrides: Record<string, unknown> = {}) {
 }
 
 function mockDeps(overrides: Partial<ImportClientsDeps> = {}): ImportClientsDeps & {
-  created: Array<{ email: string; skipEmails?: boolean }>;
+  created: Array<{ email: string; skipEmails?: boolean; assignedMemberId?: string }>;
   audited: unknown[];
 } {
   const created: Array<{ email: string; skipEmails?: boolean }> = [];
@@ -34,7 +34,11 @@ function mockDeps(overrides: Partial<ImportClientsDeps> = {}): ImportClientsDeps
     listExistingEmails: async () => [],
     findMemberByEmail: async () => null,
     createClient: async (_orgId, input, options) => {
-      created.push({ email: input.email, skipEmails: options?.skipEmails });
+      created.push({
+        email: input.email,
+        skipEmails: options?.skipEmails,
+        assignedMemberId: input.assignedMemberId,
+      });
       return {
         client: {
           id: `id-${input.email}`,
@@ -181,6 +185,45 @@ describe('runClientImport', () => {
     assert.equal(result.failed, 1);
     assert.equal(result.created, 1);
     assert.equal(result.results[0]?.fields?.companyNumber, 'Company registration number is required');
+  });
+
+  it('assigns a matching adviser name and still creates the client when unmatched', async () => {
+    const matched = mockDeps({
+      findMemberByName: async (_orgId, name) =>
+        name === 'Olu Example'
+          ? { id: 'mem-olu', email: 'olu@example.com', firstName: 'Olu', lastName: 'Example' }
+          : null,
+    });
+    const matchedResult = await runClientImport('org-1', 'user-1', ImportClientsSchema.parse({
+      rows: [person({ assignedAdviserName: 'Olu Example', postcode: 'SW1A 2AA', addressLine1: '10 Test Lane' })],
+    }), matched);
+    assert.equal('error' in matchedResult, false);
+    if ('error' in matchedResult) return;
+    assert.equal(matchedResult.created, 1);
+    assert.equal(matchedResult.failed, 0);
+    assert.equal(matched.created[0]?.assignedMemberId, 'mem-olu');
+
+    const homes: Array<{ clientId: string; postcode: string }> = [];
+    const unmatched = mockDeps({
+      findMemberByName: async () => null,
+      createHomeProperty: async (_orgId, clientId, address) => {
+        homes.push({ clientId, postcode: address.postcode });
+      },
+    });
+    const unmatchedResult = await runClientImport('org-1', 'user-1', ImportClientsSchema.parse({
+      rows: [person({
+        email: 'ada.example@example.com',
+        assignedAdviserName: 'Nobody Home',
+        postcode: 'SW1A 1AA',
+        addressLine1: '10 Test Lane',
+      })],
+    }), unmatched);
+    assert.equal('error' in unmatchedResult, false);
+    if ('error' in unmatchedResult) return;
+    assert.equal(unmatchedResult.created, 1);
+    assert.equal(unmatchedResult.failed, 0);
+    assert.equal(unmatched.created[0]?.assignedMemberId, undefined);
+    assert.deepEqual(homes, [{ clientId: 'id-ada.example@example.com', postcode: 'SW1A 1AA' }]);
   });
 
   it('fails unknown adviser emails on that row only', async () => {

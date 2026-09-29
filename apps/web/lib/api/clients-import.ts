@@ -7,9 +7,11 @@ import { prisma } from '@/lib/db';
 import { devStore } from '@/lib/api/dev-store';
 import { isPrismaConnectionError } from '@/lib/api/prisma-errors';
 import { createClientForOrg } from '@/lib/api/clients-data';
+import { createPropertyForClient } from '@/lib/api/properties-data';
 import { logAuditEvent } from '@/lib/compliance/audit';
 import {
   runClientImport,
+  splitAdviserDisplayName,
   type ImportClientsDeps,
   type ImportClientsError,
   type ImportClientsRequest,
@@ -69,9 +71,54 @@ async function defaultFindMemberByEmail(orgId: string, email: string): Promise<I
   }
 }
 
+async function defaultFindMemberByName(orgId: string, name: string): Promise<ImportMemberRef | null> {
+  const parts = splitAdviserDisplayName(name);
+  if (!parts) return null;
+  try {
+    const matches = await prisma.organisationMember.findMany({
+      where: {
+        orgId,
+        isActive: true,
+        firstName: { equals: parts.firstName, mode: 'insensitive' },
+        lastName: { equals: parts.lastName, mode: 'insensitive' },
+      },
+      select: { id: true, email: true, firstName: true, lastName: true },
+      take: 2,
+    });
+    return matches.length === 1 ? matches[0]! : null;
+  } catch (error) {
+    if (!shouldUseDevStore(error)) throw error;
+    return devStore.findMemberByName(orgId, parts.firstName, parts.lastName);
+  }
+}
+
+async function defaultCreateHomeProperty(
+  orgId: string,
+  clientId: string,
+  address: { line1?: string; postcode: string },
+  userId?: string,
+): Promise<void> {
+  try {
+    await createPropertyForClient(
+      orgId,
+      clientId,
+      {
+        postcode: address.postcode,
+        address: address.line1 ? { line1: address.line1 } : undefined,
+        type: 'RESIDENTIAL',
+      },
+      userId,
+    );
+  } catch (error) {
+    if (!shouldUseDevStore(error)) throw error;
+  }
+}
+
 const defaultDeps: ImportClientsDeps = {
   listExistingEmails: defaultListExistingEmails,
   findMemberByEmail: defaultFindMemberByEmail,
+  findMemberByName: defaultFindMemberByName,
+  createHomeProperty: defaultCreateHomeProperty,
   createClient: createClientForOrg,
   logAudit: logAuditEvent,
 };

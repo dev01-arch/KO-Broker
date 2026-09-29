@@ -47,8 +47,110 @@ const ALIASES: Record<ClientImportField, string[]> = {
   assignedAdviserEmail: ['adviser email', 'broker email', 'assigned to', 'assignedadviseremail'],
 };
 
+/** Single-column names used by Clienttree and similar CRM exports. */
+const FULL_NAME_ALIASES = [
+  'full name',
+  'fullname',
+  'client name',
+  'client full name',
+  'contact name',
+  'applicant name',
+  'name',
+];
+
+/** Adviser columns that hold a person name rather than an email address. */
+const ADVISER_NAME_ALIASES = [
+  'adviser',
+  'advisor',
+  'broker',
+  'consultant',
+  'assigned adviser',
+  'assigned advisor',
+  'adviser name',
+  'advisor name',
+];
+
+const ADDRESS_ALIASES = [
+  'address',
+  'home address',
+  'client address',
+  'property address',
+  'street address',
+  'current address',
+];
+
+const NAME_TITLES = new Set(['mr', 'mrs', 'ms', 'miss', 'dr', 'prof', 'mx', 'sir', 'dame']);
+
+const UK_POSTCODE_RE = /\b([A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2})\b/i;
+
 export function normalizeImportHeader(header: string): string {
   return header.trim().toLowerCase().replace(/[*_]/g, '').replace(/\s+/g, ' ');
+}
+
+function headerMatchesAliases(header: string, aliases: string[]): boolean {
+  return aliases.includes(normalizeImportHeader(header));
+}
+
+function unusedHeader(headers: string[], used: Set<string>, aliases: string[]): string | null {
+  return (
+    headers.find((header) => !used.has(header) && headerMatchesAliases(header, aliases)) ?? null
+  );
+}
+
+export function splitImportPersonName(full: string): { firstName: string; lastName: string } {
+  const trimmed = full.trim().replace(/\s+/g, ' ');
+  if (!trimmed) return { firstName: '', lastName: '' };
+
+  const comma = trimmed.split(',');
+  if (comma.length === 2 && comma[0]?.trim() && comma[1]?.trim()) {
+    const lastName = comma[0].trim();
+    const firstName = stripLeadingTitle(comma[1].trim());
+    return { firstName: firstName || lastName, lastName };
+  }
+
+  const parts = stripLeadingTitle(trimmed).split(' ').filter(Boolean);
+  if (parts.length === 0) return { firstName: '', lastName: '' };
+  if (parts.length === 1) return { firstName: parts[0]!, lastName: parts[0]! };
+  return { firstName: parts[0]!, lastName: parts.slice(1).join(' ') };
+}
+
+function stripLeadingTitle(value: string): string {
+  const parts = value.trim().split(/\s+/).filter(Boolean);
+  if (parts.length > 1 && NAME_TITLES.has(parts[0]!.toLowerCase().replace(/\./g, ''))) {
+    return parts.slice(1).join(' ');
+  }
+  return parts.join(' ');
+}
+
+export function normaliseUkPostcode(raw: string): string | undefined {
+  const compact = raw.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if (compact.length < 5 || compact.length > 7) return undefined;
+  const spaced = `${compact.slice(0, -3)} ${compact.slice(-3)}`;
+  if (!UK_POSTCODE_RE.test(spaced)) return undefined;
+  return spaced;
+}
+
+/** Pull a UK postcode and the remaining street/town out of a single address cell. */
+export function parseImportAddress(raw: string): { line1?: string; postcode?: string } {
+  const value = raw.trim();
+  if (!value) return {};
+  const match = UK_POSTCODE_RE.exec(value);
+  const postcode = match ? normaliseUkPostcode(match[1]!) : undefined;
+  const line1 = value
+    .split(',')
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .filter((part) => !UK_POSTCODE_RE.test(part))
+    .join(', ')
+    .replace(UK_POSTCODE_RE, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/^,|,$/g, '')
+    .trim();
+  return {
+    line1: line1 || undefined,
+    postcode,
+  };
 }
 
 export function autoMapImportHeaders(headers: string[]): Record<ClientImportField, string | null> {
@@ -67,15 +169,44 @@ export function autoMapImportHeaders(headers: string[]): Record<ClientImportFiel
     if (match) used.add(match);
   }
 
+  if (!mapping.firstName && !mapping.lastName) {
+    const fullName = unusedHeader(headers, used, FULL_NAME_ALIASES);
+    if (fullName) {
+      mapping.firstName = fullName;
+      mapping.lastName = fullName;
+      used.add(fullName);
+    }
+  }
+
   return mapping;
+}
+
+function mappedHeaderSet(mapping: Record<ClientImportField, string | null>): Set<string> {
+  return new Set(Object.values(mapping).filter((value): value is string => Boolean(value)));
+}
+
+/** Columns such as Address and Adviser that Clienttree-style files import without a KO template field. */
+export function supplementalImportHeaders(
+  headers: string[],
+  mapping: Record<ClientImportField, string | null>,
+): string[] {
+  const mapped = mappedHeaderSet(mapping);
+  return headers.filter((header) => {
+    if (mapped.has(header)) return false;
+    return (
+      headerMatchesAliases(header, ADVISER_NAME_ALIASES) ||
+      headerMatchesAliases(header, ADDRESS_ALIASES)
+    );
+  });
 }
 
 export function ignoredImportHeaders(
   headers: string[],
   mapping: Record<ClientImportField, string | null>,
 ): string[] {
-  const mapped = new Set(Object.values(mapping).filter((value): value is string => Boolean(value)));
-  return headers.filter((header) => !mapped.has(header));
+  const mapped = mappedHeaderSet(mapping);
+  const supplemental = new Set(supplementalImportHeaders(headers, mapping));
+  return headers.filter((header) => !mapped.has(header) && !supplemental.has(header));
 }
 
 export function parseImportAnnualIncome(raw: string): { value?: number } | { error: string } {
@@ -215,8 +346,9 @@ function matrixFromAoA(aoa: unknown[][]): { headers: string[]; rows: string[][] 
 }
 
 export function parseClientImportCsv(text: string, fileName: string): ParsedImportMatrix | ParseImportError {
-  if (!text.trim()) return { error: 'This file is empty.', code: 'EMPTY' };
-  const parsed = Papa.parse<string[]>(text, {
+  const source = text.replace(/^\uFEFF/, '');
+  if (!source.trim()) return { error: 'This file is empty.', code: 'EMPTY' };
+  const parsed = Papa.parse<string[]>(source, {
     header: false,
     skipEmptyLines: false,
   });
@@ -327,8 +459,11 @@ export function mapParsedRows(options: {
   return options.rows.map((row, index) => {
     const rowNumber = index + 1;
     const get = (field: ClientImportField) => cell(row, options.headers, options.mapping[field]);
-    const firstName = get('firstName');
-    const lastName = get('lastName');
+    const sameNameColumn =
+      Boolean(options.mapping.firstName) && options.mapping.firstName === options.mapping.lastName;
+    const splitName = sameNameColumn ? splitImportPersonName(get('firstName')) : null;
+    const firstName = splitName ? splitName.firstName : get('firstName');
+    const lastName = splitName ? splitName.lastName : get('lastName');
     const email = get('email');
     const companyName = get('companyName');
     const companyNumber = get('companyNumber');
@@ -381,6 +516,36 @@ export function mapParsedRows(options: {
       seenInFile.add(emailKey);
     }
 
+    const adviserEmailRaw = get('assignedAdviserEmail');
+    const adviserNameHeader = unusedHeader(
+      options.headers,
+      new Set(Object.values(options.mapping).filter((value): value is string => Boolean(value))),
+      ADVISER_NAME_ALIASES,
+    );
+    const adviserNameRaw = adviserNameHeader
+      ? cell(row, options.headers, adviserNameHeader)
+      : '';
+    const adviserLooksLikeEmail = (value: string) => value.includes('@');
+    let assignedAdviserEmail = adviserEmailRaw || undefined;
+    let assignedAdviserName: string | undefined;
+    if (assignedAdviserEmail && !adviserLooksLikeEmail(assignedAdviserEmail)) {
+      assignedAdviserName = assignedAdviserEmail;
+      assignedAdviserEmail = undefined;
+    }
+    if (!assignedAdviserName && adviserNameRaw) {
+      if (adviserLooksLikeEmail(adviserNameRaw)) assignedAdviserEmail = adviserNameRaw;
+      else assignedAdviserName = adviserNameRaw;
+    }
+
+    const addressHeader = unusedHeader(
+      options.headers,
+      new Set(Object.values(options.mapping).filter((value): value is string => Boolean(value))),
+      ADDRESS_ALIASES,
+    );
+    const address = addressHeader
+      ? parseImportAddress(cell(row, options.headers, addressHeader))
+      : {};
+
     const payload: ImportClientRow = {
       rowNumber,
       firstName: firstName || undefined,
@@ -398,7 +563,10 @@ export function mapParsedRows(options: {
       companyName: companyName || undefined,
       companyNumber: companyNumber || undefined,
       insurerName: get('insurerName') || undefined,
-      assignedAdviserEmail: get('assignedAdviserEmail') || undefined,
+      assignedAdviserEmail,
+      assignedAdviserName,
+      addressLine1: address.line1,
+      postcode: address.postcode,
     };
 
     const name =

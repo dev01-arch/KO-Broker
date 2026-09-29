@@ -67,6 +67,14 @@ export type ImportCreateClientResult =
 export type ImportClientsDeps = {
   listExistingEmails: (orgId: string) => Promise<string[]>;
   findMemberByEmail: (orgId: string, email: string) => Promise<ImportMemberRef | null>;
+  /** Match a CRM adviser name such as "Olu Awonuga". Unmatched names do not fail the row. */
+  findMemberByName?: (orgId: string, name: string) => Promise<ImportMemberRef | null>;
+  createHomeProperty?: (
+    orgId: string,
+    clientId: string,
+    address: { line1?: string; postcode: string },
+    userId?: string,
+  ) => Promise<void>;
   createClient: (
     orgId: string,
     input: ImportCreateClientInput,
@@ -185,6 +193,47 @@ export function isValidImportEmail(email: string): boolean {
   return EMAIL_RE.test(email.trim());
 }
 
+const ADVISER_TITLES = new Set(['mr', 'mrs', 'ms', 'miss', 'dr', 'prof', 'mx', 'sir', 'dame']);
+
+/** "Olu Awonuga" or "Awonuga, Olu" → first and last. Single-token names are not matched. */
+export function splitAdviserDisplayName(raw: string): { firstName: string; lastName: string } | null {
+  const trimmed = raw.trim().replace(/\s+/g, ' ');
+  if (!trimmed || trimmed.includes('@')) return null;
+
+  const comma = trimmed.split(',');
+  if (comma.length === 2 && comma[0]?.trim() && comma[1]?.trim()) {
+    const lastName = comma[0].trim();
+    const firstName = stripAdviserTitle(comma[1].trim());
+    if (!firstName || !lastName) return null;
+    return { firstName, lastName };
+  }
+
+  const parts = stripAdviserTitle(trimmed).split(' ').filter(Boolean);
+  if (parts.length < 2) return null;
+  return { firstName: parts[0]!, lastName: parts.slice(1).join(' ') };
+}
+
+function stripAdviserTitle(value: string): string {
+  const parts = value.trim().split(/\s+/).filter(Boolean);
+  if (parts.length > 1 && ADVISER_TITLES.has(parts[0]!.toLowerCase().replace(/\./g, ''))) {
+    return parts.slice(1).join(' ');
+  }
+  return parts.join(' ');
+}
+
+function importHomeAddress(
+  row: ImportClientRow,
+): { line1?: string; postcode: string } | undefined {
+  const raw = row.postcode?.trim();
+  if (!raw) return undefined;
+  const compact = raw.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if (compact.length < 5 || compact.length > 7) return undefined;
+  const postcode = `${compact.slice(0, -3)} ${compact.slice(-3)}`;
+  if (postcode.length > 10) return undefined;
+  const line1 = row.addressLine1?.trim();
+  return { postcode, line1: line1 || undefined };
+}
+
 export type PreparedImportRow =
   | {
       ok: true;
@@ -193,6 +242,8 @@ export type PreparedImportRow =
       emailKey: string;
       input: ImportCreateClientInput;
       assignedAdviserEmail?: string;
+      assignedAdviserName?: string;
+      homeAddress?: { line1?: string; postcode: string };
     }
   | { ok: false; rowNumber: number; fields: Record<string, string> };
 
@@ -244,6 +295,8 @@ export function prepareImportRow(row: ImportClientRow): PreparedImportRow {
     email,
     emailKey: email.toLowerCase(),
     assignedAdviserEmail: row.assignedAdviserEmail,
+    assignedAdviserName: row.assignedAdviserName,
+    homeAddress: importHomeAddress(row),
     input: {
       clientType: clientType.value,
       title: row.title,
@@ -335,6 +388,9 @@ export async function runClientImport(
           continue;
         }
         assignedMemberId = member.id;
+      } else if (row.assignedAdviserName?.trim() && deps.findMemberByName) {
+        const member = await deps.findMemberByName(orgId, row.assignedAdviserName);
+        if (member) assignedMemberId = member.id;
       }
 
       try {
@@ -355,6 +411,13 @@ export async function runClientImport(
         }
 
         existingKeys.add(row.emailKey);
+        if (row.homeAddress && deps.createHomeProperty) {
+          try {
+            await deps.createHomeProperty(orgId, created.client.id, row.homeAddress, userId);
+          } catch {
+            // The client is already saved. A home address must not fail the import.
+          }
+        }
         results.push({
           rowNumber: row.rowNumber,
           status: 'CREATED',

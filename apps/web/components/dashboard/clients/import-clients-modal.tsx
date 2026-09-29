@@ -26,6 +26,7 @@ import {
   mappingReady,
   parseClientImportFile,
   sampleColumnValues,
+  supplementalImportHeaders,
   type ParsedImportMatrix,
   type PreviewImportRow,
 } from '@/lib/clients/import-parse';
@@ -116,6 +117,10 @@ export function ImportClientsModal({
 
   const ignored = useMemo(
     () => (parsed ? ignoredImportHeaders(parsed.headers, mapping) : []),
+    [parsed, mapping],
+  );
+  const supplemental = useMemo(
+    () => (parsed ? supplementalImportHeaders(parsed.headers, mapping) : []),
     [parsed, mapping],
   );
   const mapGate = mappingReady(mapping);
@@ -336,6 +341,16 @@ export function ImportClientsModal({
                   </tbody>
                 </table>
               </div>
+              {mapping.firstName && mapping.firstName === mapping.lastName && (
+                <p className="text-xs text-[#71717a]">
+                  {mapping.firstName} is split into a first name and last name.
+                </p>
+              )}
+              {supplemental.length > 0 && (
+                <p className="text-xs text-[#71717a]">
+                  Also imported: {supplemental.join(', ')}. Adviser names are matched to people already in the firm. Addresses with a postcode are saved as the client&apos;s home.
+                </p>
+              )}
               {ignored.length > 0 && (
                 <p className="text-xs text-[#71717a]">
                   Ignored: {ignored.join(', ')}

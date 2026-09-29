@@ -8,12 +8,15 @@ import {
   autoMapImportHeaders,
   buildClientImportDemoCsv,
   buildClientImportTemplateCsv,
+  ignoredImportHeaders,
   mapParsedRows,
   mappingReady,
   parseClientImportCsv,
+  parseImportAddress,
   parseImportAnnualIncome,
   parseImportDateOfBirth,
   parseImportEmploymentStatus,
+  splitImportPersonName,
 } from './import-parse.ts';
 
 describe('autoMapImportHeaders', () => {
@@ -78,6 +81,77 @@ describe('mapParsedRows', () => {
     assert.equal(rows[0].status, 'create');
     assert.equal(rows[1].status, 'fail');
     assert.equal(rows[2].status, 'skip');
+  });
+});
+
+const CLIENTTREE_CSV = `Entry date,Full Name,Date of birth,Email,Phone,Address,Adviser,Portal created
+23/07/2026,Ada Example,05/12/2001,ada.example@example.com,07700900111,"10 Test Lane, , SW1A 1AA",,No
+23/07/2026,Grace Sample,14/11/1967,grace.sample@example.com,07700900112,"10 Test Lane, , SW1A 2AA",Olu Example,No
+23/07/2026,Mary Ann Demo,05/12/2007,mary.demo@example.com,07700900113,"1 Baxter Place, , EC1A 1BB",,No
+22/07/2026,Ernestina Example,03/06/1985,ernestina.example@example.com,07700900114,"2 Demo Road, Richmond, TW10 7LR",Olu Example,No
+22/07/2026,Gaubys Example,26/11/1985,gaubys.example@example.com,07700900115,"101 Sample Street, Rochester, ME2 3EX",,No
+`;
+
+describe('Clienttree CRM export', () => {
+  it('splits full names and keeps the KO template mapping unchanged', () => {
+    assert.deepEqual(splitImportPersonName('Ada Example'), {
+      firstName: 'Ada',
+      lastName: 'Example',
+    });
+    assert.deepEqual(splitImportPersonName('Mr John Smith'), {
+      firstName: 'John',
+      lastName: 'Smith',
+    });
+    const canonical = autoMapImportHeaders(['firstName', 'lastName', 'email']);
+    assert.equal(canonical.firstName, 'firstName');
+    assert.equal(canonical.lastName, 'lastName');
+  });
+
+  it('maps a Clienttree CSV into creatable client rows', () => {
+    const parsed = parseClientImportCsv(CLIENTTREE_CSV, '01 Sample Brokerage CRM Clients Page.csv');
+    assert.equal('error' in parsed, false);
+    if ('error' in parsed) return;
+
+    const mapping = autoMapImportHeaders(parsed.headers);
+    assert.equal(mappingReady(mapping).ready, true);
+    assert.equal(mapping.firstName, 'Full Name');
+    assert.equal(mapping.lastName, 'Full Name');
+    assert.equal(mapping.email, 'Email');
+    assert.equal(mapping.phone, 'Phone');
+    assert.equal(mapping.dateOfBirth, 'Date of birth');
+    assert.deepEqual(ignoredImportHeaders(parsed.headers, mapping), ['Entry date', 'Portal created']);
+
+    const rows = mapParsedRows({
+      headers: parsed.headers,
+      rows: parsed.rows,
+      mapping,
+      existingEmails: [],
+    });
+    assert.equal(rows.length, 5);
+    assert.equal(rows.every((row) => row.status === 'create'), true);
+    assert.equal(rows[0]?.payload.firstName, 'Ada');
+    assert.equal(rows[0]?.payload.lastName, 'Example');
+    assert.equal(rows[0]?.payload.dateOfBirth, '2001-12-05');
+    assert.equal(rows[0]?.payload.phone, '07700900111');
+    assert.equal(rows[0]?.payload.addressLine1, '10 Test Lane');
+    assert.equal(rows[0]?.payload.postcode, 'SW1A 1AA');
+    assert.equal(rows[0]?.payload.assignedAdviserName, undefined);
+    assert.equal(rows[1]?.payload.assignedAdviserName, 'Olu Example');
+    assert.equal(rows[1]?.payload.postcode, 'SW1A 2AA');
+    assert.equal(rows[2]?.payload.firstName, 'Mary');
+    assert.equal(rows[2]?.payload.lastName, 'Ann Demo');
+    assert.equal(rows[3]?.payload.firstName, 'Ernestina');
+    assert.equal(rows[3]?.payload.lastName, 'Example');
+    assert.equal(rows[3]?.payload.addressLine1, '2 Demo Road, Richmond');
+    assert.equal(rows[3]?.payload.postcode, 'TW10 7LR');
+    assert.equal(rows[3]?.payload.assignedAdviserEmail, undefined);
+  });
+
+  it('parses a Clienttree address with an empty middle part', () => {
+    assert.deepEqual(parseImportAddress('1 Baxter Place, , IV30 8QE'), {
+      line1: '1 Baxter Place',
+      postcode: 'IV30 8QE',
+    });
   });
 });
 

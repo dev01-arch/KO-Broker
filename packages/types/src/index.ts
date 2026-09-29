@@ -451,6 +451,10 @@ export const ImportClientRowSchema = z.object({
   companyNumber: optionalImportString,
   insurerName: optionalImportString,
   assignedAdviserEmail: optionalImportString,
+  /** CRM exports (Clienttree) often store the adviser as a name, not an email. */
+  assignedAdviserName: optionalImportString,
+  addressLine1: optionalImportString,
+  postcode: optionalImportString,
 });
 export type ImportClientRow = z.infer<typeof ImportClientRowSchema>;
 
