@@ -812,8 +812,24 @@ tbody tr:hover td{background:var(--surface)}
 #tab-case-detail .cd-comp-dot--done{background:var(--dot-color,#066D80);border-color:var(--dot-color,#066D80)}
 #tab-case-detail .cd-comp-dot--pending{background:#f4f4f5;border-color:#d4d4d8;color:#a1a1aa}
 #tab-case-detail .cd-comp-pill{display:flex;align-items:center;justify-content:center;width:100%;max-width:120px;min-height:36px;padding:8px 12px;border-radius:10px;border:1px solid var(--pill-border,#e4e4e7);background:var(--pill-bg,#fff);font-family:'Syne',sans-serif;font-size:13px;font-weight:600;color:var(--pill-color,#52525b);text-align:center;box-sizing:border-box}
+#tab-case-detail button.cd-comp-pill{appearance:none;cursor:pointer}
 #tab-case-detail .cd-comp-pill--current{box-shadow:0 0 0 2px var(--pill-border,#0F6E56)}
 #tab-case-detail .cd-comp-pill--pending{background:#f4f4f5;border-color:#e4e4e7;color:#a1a1aa}
+#tab-case-detail .cd-comp-pill--open{cursor:pointer}
+#tab-case-detail .cd-comp-pill--open:hover{box-shadow:0 0 0 2px var(--pill-border,#cba6ea)}
+#tab-case-detail .cd-comp-pill--open:disabled{opacity:.6;cursor:default}
+.ko-stage-gate{position:fixed;inset:0;z-index:900;background:rgba(13,31,26,.45);display:flex;align-items:center;justify-content:center;padding:20px}
+.ko-stage-gate-card{width:min(560px,100%);background:#fff;border-radius:18px;box-shadow:0 24px 60px rgba(24,24,27,.25);overflow:hidden;font-family:'DM Sans',sans-serif}
+.ko-stage-gate-head{display:flex;justify-content:space-between;gap:12px;padding:18px 20px 14px;border-bottom:1px solid #E4E4E7}
+.ko-stage-gate-head h3{margin:0;font-family:'Syne',sans-serif;font-size:22px;font-weight:700;color:#18181B;line-height:1.25}
+.ko-stage-gate-head p{margin:6px 0 0;font-size:14px;line-height:1.5;color:#71717A}
+.ko-stage-gate-close{appearance:none;border:0;background:transparent;color:#71717A;font-size:18px;line-height:1;cursor:pointer;padding:4px}
+.ko-stage-gate-list{padding:16px 20px;display:flex;flex-direction:column;gap:10px;max-height:360px;overflow:auto}
+.ko-stage-gate-item{padding:14px;border-radius:14px;background:#FFFBEF;border:1px solid #FDE68A}
+.ko-stage-gate-item strong{display:block;font-size:14px;color:#92400E}
+.ko-stage-gate-item span{display:block;font-size:13px;line-height:1.45;color:#A16207;margin-top:4px}
+.ko-stage-gate-foot{padding:14px 20px;border-top:1px solid #E4E4E7;display:flex;justify-content:flex-end}
+.ko-stage-gate-ok{height:38px;padding:0 16px;border:0;border-radius:999px;background:#0F6E56;color:#fff;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer}
 #tab-case-detail .cd-comp-bar{height:6px;border-radius:100px;background:#E8EEF0;overflow:hidden;margin:0 0 18px}
 #tab-case-detail .cd-comp-bar > span{display:block;height:100%;border-radius:100px;background:#619DB3;transition:width .3s ease}
 #tab-case-detail .cd-comp-bar-row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 8px}
@@ -1804,8 +1820,12 @@ body.ff-open .dash-main{overflow:hidden!important;height:100%!important;max-heig
 .ff-comp-row-lbl{color:#71717a}
 .ff-comp-row-val{font-weight:600;font-family:monospace;font-size:12px;color:#18181b}
 .ff-comp-stage{color:#0F6E56;font-weight:700;font-family:'Syne',sans-serif;font-size:13px}
+.ff-comp-actions{display:flex;flex-direction:column;gap:10px;align-items:center}
 .ff-comp-reset{padding:12px 24px;background:#0F6E56;color:#fff;border-radius:12px;border:0;font-size:14px;font-weight:600;cursor:pointer;transition:background .15s;font-family:inherit;box-shadow:0 2px 4px rgba(15,110,86,.2)}
 .ff-comp-reset:hover{background:rgba(15,110,86,.9)}
+.ff-comp-reset:disabled{opacity:.6;cursor:default}
+.ff-comp-secondary{padding:12px 24px;background:#fff;color:#0F6E56;border-radius:12px;border:1px solid #0F6E56;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit}
+.ff-comp-secondary:hover{background:#E1F5EE}
 .ff-rate-section-lbl{font-size:13px;font-weight:600;color:#71717a;margin-bottom:8px}
 .ff-state-banner{display:flex;align-items:flex-start;gap:10px;margin:0 0 14px 26px;padding:12px 14px;border-radius:14px;border:1px solid #F5D38E;background:#FFF8E8;color:#B45309;max-width:672px}
 .ff-state-banner svg{width:18px;height:18px;flex-shrink:0;margin-top:1px}
@@ -5464,27 +5484,152 @@ function getComplianceProgressStats(phases) {
   return { done, total, remaining, pct };
 }
 
+const RAIL_NEXT_STAGE = {
+  1: { index: 2, api: 'RESEARCH', stage: 'research', stageLabel: 'Research', complianceCurrent: 'research' },
+  2: { index: 3, api: 'DIP', stage: 'dip', stageLabel: 'Application', complianceCurrent: 'application' },
+  3: { index: 4, api: 'OFFER', stage: 'offer', stageLabel: 'Offer', complianceCurrent: 'offer' },
+};
+
 function renderCaseProgressSteps(c) {
   const currentIdx = getComplianceStageIndex(c);
+  const openNext = RAIL_NEXT_STAGE[currentIdx];
   return CD_COMPLIANCE_STAGES.map((s, i) => {
     const isComplete = i < currentIdx;
     const isCurrent = i === currentIdx;
-    const isPending = i > currentIdx;
+    const canOpen = !!(openNext && i === openNext.index);
+    const isPending = i > currentIdx && !canOpen;
     const theme = isPending ? CD_COMPLIANCE_GRAY : s;
     const leftBg = i === 0 ? 'transparent' : (isComplete || isCurrent ? CD_COMPLIANCE_STAGES[i - 1].line : CD_COMPLIANCE_GRAY.line);
     const rightBg = i === CD_COMPLIANCE_STAGES.length - 1 ? 'transparent' : (isComplete ? s.line : CD_COMPLIANCE_GRAY.line);
-    const dotCls = isPending ? 'cd-comp-dot--pending' : 'cd-comp-dot--done';
-    const pillCls = [isCurrent ? 'cd-comp-pill--current' : '', isPending ? 'cd-comp-pill--pending' : ''].filter(Boolean).join(' ');
+    const dotCls = isPending || canOpen ? 'cd-comp-dot--pending' : 'cd-comp-dot--done';
+    const pillCls = [isCurrent ? 'cd-comp-pill--current' : '', isPending ? 'cd-comp-pill--pending' : '', canOpen ? 'cd-comp-pill--open' : ''].filter(Boolean).join(' ');
+    const pillStyle = `--pill-bg:${theme.bg};--pill-border:${theme.border};--pill-color:${theme.text}`;
+    const pill = canOpen
+      ? `<button type="button" class="cd-comp-pill ${pillCls}" style="${pillStyle}" data-ko-open-stage="${openNext.api}">${s.label}</button>`
+      : `<div class="cd-comp-pill ${pillCls}" style="${pillStyle}">${s.label}</div>`;
     return `<div class="cd-comp-step">
       <div class="cd-comp-dot-row">
         <div class="cd-comp-connector" style="background:${leftBg}"></div>
         <div class="cd-comp-dot ${dotCls}" style="--dot-color:${theme.dot}">✓</div>
         <div class="cd-comp-connector" style="background:${rightBg}"></div>
       </div>
-      <div class="cd-comp-pill ${pillCls}" style="--pill-bg:${theme.bg};--pill-border:${theme.border};--pill-color:${theme.text}">${s.label}</div>
+      ${pill}
     </div>`;
   }).join('');
 }
+
+document.addEventListener('click', (event) => {
+  const btn = event.target && event.target.closest ? event.target.closest('[data-ko-open-stage]') : null;
+  if (!btn) return;
+  const apiStage = btn.getAttribute('data-ko-open-stage');
+  const localNext = Object.keys(RAIL_NEXT_STAGE).map((key) => RAIL_NEXT_STAGE[key]).find((step) => step.api === apiStage);
+  if (!localNext) return;
+  event.preventDefault();
+  const page = document.querySelector('#case-detail-content .cd-page[data-open-case-id]');
+  const caseId = page ? page.getAttribute('data-open-case-id') : null;
+  if (!caseId || btn.disabled || btn.getAttribute('aria-busy') === 'true') return;
+  const isLive = new URLSearchParams(window.location.search).get('liveData') === '1';
+  if (isLive && window.parent !== window) {
+    btn.disabled = true;
+    btn.setAttribute('aria-busy', 'true');
+    window.parent.postMessage({ type: 'ko:open-stage', caseId: caseId, stage: apiStage }, window.location.origin);
+    return;
+  }
+  if (typeof cases !== 'undefined' && cases[caseId]) {
+    cases[caseId].stage = localNext.stage;
+    cases[caseId].stageLabel = localNext.stageLabel;
+    cases[caseId].complianceCurrent = localNext.complianceCurrent;
+    if (typeof openCase === 'function') openCase(caseId);
+  }
+});
+
+function closeStageGateModal() {
+  const existing = document.getElementById('ko-stage-gate');
+  if (existing) existing.remove();
+}
+
+function showStageGateModal(data) {
+  closeStageGateModal();
+  const label = data.targetLabel || 'the next stage';
+  const rawItems = Array.isArray(data.items) && data.items.length
+    ? data.items
+    : [data.summary || 'Complete the outstanding compliance items, then try again.'];
+  const copy = {
+    'Initial disclosure document must be uploaded.': {
+      title: 'Upload the initial disclosure',
+      detail: 'Add the initial disclosure document on this case before it can leave Enquiry.',
+    },
+    'Fact-find questionnaire must be completed.': {
+      title: 'Finish the fact-find',
+      detail: 'Open the fact-find and submit it. Research stays closed until the questionnaire is complete.',
+    },
+    'At least 3 products must be considered and recorded.': {
+      title: 'Record at least 3 products',
+      detail: 'Add the mortgage products you considered on this case. Application needs three or more.',
+    },
+    'A selected product must be confirmed.': {
+      title: 'Select the recommended product',
+      detail: 'Mark the product you are recommending, and include the lender.',
+    },
+    'Adviser notes must be completed.': {
+      title: 'Write the adviser notes',
+      detail: 'Add the adviser notes for this case before it can move to Application.',
+    },
+    'ESIS compliance document must be uploaded or generated.': {
+      title: 'File the ESIS',
+      detail: 'ESIS is the European Standardised Information Sheet: the mortgage illustration for this case. Upload it on Documents as a compliance file with ESIS in the name, for example ESIS_Document.pdf. Offer stays closed until that file is on the case.',
+    },
+    'Suitability report must be finalised.': {
+      title: 'Finalise the suitability report',
+      detail: 'The suitability report has to be finalised before this case can be completed. The client then receives the recommendation and the PDF.',
+    },
+  };
+  const escText = (value) => String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+  const itemsHtml = rawItems.map((item) => {
+    const known = copy[item];
+    const title = known ? known.title : item;
+    const detail = known ? known.detail : '';
+    return `<div class="ko-stage-gate-item"><strong>${escText(title)}</strong>${detail ? `<span>${escText(detail)}</span>` : ''}</div>`;
+  }).join('');
+  const wrap = document.createElement('div');
+  wrap.id = 'ko-stage-gate';
+  wrap.className = 'ko-stage-gate';
+  wrap.innerHTML = `<div class="ko-stage-gate-card" role="dialog" aria-modal="true" aria-labelledby="ko-stage-gate-title">
+    <div class="ko-stage-gate-head">
+      <div>
+        <h3 id="ko-stage-gate-title">This case cannot move to ${escText(label)} yet</h3>
+        <p>Finish the items below, then choose ${escText(label)} again.</p>
+      </div>
+      <button type="button" class="ko-stage-gate-close" data-ko-stage-gate-close aria-label="Close">✕</button>
+    </div>
+    <div class="ko-stage-gate-list">${itemsHtml}</div>
+    <div class="ko-stage-gate-foot"><button type="button" class="ko-stage-gate-ok" data-ko-stage-gate-close>Got it</button></div>
+  </div>`;
+  wrap.addEventListener('click', (event) => {
+    if (event.target === wrap || (event.target.closest && event.target.closest('[data-ko-stage-gate-close]'))) {
+      closeStageGateModal();
+    }
+  });
+  document.body.appendChild(wrap);
+  const ok = wrap.querySelector('.ko-stage-gate-ok');
+  if (ok) ok.focus();
+}
+
+window.addEventListener('message', (event) => {
+  if (event.origin !== window.location.origin) return;
+  const data = event.data;
+  if (!data || data.success) return;
+  if (data.type !== 'ko:open-stage-result' && data.type !== 'ko:open-research-result') return;
+  document.querySelectorAll('[data-ko-open-stage]').forEach((el) => {
+    el.disabled = false;
+    el.removeAttribute('aria-busy');
+  });
+  if (data.type === 'ko:open-stage-result') showStageGateModal(data);
+});
 
 function cdStatusClass(status) {
   const map = {
@@ -5538,16 +5683,19 @@ function cdPhaseItemNote(text) {
 
 function cdStatusBadgeHtml(label, itemStatus) {
   const isAuto = label === 'AUTO';
-  const cls = isAuto ? 'cd-status--auto' : cdStatusClass(itemStatus);
+  const visualStatus = label === 'Sent' ? 'sent' : itemStatus;
+  const cls = isAuto ? 'cd-status--auto' : cdStatusClass(visualStatus);
   const kind = isAuto
     ? 'auto'
-    : (label === 'Complete' || itemStatus === 'complete')
-      ? 'complete'
-      : (itemStatus === 'advisory' || itemStatus === 'critical' || label === 'Advisory')
-        ? 'orange'
-        : (itemStatus === 'pending' || itemStatus === 'outstanding' || label === 'Not started')
-          ? 'gray'
-          : 'green';
+    : (label === 'Sent' || itemStatus === 'sent')
+      ? 'green'
+      : (label === 'Complete' || itemStatus === 'complete')
+        ? 'complete'
+        : (itemStatus === 'advisory' || itemStatus === 'critical' || label === 'Advisory')
+          ? 'orange'
+          : (itemStatus === 'pending' || itemStatus === 'outstanding' || label === 'Not started')
+            ? 'gray'
+            : 'green';
 
   let icon = '';
   if (kind === 'complete') {
@@ -7645,7 +7793,11 @@ function calcRun() {
     var nameEl = root.querySelector('.cd-client-name');
     if (nameEl) nameEl.textContent = c.client || c.name || '';
     var badge = root.querySelector('.cd-stage-badge');
-    if (badge && c.stageLabel) badge.textContent = c.stageLabel;
+    if (badge && c.stageLabel) {
+      badge.textContent = c.stageLabel;
+      var badgeMap = {lead:'cd-stage-badge--lead',enquiry:'cd-stage-badge--enquiry',factfind:'cd-stage-badge--factfind',research:'cd-stage-badge--research',dip:'cd-stage-badge--dip',offer:'cd-stage-badge--offer'};
+      badge.className = 'cd-stage-badge ' + (badgeMap[c.stage] || 'cd-stage-badge--lead');
+    }
     var pills = root.querySelectorAll('.cd-meta-pill');
     if (pills[0] && c.ref) pills[0].textContent = '# ' + c.ref;
     if (pills[1] && c.headerAmount) pills[1].textContent = c.headerAmount;
@@ -9205,6 +9357,8 @@ calcRun();
   };
 
   function ffClose() {
+    const caseId = ff.caseId;
+    const refreshCase = ff.done && caseId;
     document.getElementById('ff-overlay').classList.add('ff-hidden');
     document.documentElement.classList.remove('ff-open');
     document.body.classList.remove('ff-open');
@@ -9220,6 +9374,10 @@ calcRun();
     ffHideUploadFloat();
     ffNotifyParent(false);
     document.removeEventListener('keydown', ffKeyDown);
+    if (refreshCase && typeof openCase === 'function' && typeof cases !== 'undefined' && cases[caseId]) {
+      const tab = document.getElementById('tab-case-detail');
+      if (tab && !tab.classList.contains('hidden')) openCase(caseId);
+    }
   }
 
   window.closeFactFindWizardIfOpen = function () {
@@ -9347,6 +9505,14 @@ calcRun();
 
   function ffSubmitToApi() {
     if (!ff.caseId || window.parent === window || ffIsOfflineSave()) {
+      if (ff.caseId && typeof cases !== 'undefined' && cases[ff.caseId]) {
+        const stage = cases[ff.caseId].stage;
+        if (stage === 'factfind' || stage === 'enquiry' || stage === 'lead') {
+          cases[ff.caseId].stage = 'research';
+          cases[ff.caseId].stageLabel = 'Research';
+          cases[ff.caseId].complianceCurrent = 'research';
+        }
+      }
       ff.done = true;
       ffRender();
       return;
@@ -9398,6 +9564,7 @@ calcRun();
     if (ff.done) {
       ov.innerHTML = ffCompHTML();
       ov.querySelector('#ff-comp-close').addEventListener('click', ffClose);
+      ov.querySelector('#ff-comp-back').addEventListener('click', ffClose);
       ov.querySelector('#ff-comp-reset').addEventListener('click', () => {
         var ok = window.confirm('This action will be recorded in the audit log. If a product is already selected, the recommendation may be marked stale. Continue?');
         if (!ok) return;
@@ -10106,13 +10273,16 @@ calcRun();
           <div class="ff-comp-icon"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
           <h1 class="ff-comp-title">Fact-find submitted</h1>
           <p class="ff-comp-desc">All sections complete for <strong>${esc(clientName)}</strong>${caseRef!=='—'?' (Case '+esc(caseRef)+')':''}.
-            The compliance checklist has been updated — this case can now advance to <strong>RESEARCH</strong>.</p>
+            Research is now the open stage for this case.</p>
           <div class="ff-comp-details">
             <div class="ff-comp-row"><span class="ff-comp-row-lbl">Completed at</span><span class="ff-comp-row-val">${esc(now)}</span></div>
             ${caseRef!=='—'?`<div class="ff-comp-row"><span class="ff-comp-row-lbl">Case reference</span><span class="ff-comp-row-val">${esc(caseRef)}</span></div>`:''}
             <div class="ff-comp-row"><span class="ff-comp-row-lbl">Next stage</span><span class="ff-comp-row-val ff-comp-stage">RESEARCH</span></div>
           </div>
-          <button type="button" id="ff-comp-reset" class="ff-comp-reset">Amend fact-find</button>
+          <div class="ff-comp-actions">
+            <button type="button" id="ff-comp-back" class="ff-comp-reset">Back to case</button>
+            <button type="button" id="ff-comp-reset" class="ff-comp-secondary">Amend fact-find</button>
+          </div>
         </div>
       </div>`;
   }

@@ -685,11 +685,11 @@ function evaluateItem(catalog: CatalogItem, input: ChecklistCaseInput): Complian
     case 'tob-sent': {
       const doc = findDoc(docs, [/terms of business/i, /\btob\b/i]);
       if (doc || idx >= stageIndex('FACT_FIND')) {
+        // Issued TOB is complete. Keep the Sent badge, but use a done status so
+        // the phase and the 16-item progress can reach 100%.
         return {
           ...doneItem(catalog, 'complete', doc?.createdAt ?? input.createdAt, 'Sent'),
-          status: 'sent',
           badges: ['Sent', 'AUTO'],
-          actions: undefined,
         };
       }
       return pendingItem(catalog, { actions: ['resend', 'confirm'] });

@@ -4,6 +4,7 @@ import { requireApiAuth } from '@/lib/api/require-api-auth';
 import { getCurrentUser, maskCaseFinancials, maskClientFinancials } from '@/lib/auth';
 import { caseAssignedToAdviserWhere, isRestrictedAdviser } from '@/lib/auth/adviser-scope';
 import { getCaseForOrg, updateCaseForOrg } from '@/lib/api/cases-data';
+import { promoteCompletedFactFindToResearch } from '@/lib/api/fact-find-data';
 import { serializeCaseDetail, serializeCaseSummary } from '@/lib/api/cases';
 import { apiError, apiFromZodError, apiNotFound, apiSuccess } from '@/lib/api/responses';
 import { isPrismaConnectionError } from '@/lib/api/prisma-errors';
@@ -23,7 +24,7 @@ export async function GET(_req: NextRequest, context: RouteContext) {
     const hideAccountDetails =
       currentUser?.role === 'ADVISER' && !currentUser.canViewAccountDetails;
 
-    const caseRecord = await getCaseForOrg(orgId, id);
+    let caseRecord = await getCaseForOrg(orgId, id);
     if (!caseRecord) {
       return apiNotFound('Case not found');
     }
@@ -40,6 +41,16 @@ export async function GET(_req: NextRequest, context: RouteContext) {
       if (!allowed) {
         return apiNotFound('Case not found');
       }
+    }
+
+    if (caseRecord.stage === 'FACT_FIND' && caseRecord.factFind?.completedAt) {
+      await promoteCompletedFactFindToResearch({
+        caseId: id,
+        orgId,
+        fromStage: caseRecord.stage,
+        userId: currentUser?.id,
+      });
+      caseRecord = (await getCaseForOrg(orgId, id)) ?? caseRecord;
     }
 
     let payload = serializeCaseDetail(caseRecord);

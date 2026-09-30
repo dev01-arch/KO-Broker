@@ -5,6 +5,7 @@ import { requirePortalAuth } from '@/lib/auth/portalAuth';
 import { calculateVulnerabilityScore, checkIsVulnerable } from '@/lib/compliance/vulnerability';
 import { deliverEmail } from '@/lib/notifications/email';
 import { logAuditEvent, computeDiff } from '@/lib/compliance/audit';
+import { promoteCompletedFactFindToResearch } from '@/lib/api/fact-find-data';
 
 export const POST = createHandler({
   method: 'POST',
@@ -101,6 +102,14 @@ export const POST = createHandler({
         body: 'I have completed my Fact-Find questionnaire and submitted it for review.',
       },
     });
+
+    if (activeCase.stage === 'ENQUIRY' || activeCase.stage === 'FACT_FIND') {
+      await promoteCompletedFactFindToResearch({
+        caseId: activeCase.id,
+        orgId: client.orgId,
+        fromStage: activeCase.stage,
+      });
+    }
 
     // 5. Notify assigned broker/adviser via Email
     if (activeCase.assignedAdviserId) {

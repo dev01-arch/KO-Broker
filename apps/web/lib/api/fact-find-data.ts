@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/db';
+import { advanceCaseStage } from '@/lib/api/compliance-data';
 import { devStore } from '@/lib/api/dev-store';
 import { isPrismaConnectionError } from '@/lib/api/prisma-errors';
 import { computeDiff, logAuditEvent } from '@/lib/compliance/audit';
@@ -8,6 +9,29 @@ import type { UpsertFactFindInput } from '@ko/types';
 
 function shouldUseDevStore(error: unknown) {
   return process.env.NODE_ENV === 'development' && isPrismaConnectionError(error);
+}
+
+/**
+ * A completed fact-find opens Research through the compliance advance.
+ * Enquiry completes initial disclosure first. Later stages are left alone.
+ * The rail updates from the resulting case stage; a failed checklist does not move it.
+ */
+export async function promoteCompletedFactFindToResearch(input: {
+  caseId: string;
+  orgId: string;
+  fromStage: string;
+  userId?: string | null;
+}): Promise<boolean> {
+  if (input.fromStage !== 'ENQUIRY' && input.fromStage !== 'FACT_FIND') return false;
+
+  const userId = input.userId ?? undefined;
+  if (input.fromStage === 'ENQUIRY') {
+    const disclosure = await advanceCaseStage(input.orgId, input.caseId, 'FACT_FIND', userId);
+    if ('error' in disclosure) return false;
+  }
+
+  const research = await advanceCaseStage(input.orgId, input.caseId, 'RESEARCH', userId);
+  return !('error' in research);
 }
 
 // Sections whose change on amend can trigger a stale recommendation
@@ -145,34 +169,12 @@ export async function upsertFactFindWithCompliance(
       }
     }
 
-    // Auto stage advance: completing fact-find at ENQUIRY → FACT_FIND
-    if (markComplete && caseRecord.stage === 'ENQUIRY') {
-      await prisma.$transaction(async (tx) => {
-        await tx.complianceRecord.create({
-          data: {
-            caseId,
-            stage: 'INITIAL_DISCLOSURE',
-            completedAt: new Date(),
-            isApproved: true,
-            userId: options?.userId ?? null,
-          },
-        });
-        await tx.case.update({
-          where: { id: caseId },
-          data: { stage: 'FACT_FIND', updatedAt: new Date() },
-        });
-      });
-
-      await logAuditEvent({
+    if (markComplete && (caseRecord.stage === 'ENQUIRY' || caseRecord.stage === 'FACT_FIND')) {
+      await promoteCompletedFactFindToResearch({
+        caseId,
         orgId,
+        fromStage: caseRecord.stage,
         userId: options?.userId,
-        entityType: 'Case',
-        entityId: caseId,
-        action: 'CASE_STAGE_CHANGED',
-        diff: {
-          stage: { before: 'ENQUIRY', after: 'FACT_FIND' },
-          reason: 'Fact-find completed while case was at ENQUIRY',
-        },
       });
     }
 
@@ -271,31 +273,11 @@ export async function completePortalFactFind(session: {
       },
     });
 
-    if (caseRecord.stage === 'ENQUIRY') {
-      await prisma.$transaction(async (tx) => {
-        await tx.complianceRecord.create({
-          data: {
-            caseId: session.caseId,
-            stage: 'INITIAL_DISCLOSURE',
-            completedAt: completedDate,
-            isApproved: true,
-          },
-        });
-        await tx.case.update({
-          where: { id: session.caseId },
-          data: { stage: 'FACT_FIND', updatedAt: new Date() },
-        });
-      });
-
-      await logAuditEvent({
+    if (caseRecord.stage === 'ENQUIRY' || caseRecord.stage === 'FACT_FIND') {
+      await promoteCompletedFactFindToResearch({
+        caseId: session.caseId,
         orgId: session.orgId,
-        entityType: 'Case',
-        entityId: session.caseId,
-        action: 'CASE_STAGE_CHANGED',
-        diff: {
-          stage: { before: 'ENQUIRY', after: 'FACT_FIND' },
-          reason: 'Fact-find completed while case was at ENQUIRY',
-        },
+        fromStage: caseRecord.stage,
       });
     }
 

@@ -442,6 +442,9 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
   // Stable ref so onLoad/click closures always call the current getToken.
   const getTokenRef = useRef(getToken);
   useEffect(() => { getTokenRef.current = getToken; }, [getToken]);
+  const openResearchStageRef = useRef<(caseId: string, stage?: string) => Promise<void>>(
+    async () => {},
+  );
 
   async function searchLendersForSelect(query: string): Promise<LenderSearchHit[]> {
     try {
@@ -1662,6 +1665,20 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
         return;
       }
 
+      if (data?.type === 'ko:open-research' && typeof data.caseId === 'string') {
+        await openResearchStageRef.current(data.caseId, 'RESEARCH');
+        return;
+      }
+
+      if (
+        data?.type === 'ko:open-stage' &&
+        typeof data.caseId === 'string' &&
+        (data.stage === 'RESEARCH' || data.stage === 'DIP' || data.stage === 'OFFER')
+      ) {
+        await openResearchStageRef.current(data.caseId, data.stage);
+        return;
+      }
+
       if (data?.type === 'ko:open-case' && typeof data.caseId === 'string') {
         const openedCaseId = data.caseId;
         activeCaseIdRef.current = openedCaseId;
@@ -1938,6 +1955,20 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
           const caseResult = await casePromise;
           if (activeCaseIdRef.current !== openedCaseId) return;
 
+          if (
+            caseResult.data.stage === 'RESEARCH' &&
+            (listHit?.stage === 'FACT_FIND' || listHit?.stage === 'ENQUIRY')
+          ) {
+            applyUpdatedCaseToCache(queryClient, caseResult.data as CaseSummary);
+            const bootstrap = queryClient.getQueryData<{
+              data: { cases: CaseSummary[] };
+            }>(dashboardBootstrapQueryKey);
+            if (bootstrap?.data.cases) {
+              casesDataRef.current = bootstrap.data.cases;
+              syncLiveDataToIframe();
+            }
+          }
+
           const cachedCompliance = queryClient.getQueryData<
             ApiSuccessResponse<CaseComplianceSnapshot>
           >(['compliance', 'case', openedCaseId]);
@@ -2142,7 +2173,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
             if (idoc) paintStaleBanner(idoc, openId);
           }
 
-          // After final submit, refresh case detail so compliance rail reflects FACT_FIND.
+          // After final submit, refresh case detail so the rail opens on Research.
           if (payload.markComplete) {
             try {
               const updated = await casesApi.get(token, data.caseId as string);
@@ -4000,16 +4031,21 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
       idoc.querySelector<HTMLElement>('.cd-progress-rail') ??
       compCard;
     const steps = Array.from(stepsRoot.querySelectorAll<HTMLElement>('.cd-comp-step'));
+    const openNextIndex =
+      apiStage === 'FACT_FIND' ? 2 : apiStage === 'RESEARCH' ? 3 : apiStage === 'DIP' ? 4 : -1;
+    const openNextApi =
+      openNextIndex === 2 ? 'RESEARCH' : openNextIndex === 3 ? 'DIP' : openNextIndex === 4 ? 'OFFER' : '';
     steps.forEach((stepEl, i) => {
+      const canOpen = i === openNextIndex;
       const isComplete = i < idx;
       const isCurrent = i === idx;
-      const isPending = i > idx;
-      const theme = isPending ? gray : themes[i] ?? gray;
+      const isPending = i > idx && !canOpen;
+      const theme = canOpen ? themes[i] ?? gray : isPending ? gray : themes[i] ?? gray;
 
       const dot = stepEl.querySelector<HTMLElement>('.cd-comp-dot');
       if (dot) {
-        dot.classList.toggle('cd-comp-dot--pending', isPending);
-        dot.classList.toggle('cd-comp-dot--done', !isPending);
+        dot.classList.toggle('cd-comp-dot--pending', isPending || canOpen);
+        dot.classList.toggle('cd-comp-dot--done', !isPending && !canOpen);
         dot.style.setProperty('--dot-color', theme.dot);
       }
 
@@ -4017,9 +4053,12 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
       if (pill) {
         pill.classList.toggle('cd-comp-pill--current', isCurrent);
         pill.classList.toggle('cd-comp-pill--pending', isPending);
+        pill.classList.toggle('cd-comp-pill--open', canOpen);
         pill.style.setProperty('--pill-bg', theme.bg);
         pill.style.setProperty('--pill-border', theme.border);
         pill.style.setProperty('--pill-color', theme.text);
+        if (canOpen && openNextApi) pill.setAttribute('data-ko-open-stage', openNextApi);
+        else pill.removeAttribute('data-ko-open-stage');
       }
 
       const conns = stepEl.querySelectorAll<HTMLElement>('.cd-comp-connector');
@@ -4067,6 +4106,121 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
     wireComplianceRequestButtons(idoc, caseId);
   }
 
+  async function performStageAdvance(
+    caseId: string,
+    next: { toStage: CaseStage; label: string },
+    btn?: HTMLButtonElement,
+    options?: { focusComplianceTab?: boolean },
+  ) {
+    const focusComplianceTab = options?.focusComplianceTab !== false;
+    if (btn) {
+      if (btn.disabled) return;
+      btn.disabled = true;
+      btn.style.opacity = '0.6';
+      btn.textContent = 'Advancing…';
+    }
+    try {
+      const token = await getCachedSessionToken(() => getTokenRef.current());
+      if (!token) throw new Error('Not authenticated');
+
+      const advanced = await complianceApi.advanceStage(token, {
+        caseId,
+        targetStage: next.toStage,
+      });
+      applyUpdatedCaseToCache(queryClient, advanced.data);
+      softInvalidateDashboardLists(queryClient);
+
+      const bootstrap = queryClient.getQueryData<{
+        data: { cases: CaseSummary[] };
+      }>(dashboardBootstrapQueryKey);
+      if (bootstrap?.data.cases) {
+        casesDataRef.current = bootstrap.data.cases;
+        syncLiveDataToIframe();
+      }
+
+      const idocNow = iframeRef.current?.contentDocument;
+      if (idocNow) updateCompliancePanel(idocNow, caseId, advanced.data.stage);
+
+      const [updated, freshTl, freshCompliance] = await Promise.all([
+        casesApi.get(token, caseId).catch(() => ({ data: advanced.data })),
+        casesApi.timeline(token, caseId).catch(() => null),
+        complianceApi.getCaseChecklist(token, caseId).catch(() => null),
+      ]);
+      if (freshTl) {
+        queryClient.setQueryData(['cases', caseId, 'timeline'], freshTl);
+      }
+      if (freshCompliance) {
+        queryClient.setQueryData(['compliance', 'case', caseId], freshCompliance);
+      }
+
+      iframeRef.current?.contentWindow?.postMessage(
+        {
+          type: 'ko:case-detail',
+          case: {
+            ...updated.data,
+            ...(freshCompliance?.data ? { compliancePhases: freshCompliance.data.phases } : {}),
+          },
+        },
+        window.location.origin,
+      );
+      if (freshCompliance) {
+        iframeRef.current?.contentWindow?.postMessage(
+          { type: 'ko:case-compliance', caseId, snapshot: freshCompliance.data },
+          window.location.origin,
+        );
+      }
+      const overviewDoc = iframeRef.current?.contentDocument;
+      if (overviewDoc) void refreshComplianceFromApi(overviewDoc);
+      window.setTimeout(() => {
+        const freshIdoc = iframeRef.current?.contentDocument;
+        if (!freshIdoc) return;
+        updateCompliancePanel(freshIdoc, caseId, updated.data.stage);
+        if (freshTl) renderTimelineTrack(freshIdoc, freshTl.data);
+        if (!focusComplianceTab) return;
+        const compTab = freshIdoc.querySelector<HTMLElement>(
+          `.cd-tab[onclick*="compliance-${caseId}"]`,
+        );
+        compTab?.click();
+      }, 80);
+    } catch (err) {
+      if (btn) {
+        btn.disabled = false;
+        btn.style.opacity = '1';
+        btn.textContent = `Advance to ${next.label} →`;
+      }
+      const details = getApiErrorDetails(err)?.filter(Boolean) ?? [];
+      const summary = formatApiError(err, {
+        fallback: 'Could not advance stage. Please check all compliance requirements are met.',
+      });
+      iframeRef.current?.contentWindow?.postMessage(
+        {
+          type: 'ko:open-stage-result',
+          success: false,
+          caseId,
+          targetLabel: next.label,
+          summary,
+          items: details,
+        },
+        window.location.origin,
+      );
+      if (!iframeRef.current?.contentWindow) window.alert([summary, ...details].filter(Boolean).join('\n\n'));
+    }
+  }
+  openResearchStageRef.current = (caseId, stage = 'RESEARCH') => {
+    const next =
+      stage === 'DIP'
+        ? { toStage: 'DIP' as const, label: 'Application' }
+        : stage === 'OFFER'
+          ? { toStage: 'OFFER' as const, label: 'Offer' }
+          : stage === 'RESEARCH'
+            ? { toStage: 'RESEARCH' as const, label: 'Research' }
+            : null;
+    if (!next) return Promise.resolve();
+    return performStageAdvance(caseId, next, undefined, {
+      focusComplianceTab: false,
+    });
+  };
+
   function appendAdvanceControls(
     mountTarget: HTMLElement,
     caseId: string,
@@ -4092,91 +4246,10 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
       "margin-top:16px;padding:10px 24px;background:#1D9E75;color:#fff;border:none;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;width:100%;box-shadow:0 4px 12px rgba(29,158,117,0.2);transition:opacity .15s";
     btn.textContent = `Advance to ${next.label} →`;
 
-    btn.addEventListener('click', async (e) => {
+    btn.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
-      if ((btn as HTMLButtonElement).disabled) return;
-      (btn as HTMLButtonElement).disabled = true;
-      btn.style.opacity = '0.6';
-      btn.textContent = 'Advancing…';
-      try {
-        const token = await getCachedSessionToken(() => getTokenRef.current());
-        if (!token) throw new Error('Not authenticated');
-
-        const advanced = await complianceApi.advanceStage(token, {
-          caseId,
-          targetStage: next.toStage,
-        });
-        applyUpdatedCaseToCache(queryClient, advanced.data);
-        softInvalidateDashboardLists(queryClient);
-
-        const bootstrap = queryClient.getQueryData<{
-          data: { cases: CaseSummary[] };
-        }>(dashboardBootstrapQueryKey);
-        if (bootstrap?.data.cases) {
-          casesDataRef.current = bootstrap.data.cases;
-          syncLiveDataToIframe();
-        }
-
-        // Paint the new stage immediately from the advance response.
-        updateCompliancePanel(mountTarget.ownerDocument, caseId, advanced.data.stage);
-
-        const [updated, freshTl, freshCompliance] = await Promise.all([
-          casesApi.get(token, caseId).catch(() => ({ data: advanced.data })),
-          casesApi.timeline(token, caseId).catch(() => null),
-          complianceApi.getCaseChecklist(token, caseId).catch(() => null),
-        ]);
-        if (freshTl) {
-          queryClient.setQueryData(['cases', caseId, 'timeline'], freshTl);
-        }
-        if (freshCompliance) {
-          queryClient.setQueryData(['compliance', 'case', caseId], freshCompliance);
-        }
-
-        iframeRef.current?.contentWindow?.postMessage(
-          {
-            type: 'ko:case-detail',
-            case: {
-              ...updated.data,
-              ...(freshCompliance?.data ? { compliancePhases: freshCompliance.data.phases } : {}),
-            },
-          },
-          window.location.origin,
-        );
-        if (freshCompliance) {
-          iframeRef.current?.contentWindow?.postMessage(
-            { type: 'ko:case-compliance', caseId, snapshot: freshCompliance.data },
-            window.location.origin,
-          );
-        }
-        const overviewDoc = iframeRef.current?.contentDocument;
-        if (overviewDoc) void refreshComplianceFromApi(overviewDoc);
-        window.setTimeout(() => {
-          const freshIdoc = iframeRef.current?.contentDocument;
-          if (!freshIdoc) return;
-          updateCompliancePanel(freshIdoc, caseId, updated.data.stage);
-          if (freshTl) renderTimelineTrack(freshIdoc, freshTl.data);
-          const compTab = freshIdoc.querySelector<HTMLElement>(
-            `.cd-tab[onclick*="compliance-${caseId}"]`,
-          );
-          compTab?.click();
-        }, 80);
-      } catch (err) {
-        (btn as HTMLButtonElement).disabled = false;
-        btn.style.opacity = '1';
-        btn.textContent = `Advance to ${next.label} →`;
-        const details = getApiErrorDetails(err)?.filter(Boolean).join('\n') ?? '';
-        window.alert(
-          [
-            formatApiError(err, {
-              fallback: 'Could not advance stage. Please check all compliance requirements are met.',
-            }),
-            details,
-          ]
-            .filter(Boolean)
-            .join('\n\n'),
-        );
-      }
+      void performStageAdvance(caseId, next, btn);
     });
 
     mountTarget.appendChild(btn);
