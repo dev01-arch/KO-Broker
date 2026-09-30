@@ -1543,6 +1543,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
         type?: string;
         requestId?: number;
         caseId?: string;
+        stage?: string;
         itemId?: string;
         clientId?: string;
         clientIds?: string[];
