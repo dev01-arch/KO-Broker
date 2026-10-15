@@ -329,6 +329,15 @@ export function EditClientModal({
         status: form.status,
         insurerName: isCompany ? loaded?.insurerName : form.insurerName.trim() || undefined,
         isVulnerable: loaded?.isVulnerable ?? false,
+        phone: form.phone.trim() || undefined,
+        dateOfBirth: isCompany ? undefined : form.dateOfBirth || undefined,
+        properties: properties.map((home) => ({
+          id: home.id,
+          postcode: home.postcode,
+          address: home.line1 ? { line1: home.line1 } : undefined,
+          currentValue:
+            home.value && Number(home.value) > 0 ? Number(home.value) : undefined,
+        })),
         assignedMember: adviser
           ? {
               id: adviser.memberId ?? adviser.id,

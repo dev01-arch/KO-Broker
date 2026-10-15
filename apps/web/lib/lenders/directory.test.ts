@@ -14,6 +14,11 @@ import {
 } from './directory.ts';
 
 describe('searchLenders', () => {
+  it('includes Barclays Bank when that name is searched', () => {
+    const names = searchLenders('barclays').map((hit) => hit.name);
+    assert.ok(names.includes('Barclays Bank'));
+  });
+
   it('returns Clydesdale Bank PLC for clydes', () => {
     const names = searchLenders('clydes').map((hit) => hit.name);
     assert.ok(names.includes('Clydesdale Bank PLC'));

@@ -9,6 +9,48 @@
 import { prisma } from '@/lib/db';
 import type { LenderRow } from '@ko/types';
 
+/** Appendix A omitted this name. The API reads the lenders table, so the row has to exist there. */
+const BARCLAYS_BANK = {
+  name: 'Barclays Bank',
+  normalizedName: 'barclays bank',
+  fcaFrn: '122702',
+} as const;
+
+let barclaysReady = false;
+
+async function ensureBarclaysBank(): Promise<void> {
+  if (barclaysReady) return;
+  const existing = await prisma.lender.findUnique({
+    where: { normalizedName: BARCLAYS_BANK.normalizedName },
+    select: { id: true, fcaFrn: true, status: true },
+  });
+  if (!existing) {
+    try {
+      await prisma.lender.create({
+        data: {
+          name: BARCLAYS_BANK.name,
+          normalizedName: BARCLAYS_BANK.normalizedName,
+          status: 'ACTIVE',
+          source: 'SEED',
+          fcaFrn: BARCLAYS_BANK.fcaFrn,
+        },
+      });
+    } catch (error) {
+      const code =
+        error && typeof error === 'object' && 'code' in error
+          ? String((error as { code?: string }).code)
+          : '';
+      if (code !== 'P2002') throw error;
+    }
+  } else if (!existing.fcaFrn && existing.status !== 'INACTIVE') {
+    await prisma.lender.update({
+      where: { id: existing.id },
+      data: { fcaFrn: BARCLAYS_BANK.fcaFrn },
+    });
+  }
+  barclaysReady = true;
+}
+
 /**
  * searchLenders — returns up to 20 lenders matching the query.
  *
@@ -20,6 +62,12 @@ import type { LenderRow } from '@ko/types';
  *   plus the Other sentinel.
  */
 export async function searchLenders(q?: string): Promise<LenderRow[]> {
+  try {
+    await ensureBarclaysBank();
+  } catch (error) {
+    console.error('[lenders] could not ensure Barclays Bank', error);
+  }
+
   const trimmed = q?.trim() ?? '';
 
   // Fetch up to 20 matching non-Other rows

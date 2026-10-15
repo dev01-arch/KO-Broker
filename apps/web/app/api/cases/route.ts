@@ -3,7 +3,7 @@
  * POST /api/cases  — create a new case
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse, after } from 'next/server';
 import { createHandler } from '@/lib/api/handler';
 import { prisma } from '@/lib/db';
 import { logAuditEvent } from '@/lib/compliance/audit';
@@ -11,6 +11,7 @@ import { CreateCaseSchema } from '@ko/types';
 import { generateReference, calculateLTV } from '@ko/utils';
 import { getCurrentUser, maskCaseFinancials } from '@/lib/auth';
 import { caseAssignedToAdviserWhere, isRestrictedAdviser } from '@/lib/auth/adviser-scope';
+import { sendEstablishDisclosure } from '@/lib/documents/send-client-document';
 
 /** Prefer latest ref over full-table count — much faster as orgs grow. */
 async function nextCaseReferenceSequence(orgId: string): Promise<number> {
@@ -249,6 +250,30 @@ export const POST = createHandler({
             },
         });
 
-        return NextResponse.json({ success: true, data: newCase }, { status: 201 });
+        const disclosureInput = {
+            orgId: orgId!,
+            caseId: newCase.id,
+            clientId: newCase.clientId,
+            email: newCase.client.email,
+            firstName: newCase.client.firstName,
+            userId: user?.id,
+        };
+        after(() => {
+            void sendEstablishDisclosure(disclosureInput).catch((error) => {
+                console.error('[POST /api/cases] disclosure send failed', error);
+            });
+        });
+
+        return NextResponse.json({
+            success: true,
+            data: newCase,
+            meta: {
+                disclosure: {
+                    sent: false,
+                    pending: true,
+                    documents: [] as string[],
+                },
+            },
+        }, { status: 201 });
     },
 });

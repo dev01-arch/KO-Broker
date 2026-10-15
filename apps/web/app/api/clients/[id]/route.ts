@@ -6,6 +6,7 @@ import { logAuditEvent, computeDiff } from '@/lib/compliance/audit';
 import { requireVisibility, getCurrentUser, maskClientFinancials, maskCaseFinancials } from '@/lib/auth';
 import { clientAssignedToAdviserWhere, isRestrictedAdviser } from '@/lib/auth/adviser-scope';
 import { UpdateClientSchema } from '@ko/types';
+import { deleteClientForOrg } from '@/lib/api/clients-data';
 
 // ── GET /api/clients/[id] ─────────────────────────────────────────────────────
 
@@ -144,5 +145,51 @@ export const PATCH = createParamHandler<z.infer<typeof UpdateClientSchema>, { id
         });
 
         return NextResponse.json({ success: true, data: updated }, { status: 200 });
+    },
+});
+
+// ── DELETE /api/clients/[id] ──────────────────────────────────────────────────
+
+export const DELETE = createParamHandler<unknown, { id: string }>({
+    method: 'DELETE',
+    handler: async (_req: NextRequest, { orgId, params }) => {
+        const { id } = params;
+        const currentUser = await getCurrentUser();
+        if (isRestrictedAdviser(currentUser) && currentUser) {
+            const allowed = await prisma.client.findFirst({
+                where: {
+                    id,
+                    orgId,
+                    ...clientAssignedToAdviserWhere(currentUser.id),
+                },
+                select: { id: true },
+            });
+            if (!allowed) {
+                const stillThere = await prisma.client.findFirst({
+                    where: { id, orgId },
+                    select: { id: true },
+                });
+                if (stillThere) {
+                    return NextResponse.json(
+                        { success: false, error: { code: 'NOT_FOUND', message: 'Client not found' } },
+                        { status: 404 },
+                    );
+                }
+                return NextResponse.json({ success: true, data: { deleted: true } }, { status: 200 });
+            }
+        }
+
+        const result = await deleteClientForOrg(orgId!, id);
+        if ('error' in result) {
+            if (result.error === 'NOT_FOUND') {
+                return NextResponse.json({ success: true, data: { deleted: true } }, { status: 200 });
+            }
+            return NextResponse.json(
+                { success: false, error: { code: 'NOT_FOUND', message: 'Client not found' } },
+                { status: 404 },
+            );
+        }
+
+        return NextResponse.json({ success: true, data: { deleted: true } }, { status: 200 });
     },
 });

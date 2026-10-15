@@ -108,6 +108,7 @@ const PIPELINE_CASE_SELECT = {
       email: true,
     },
   },
+  factFind: { select: { personalDetails: true } },
 } as const;
 
 /**

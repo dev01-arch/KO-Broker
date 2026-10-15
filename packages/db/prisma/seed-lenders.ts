@@ -60,6 +60,7 @@ const LENDER_NAMES: string[] = [
   'Aviva',
   'Bank Of China (UK)',
   'Bank of Ireland',
+  'Barclays Bank',
   'Bath Building Society',
   'BC Invest',
   'Bespoke BOI',

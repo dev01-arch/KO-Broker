@@ -71,7 +71,8 @@ export async function verifyStageChecklist(
             break;
         }
         case 'RESEARCH': {
-            // Min 3 products considered recorded; selected product confirmed; adviser notes filled.
+            // Three recorded products and one selected product complete this stage.
+            // Adviser notes stay on the case and do not block the move to Application.
             const caseRecord = await prisma.case.findFirst({
                 where: { id: caseId, orgId },
                 include: {
@@ -93,10 +94,6 @@ export async function verifyStageChecklist(
 
             if (!hasSelectedProduct) {
                 missingItems.push('A selected product must be confirmed.');
-            }
-
-            if (!caseRecord.adviserNotes || caseRecord.adviserNotes.trim() === '') {
-                missingItems.push('Adviser notes must be completed.');
             }
             break;
         }

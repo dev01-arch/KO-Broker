@@ -798,6 +798,36 @@ tbody tr:hover td{background:var(--surface)}
 #tab-case-detail .cd-factfind-bar{display:flex;justify-content:flex-end;margin-bottom:4px}
 #tab-case-detail .cd-progress-rail{background:#fff;border:1px solid rgba(13,31,26,0.08);border-radius:16px;box-shadow:0 1px 3px rgba(0,0,0,0.04);padding:20px 24px 22px;box-sizing:border-box}
 #tab-case-detail .cd-progress-label{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:#52525b;letter-spacing:0.04em;text-transform:uppercase;margin:0 0 16px}
+#tab-case-detail .cd-stage-screen{margin-top:16px;background:#fff;border:1px solid rgba(13,31,26,0.08);border-radius:16px;box-shadow:0 1px 3px rgba(0,0,0,0.04);padding:20px 24px 22px;box-sizing:border-box}
+#tab-case-detail .cd-page--future-stage .cd-tabs,
+#tab-case-detail .cd-page--future-stage [id^="caseview-"]{display:none !important}
+#tab-case-detail .cd-stage-screen h3{margin:0 0 8px;font-family:'Syne',sans-serif;font-size:16px;font-weight:700;color:#18181b}
+#tab-case-detail .cd-stage-screen p{margin:0 0 10px;font-family:'DM Sans',sans-serif;font-size:13px;color:#52525b;line-height:1.45}
+#tab-case-detail .cd-stage-screen ul{margin:0 0 12px;padding-left:18px;font-family:'DM Sans',sans-serif;font-size:13px;color:#18181b;line-height:1.5}
+#tab-case-detail .cd-comp-pill--viewing{box-shadow:0 0 0 2px var(--pill-border,#0F6E56)}
+#tab-case-detail .cd-stage-advance{margin-top:8px;padding:10px 18px;background:#1D9E75;color:#fff;border:none;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer}
+#tab-case-detail .cd-client-docs{margin-top:16px;padding-top:14px;border-top:1px solid #f4f4f5}
+#tab-case-detail .cd-client-docs h3{margin:0 0 6px}
+#tab-case-detail .cd-doc-list{list-style:none;margin:0;padding:0}
+#tab-case-detail .cd-doc-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid #f4f4f5}
+#tab-case-detail .cd-doc-actions{display:inline-flex;align-items:center;gap:8px;flex-shrink:0}
+#tab-case-detail .cd-doc-status{color:#71717a;font-size:12px}
+#tab-case-detail .cd-doc-send{padding:6px 12px;border-radius:8px;border:1px solid #E4E4E7;background:#fff;color:#18181b;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer}
+#tab-case-detail .cd-doc-send:hover:not(:disabled){border-color:#1D9E75;color:#0F6E56}
+#tab-case-detail .cd-doc-send:disabled{opacity:0.6;cursor:not-allowed}
+#tab-case-detail .cd-aml{margin-top:14px;padding-top:12px;border-top:1px solid #f4f4f5}
+#tab-case-detail .cd-aml-check{display:flex;align-items:center;gap:8px;margin:6px 0;font-size:13px}
+.ai-vuln-report{background:#fff;border:1px solid rgba(13,31,26,0.08);border-radius:16px;padding:20px 22px;display:flex;flex-direction:column;gap:12px}
+.ai-vuln-report h2{margin:0;font-family:'Syne',sans-serif;font-size:18px;font-weight:700;color:#061F18}
+.ai-vuln-report p{margin:0;font-family:'DM Sans',sans-serif;font-size:13px;color:#52525b;line-height:1.45}
+.ai-vuln-report-row{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end}
+.ai-vuln-report label{display:flex;flex-direction:column;gap:4px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;color:#52525b}
+.ai-vuln-report input[type="date"]{height:40px;padding:0 10px;border:1px solid #e4e4e7;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:14px}
+.ai-vuln-report-stats{display:flex;flex-wrap:wrap;gap:16px}
+.ai-vuln-report-stat{min-width:160px}
+.ai-vuln-report-stat strong{display:block;font-family:'Syne',sans-serif;font-size:22px;color:#061F18}
+.ai-vuln-report table{width:100%;border-collapse:collapse;font-family:'DM Sans',sans-serif;font-size:13px}
+.ai-vuln-report th,.ai-vuln-report td{text-align:left;padding:8px 0;border-bottom:1px solid #f4f4f5}
 #tab-case-detail .cd-comp{display:flex;flex-direction:column;gap:20px;width:100%}
 #tab-case-detail .cd-comp-card{background:#fff;border:1px solid rgba(13,31,26,0.08);border-radius:16px;box-shadow:0 1px 3px rgba(0,0,0,0.04);padding:24px 28px 28px;box-sizing:border-box}
 #tab-case-detail .cd-comp-title{font-family:'Syne',sans-serif;font-size:18px;font-weight:600;color:#18181b;margin:0 0 16px;line-height:1.2}
@@ -1083,6 +1113,8 @@ tbody tr:hover td{background:var(--surface)}
 #tab-case-detail .cd-client-name{font-family:'Syne',sans-serif;font-size:32px;font-weight:800;color:#061F18;line-height:1.1;margin:0;letter-spacing:-0.02em;white-space:nowrap;min-width:0}
 #tab-case-detail .cd-meta-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
 #tab-case-detail .cd-meta-pill{display:inline-flex;align-items:center;padding:5px 12px;border-radius:999px;background:#f4f4f5;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;color:#52525b;white-space:nowrap}
+#tab-case-detail .cd-applicant-btn{border:0;background:transparent;font:inherit;color:#71717a;cursor:pointer;padding:0 2px}
+#tab-case-detail .cd-applicant-btn.is-selected{color:#0F6E56;font-weight:700}
 #tab-case-detail .cd-stage-badge{display:inline-flex;padding:8px 20px;border-radius:999px;border:1.5px solid #7DD3FC;background:#fff;font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:#0369a1;white-space:nowrap;flex-shrink:0}
 #tab-case-detail .cd-stage-badge--lead{display:inline-flex;padding:4px 12px;border-radius:16px;border:1px solid #00B8D9;background:#EAFCFF;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;color:#061F18;line-height:1.2;flex-shrink:0;box-sizing:border-box}
 #tab-case-detail .cd-stage-badge--enquiry{border-color:#7DD3FC;color:#0369a1}
@@ -3403,6 +3435,28 @@ body.ff-open .dash-main{overflow:hidden!important;height:100%!important;max-heig
             </div>
             <button type="button" class="ai-rpt-btn-new" id="ai-rpt-btn-new" onclick="openClDrawer()">New Client +</button>
           </div>
+          <section class="ai-vuln-report" id="ai-vuln-report" aria-labelledby="ai-vuln-title">
+            <h2 id="ai-vuln-title">Vulnerability assessments</h2>
+            <p>Year-to-date counts up to the date you choose. The report uses numbers only. Client names, emails, and case references are not included.</p>
+            <div class="ai-vuln-report-row">
+              <label for="ai-vuln-asof">As of
+                <input type="date" id="ai-vuln-asof">
+              </label>
+              <button type="button" class="ai-rpt-btn-new" id="ai-vuln-run">Generate report</button>
+            </div>
+            <div id="ai-vuln-result"></div>
+          </section>
+          <section class="ai-vuln-report" id="ai-survey-report" aria-labelledby="ai-survey-title">
+            <h2 id="ai-survey-title">Client feedback</h2>
+            <p>Year-to-date counts of surveys sent from cases, responses received, and how many were below the expected standard. No names or case references.</p>
+            <div class="ai-vuln-report-row">
+              <label for="ai-survey-asof">As of
+                <input type="date" id="ai-survey-asof">
+              </label>
+              <button type="button" class="ai-rpt-btn-new" id="ai-survey-run">Generate report</button>
+            </div>
+            <div id="ai-survey-result"></div>
+          </section>
 
           <div class="ov-kpi-row">
             <div class="ov-kpi-card">
@@ -3619,8 +3673,8 @@ body.ff-open .dash-main{overflow:hidden!important;height:100%!important;max-heig
             </div>
           </div>
           <div class="cl-drawer-field">
-            <label class="cl-drawer-label" for="cl-new-email">Email *</label>
-            <input type="email" class="cl-drawer-input" id="cl-new-email" name="email" placeholder="name@company.com" autocomplete="email" required>
+            <label class="cl-drawer-label" for="cl-new-email">Email</label>
+            <input type="email" class="cl-drawer-input" id="cl-new-email" name="email" placeholder="Optional — add later if you have it" autocomplete="email">
           </div>
           <div class="cl-drawer-field">
             <label class="cl-drawer-label" for="cl-new-income" id="cl-new-income-label">Annual income</label>
@@ -4638,12 +4692,39 @@ function switchCasesView(v) {
   }
 }
 
+function koClientHome(client) {
+  var homes = (client && client.properties) || [];
+  var home = homes[0] || {};
+  var homeAddress = home.address && typeof home.address === 'object' ? home.address : {};
+  var address = client && client.address && typeof client.address === 'object' ? client.address : {};
+  function text() {
+    for (var i = 0; i < arguments.length; i += 1) {
+      if (arguments[i] != null && String(arguments[i]).trim()) return String(arguments[i]).trim();
+    }
+    return '';
+  }
+  var value = home.currentValue != null && home.currentValue !== '' ? home.currentValue : null;
+  return {
+    postcode: text(home.postcode, address.postcode),
+    line1: text(homeAddress.line1, homeAddress.addressLine1, address.line1, address.addressLine1),
+    city: text(homeAddress.city, homeAddress.town, address.city, address.town),
+    value: value,
+  };
+}
+
+function koFindLiveClient(clientId) {
+  var list = window.koLiveClients || [];
+  for (var i = 0; i < list.length; i += 1) {
+    if (list[i] && list[i].id === clientId) return list[i];
+  }
+  return null;
+}
+
 // ── New Case modal logic
 (function() {
   var ncCaseCounter = 8; // starting from KOC-2026-0008
   var ncCreateRequestId = 0;
   var ncLastCreatedCaseId = null;
-  var ncDisclosureSent = null;
   var ncApplicants = 'single';
   var isEmbeddedLive =
     new URLSearchParams(window.location.search).get('liveData') === '1' &&
@@ -4668,30 +4749,28 @@ function switchCasesView(v) {
     });
   }
 
+  function applyNcClientLocation() {
+    if (!isEmbeddedLive) return;
+    var select = document.getElementById('nc-client');
+    if (!select) return;
+    var home = koClientHome(koFindLiveClient(select.value));
+    var postcode = document.getElementById('nc-postcode');
+    var line = document.getElementById('nc-address-line');
+    var asset = document.getElementById('nc-asset-value');
+    if (postcode) postcode.value = home.postcode;
+    if (line) line.value = home.line1;
+    if (asset) {
+      asset.value = home.value != null ? String(home.value) : '';
+      updateNCLtv();
+    }
+  }
+
   function setNcSubmitting(submitting) {
     var btn = document.querySelector('#nc-modal-overlay .nc-submit-btn');
     if (!btn) return;
     btn.disabled = submitting;
     btn.style.opacity = submitting ? '0.7' : '';
   }
-
-  function syncNcDisclosureUi() {
-    var yesBtn = document.getElementById('nc-disclosure-yes');
-    var noBtn = document.getElementById('nc-disclosure-no');
-    if (yesBtn) {
-      yesBtn.classList.toggle('is-selected', ncDisclosureSent === true);
-      yesBtn.setAttribute('aria-pressed', ncDisclosureSent === true ? 'true' : 'false');
-    }
-    if (noBtn) {
-      noBtn.classList.toggle('is-selected', ncDisclosureSent === false);
-      noBtn.setAttribute('aria-pressed', ncDisclosureSent === false ? 'true' : 'false');
-    }
-  }
-
-  window.setNcDisclosure = function(sent) {
-    ncDisclosureSent = !!sent;
-    syncNcDisclosureUi();
-  };
 
   function syncNcApplicantsUi() {
     var singleBtn = document.getElementById('nc-applicants-single');
@@ -4725,8 +4804,7 @@ function switchCasesView(v) {
     document.getElementById('nc-ltv-value').textContent = '0%';
     ncApplicants = 'single';
     syncNcApplicantsUi();
-    ncDisclosureSent = null;
-    syncNcDisclosureUi();
+    applyNcClientLocation();
     setNcSubmitting(false);
     overlay.classList.remove('nc-hidden');
     document.body.style.overflow = 'hidden';
@@ -4745,10 +4823,25 @@ function switchCasesView(v) {
     document.getElementById('nc-ltv-value').textContent = ltv + '%';
   };
 
-  function showCaseSuccess(ref, clientText, caseId) {
+  function showCaseSuccess(ref, clientText, caseId, disclosure) {
     ncLastCreatedCaseId = caseId || null;
     document.getElementById('nc-success-ref').textContent = ref;
     document.getElementById('nc-success-client').textContent = clientText;
+    var note = document.getElementById('nc-success-disclosure');
+    if (note) {
+      var both = disclosure && disclosure.sent && disclosure.documents && disclosure.documents.indexOf('idd') >= 0 && disclosure.documents.indexOf('privacy') >= 0;
+      if (both) {
+        note.textContent = 'The initial disclosure and customer privacy notice have been sent to the client.';
+      } else if (disclosure && disclosure.sent) {
+        note.textContent = 'The disclosure email was sent. Check the case if one of the documents is missing.';
+      } else if (disclosure && disclosure.pending) {
+        note.textContent = 'The case is open. The initial disclosure and privacy notice are being emailed if this client has an email address.';
+      } else if (disclosure) {
+        note.textContent = 'The case is open, but the initial disclosure and privacy notice could not be emailed. ' + (disclosure.error || 'Try Resend on the case.');
+      } else {
+        note.textContent = 'In the broker app, the initial disclosure and customer privacy notice are emailed when the case is established.';
+      }
+    }
     closeNewCaseModal();
     var successOverlay = document.getElementById('nc-success-overlay');
     if (successOverlay) {
@@ -4781,10 +4874,16 @@ function switchCasesView(v) {
       alert('Please select a case type.');
       return;
     }
-    if (ncDisclosureSent === null) {
-      alert('Please confirm whether the Initial Disclosure Document (IDD) and Customer Privacy Notice have been sent to the client.');
-      return;
-    }
+
+    window.koPendingCasePrefill = {
+      propertyValue: propertyValue,
+      loanAmount: loanAmount,
+      termYears: termRaw > 0 ? termRaw : undefined,
+      postcode: postcode || '',
+      addressLine1: addressLine1 || '',
+      purposeNote: (document.getElementById('nc-purpose-note')?.value || '').trim(),
+      applicantMode: ncApplicants,
+    };
 
     ncCreateRequestId += 1;
     var requestId = ncCreateRequestId;
@@ -4801,6 +4900,7 @@ function switchCasesView(v) {
           termYears: termRaw > 0 ? termRaw : undefined,
           postcode: postcode || undefined,
           addressLine1: addressLine1 || undefined,
+          applicantMode: ncApplicants,
         },
       },
       window.location.origin,
@@ -4808,10 +4908,6 @@ function switchCasesView(v) {
   }
 
   window.submitNewCase = function() {
-    if (ncDisclosureSent === null) {
-      alert('Please confirm whether the Initial Disclosure Document (IDD) and Customer Privacy Notice have been sent to the client.');
-      return;
-    }
     if (isEmbeddedLive) {
       submitNewCaseLive();
       return;
@@ -4830,10 +4926,27 @@ function switchCasesView(v) {
     if (data.requestId !== ncCreateRequestId) return;
     setNcSubmitting(false);
     if (data.success && data.case) {
+      if (data.case.id && window.koPendingCasePrefill) {
+        window.koPendingCasePrefill.caseId = data.case.id;
+        if (!cases[data.case.id]) cases[data.case.id] = { id: data.case.id };
+        if (!cases[data.case.id].prefill) cases[data.case.id].prefill = {};
+        const pending = window.koPendingCasePrefill;
+        const prefill = cases[data.case.id].prefill;
+        if (pending.propertyValue != null) prefill.propertyValue = pending.propertyValue;
+        if (pending.loanAmount != null) prefill.loanAmount = pending.loanAmount;
+        if (pending.termYears != null) prefill.termYears = pending.termYears;
+        if (pending.postcode) prefill.postcode = pending.postcode;
+        if (pending.addressLine1) prefill.addressLine1 = pending.addressLine1;
+        if (pending.purposeNote) prefill.purposeNote = pending.purposeNote;
+        if (pending.applicantMode === 'joint' || pending.applicantMode === 'single') {
+          cases[data.case.id].applicantMode = pending.applicantMode;
+        }
+      }
       showCaseSuccess(
         data.case.referenceNumber,
         data.clientName || 'Client',
         data.case.id,
+        data.disclosure,
       );
       if (typeof showTab === 'function') showTab('cases');
       return;
@@ -4906,6 +5019,10 @@ function switchCasesView(v) {
     if (successOverlay && !successOverlay.classList.contains('nc-hidden')) { closeSuccessModal(); return; }
     var ncOverlay = document.getElementById('nc-modal-overlay');
     if (ncOverlay && !ncOverlay.classList.contains('nc-hidden')) closeNewCaseModal();
+  });
+
+  document.addEventListener('change', function (e) {
+    if (e.target && e.target.id === 'nc-client') applyNcClientLocation();
   });
 })();
 
@@ -5436,7 +5553,7 @@ const CD_COMPLIANCE_PHASES = [
     open: false,
     items: [
       {
-        n: 14, itemId: 'survey-sent', name: 'Feedback survey sent', desc: 'Client feedback survey issued automatically.',
+        n: 14, itemId: 'survey-sent', name: 'Feedback survey sent', desc: 'Client feedback survey issued to the client.',
         status: 'pending', badges: ['Not started', 'AUTO'],
       },
       {
@@ -5490,33 +5607,229 @@ const RAIL_NEXT_STAGE = {
   3: { index: 4, api: 'OFFER', stage: 'offer', stageLabel: 'Offer', complianceCurrent: 'offer' },
 };
 
+function researchProductsReady(c) {
+  const products = (c && c.productsConsidered) || [];
+  const selected = products.some((p) => p && p.isSelected) || !!(c && c.selectedProduct);
+  return products.length >= 3 && selected;
+}
+
 function renderCaseProgressSteps(c) {
   const currentIdx = getComplianceStageIndex(c);
-  const openNext = RAIL_NEXT_STAGE[currentIdx];
+  const viewKey = (c && c.viewStage) || (CD_COMPLIANCE_STAGES[currentIdx] && CD_COMPLIANCE_STAGES[currentIdx].key) || 'enquiry';
   return CD_COMPLIANCE_STAGES.map((s, i) => {
-    const isComplete = i < currentIdx;
+    const isComplete = i < currentIdx || (i === 2 && currentIdx === 2 && researchProductsReady(c));
     const isCurrent = i === currentIdx;
-    const canOpen = !!(openNext && i === openNext.index);
-    const isPending = i > currentIdx && !canOpen;
-    const theme = isPending ? CD_COMPLIANCE_GRAY : s;
+    const isViewing = s.key === viewKey;
+    const theme = s;
     const leftBg = i === 0 ? 'transparent' : (isComplete || isCurrent ? CD_COMPLIANCE_STAGES[i - 1].line : CD_COMPLIANCE_GRAY.line);
     const rightBg = i === CD_COMPLIANCE_STAGES.length - 1 ? 'transparent' : (isComplete ? s.line : CD_COMPLIANCE_GRAY.line);
-    const dotCls = isPending || canOpen ? 'cd-comp-dot--pending' : 'cd-comp-dot--done';
-    const pillCls = [isCurrent ? 'cd-comp-pill--current' : '', isPending ? 'cd-comp-pill--pending' : '', canOpen ? 'cd-comp-pill--open' : ''].filter(Boolean).join(' ');
+    const dotCls = isComplete ? 'cd-comp-dot--done' : 'cd-comp-dot--pending';
+    const pillCls = [isCurrent ? 'cd-comp-pill--current' : '', isViewing ? 'cd-comp-pill--viewing' : ''].filter(Boolean).join(' ');
     const pillStyle = `--pill-bg:${theme.bg};--pill-border:${theme.border};--pill-color:${theme.text}`;
-    const pill = canOpen
-      ? `<button type="button" class="cd-comp-pill ${pillCls}" style="${pillStyle}" data-ko-open-stage="${openNext.api}">${s.label}</button>`
-      : `<div class="cd-comp-pill ${pillCls}" style="${pillStyle}">${s.label}</div>`;
+    const pill = `<button type="button" class="cd-comp-pill ${pillCls}" style="${pillStyle}" data-ko-view-stage="${s.key}">${s.label}</button>`;
     return `<div class="cd-comp-step">
       <div class="cd-comp-dot-row">
         <div class="cd-comp-connector" style="background:${leftBg}"></div>
-        <div class="cd-comp-dot ${dotCls}" style="--dot-color:${theme.dot}">✓</div>
+        <div class="cd-comp-dot ${dotCls}" style="--dot-color:${theme.dot}">${isComplete ? '✓' : ''}</div>
         <div class="cd-comp-connector" style="background:${rightBg}"></div>
       </div>
       ${pill}
     </div>`;
   }).join('');
 }
+
+function caseStageScreenHtml(c, stageKey) {
+  const prefill = (c && c.prefill) || {};
+  const money = (value) => {
+    if (value == null || value === '' || Number.isNaN(Number(value))) return '—';
+    return '£' + Number(value).toLocaleString('en-GB');
+  };
+  const products = Array.isArray(c && c.productsConsidered) ? c.productsConsidered : [];
+  const selected = products.filter((p) => p && p.isSelected);
+  const factFindDone = !!(c && c.factFind && c.factFind.completedAt);
+  if (stageKey === 'factfind') {
+    const aml = (c && c.factFind && c.factFind.personalDetails && c.factFind.personalDetails.amlEvidence) || (c && c.amlEvidence) || {};
+    const box = (id, label, checked) => `<label class="cd-aml-check"><input type="checkbox" data-ko-aml="${id}" ${checked ? 'checked' : ''}> ${label}</label>`;
+    return `<h3>Fact-Find</h3>
+      <p>${factFindDone ? 'The fact-find has been submitted. Open it again only when you need to amend an answer.' : 'Names, employment, income, property value, and loan amount already captured on the client or case are filled in when you open the wizard. Finish the remaining questions, then submit.'}</p>
+      <p>${factFindDone ? 'Status: submitted.' : 'Status: not submitted yet. The stage stays open until the fact-find is submitted.'}</p>
+      <div class="cd-aml">
+        <h3>Identity check</h3>
+        <p>Record what you confirmed. An identity document on the case still completes the checklist. This record does not move the case.</p>
+        ${box('idSeen', 'Identity document seen', !!aml.idSeen)}
+        ${box('nameMatches', 'Name matches the client', !!aml.nameMatches)}
+        ${box('addressMatches', 'Address matches the client', !!aml.addressMatches)}
+        <button type="button" class="cd-doc-send" data-ko-save-aml>Save identity check</button>
+      </div>`;
+  }
+  if (stageKey === 'research') {
+    const selectedOne = selected.length > 0 || !!(c && c.selectedProduct);
+    const productCheck = products.length >= 3;
+    const check = (ok, label) => `<li class="cd-comp-check-item"><input type="checkbox" class="cd-comp-check" ${ok ? 'checked' : ''} disabled> ${escHtml(label)}</li>`;
+    const lines = products.length
+      ? `<ul>${products.map((p) => `<li>${escHtml(p.lenderName || 'Lender')} — ${escHtml(p.productName || 'Product')}${p.isSelected ? ' (recommended)' : ''}</li>`).join('')}</ul>`
+      : '<p>No products recorded yet. Add at least three and mark one as recommended. Those two checks tick on their own.</p>';
+    return `<h3>Research</h3>
+      <p>Record the products you considered. This screen is separate from Application and Offer. The research tick appears when three products are saved and one is selected. Opening this screen does not move the case.</p>
+      <ul class="cd-comp-checklist">
+        ${check(productCheck, 'At least 3 products recorded (' + products.length + '/3)')}
+        ${check(selectedOne, 'Recommended product selected')}
+      </ul>
+      ${lines}
+      <div data-ko-stage-products></div>`;
+  }
+  if (stageKey === 'application') {
+    const picked = selected[0];
+    return `<h3>Application</h3>
+      <p>Submission details for the recommended product. Research stays on the Research stage. Opening this screen does not move the case.</p>
+      <ul>
+        <li>Recommended product: ${picked ? escHtml((picked.lenderName || '') + ' ' + (picked.productName || '')) : escHtml(c.selectedProduct || 'Not selected')}</li>
+        <li>AIP date: ${escHtml(c.aipAt || '—')}</li>
+        <li>Submitted: ${escHtml(c.submittedAt || '—')}</li>
+        <li>ESIS: generate it from the recommended product in Client documents. An uploaded lender illustration still counts.</li>
+      </ul>`;
+  }
+  if (stageKey === 'offer') {
+    return `<h3>Offer</h3>
+      <p>Offer dates and the suitability report. This is not the Application screen. Opening it does not move the case.</p>
+      <ul>
+        <li>Offer issued: ${escHtml(c.offerIssuedAt || '—')}</li>
+        <li>Offer expires: ${escHtml(c.offerExpiresAt || '—')}</li>
+        <li>Selected product: ${escHtml(c.selectedProduct || c.lender || '—')}</li>
+        <li>Suitability report: open the AI Report tab on this case.</li>
+      </ul>`;
+  }
+  return `<h3>Enquiry</h3>
+    <p>Details captured when the client and case were set up. Later stages can be opened from the progress rail without moving the case. A stage shows a tick after the case has moved past it. Research also ticks once three products are saved and one is selected.</p>
+    <ul>
+      <li>Client: ${escHtml(c.client || '—')}</li>
+      <li>Email: ${escHtml(c.email || '—')}</li>
+      <li>Employment: ${escHtml(c.employment || '—')}</li>
+      <li>Income: ${escHtml(c.income || money(prefill.annualIncome))}</li>
+      <li>Property value: ${escHtml(money(prefill.propertyValue))}</li>
+      <li>Loan: ${escHtml(c.loanAmount || money(prefill.loanAmount))}</li>
+      <li>Term: ${prefill.termYears ? escHtml(String(prefill.termYears) + ' years') : '—'}</li>
+    </ul>`;
+}
+
+function escHtml(value) {
+  return String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function caseHasNamedDoc(c, pattern) {
+  const docs = (c && (c.documents || (c.factFind && c.factFind.documents))) || [];
+  return docs.some((doc) => pattern.test(String((doc && (doc.name || doc.fileName)) || '')));
+}
+
+function clientDocItemDone(c, itemId) {
+  if (!itemId) return false;
+  const phases = (c && c.compliancePhases) || [];
+  for (let i = 0; i < phases.length; i++) {
+    const items = phases[i].items || [];
+    for (let j = 0; j < items.length; j++) {
+      const status = items[j].status;
+      if (items[j].itemId === itemId && (status === 'complete' || status === 'sent' || status === 'accepted' || status === 'confirmed')) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+function clientDocumentsHtml(c) {
+  const sentLocal = (c && c.clientDocSends) || {};
+  const rows = [
+    { id: 'idd', itemId: 'idd', label: 'Initial disclosure', ready: true },
+    { id: 'privacy', itemId: 'privacy', label: 'Customer privacy notice', ready: true },
+    { id: 'tob', itemId: 'tob-sent', label: 'Terms of business', ready: true },
+    { id: 'research', itemId: '', label: 'Research pack', ready: true, generate: true },
+    { id: 'esis', itemId: '', label: 'ESIS', ready: true, generate: true },
+    { id: 'survey', itemId: 'survey-sent', label: 'Feedback survey', ready: true },
+  ];
+  const body = rows.map((row) => {
+    const named = row.id === 'esis'
+      ? caseHasNamedDoc(c, /esis/i)
+      : row.id === 'research'
+        ? caseHasNamedDoc(c, /research pack/i)
+        : false;
+    const sent = row.ready && (!!sentLocal[row.id] || named || clientDocItemDone(c, row.itemId));
+    const status = sent ? (row.generate && !sentLocal[row.id] && named ? 'On file' : 'Sent') : 'Not sent';
+    const generate = row.generate ? `<button type="button" class="cd-doc-send" data-ko-generate-doc="${row.id}">Generate</button>` : '';
+    const button = `${generate}<button type="button" class="cd-doc-send" data-ko-send-doc="${row.id}">${sent ? 'Resend' : 'Send'}</button>`;
+    return `<li class="cd-doc-row"><span>${escHtml(row.label)}</span><span class="cd-doc-actions"><span class="cd-doc-status">${escHtml(status)}</span>${button}</span></li>`;
+  }).join('');
+  return `<div class="cd-client-docs"><h3>Client documents</h3><p>Initial disclosure and the customer privacy notice are emailed when the case is established. Generate the research pack and the ESIS from the products on this case, then send them. The feedback survey emails the client a link. An uploaded ESIS still counts.</p><ul class="cd-doc-list">${body}</ul></div>`;
+}
+
+function caseAdvanceButtonHtml(c) {
+  const idx = getComplianceStageIndex(c);
+  const next = RAIL_NEXT_STAGE[idx];
+  if (!next) return '';
+  return `<button type="button" class="cd-stage-advance" data-ko-open-stage="${next.api}">Advance to ${next.stageLabel}</button>`;
+}
+
+function paintResearchRailTick(c) {
+  const rail = document.querySelector('#case-detail-content .cd-progress-rail') || document.querySelector('.cd-progress-rail');
+  if (!rail || !c) return;
+  const step = rail.querySelectorAll('.cd-comp-step')[2];
+  if (!step) return;
+  const currentIdx = getComplianceStageIndex(c);
+  const done = currentIdx > 2 || (currentIdx === 2 && researchProductsReady(c));
+  const dot = step.querySelector('.cd-comp-dot');
+  if (!dot) return;
+  dot.classList.toggle('cd-comp-dot--done', done);
+  dot.classList.toggle('cd-comp-dot--pending', !done);
+  if (done) dot.textContent = '✓';
+  else if (dot.textContent === '✓') dot.textContent = '';
+}
+
+function stageKeyIndex(key) {
+  const idx = CD_COMPLIANCE_STAGES.findIndex((s) => s.key === key);
+  return idx < 0 ? 0 : idx;
+}
+
+function syncUnreachedStageView(caseId, stageKey) {
+  const c = caseId && typeof cases !== 'undefined' ? cases[caseId] : null;
+  const page = document.querySelector('#case-detail-content .cd-page[data-open-case-id="' + caseId + '"]');
+  if (!page || !c) return;
+  const future = stageKeyIndex(stageKey) > getComplianceStageIndex(c);
+  page.classList.toggle('cd-page--future-stage', future);
+}
+
+function showCaseStage(caseId, stageKey) {
+  const c = caseId && typeof cases !== 'undefined' ? cases[caseId] : null;
+  if (!c) return;
+  const key = stageKey || c.viewStage || c.complianceCurrent || 'enquiry';
+  const previous = c.viewStage;
+  c.viewStage = key;
+  const host = document.querySelector('#case-detail-content [data-ko-stage-screen]');
+  const stageIdx = String(getComplianceStageIndex(c));
+  const unchanged = previous === key && host && host.getAttribute('data-view') === key && host.getAttribute('data-stage-idx') === stageIdx && host.childElementCount > 0;
+  if (host && !unchanged) {
+    host.setAttribute('data-view', key);
+    host.setAttribute('data-stage-idx', stageIdx);
+    host.innerHTML = caseStageScreenHtml(c, key) + clientDocumentsHtml(c) + caseAdvanceButtonHtml(c);
+  }
+  document.querySelectorAll('#case-detail-content [data-ko-view-stage]').forEach((btn) => {
+    btn.classList.toggle('cd-comp-pill--viewing', btn.getAttribute('data-ko-view-stage') === key);
+  });
+  if (!unchanged && window.parent !== window) {
+    window.parent.postMessage({ type: 'ko:view-stage', caseId: caseId, stage: key }, window.location.origin);
+  }
+  paintResearchRailTick(c);
+  syncUnreachedStageView(caseId, key);
+}
+window.showCaseStage = showCaseStage;
+
+document.addEventListener('click', (event) => {
+  const viewBtn = event.target && event.target.closest ? event.target.closest('[data-ko-view-stage]') : null;
+  if (!viewBtn) return;
+  event.preventDefault();
+  const page = document.querySelector('#case-detail-content .cd-page[data-open-case-id]');
+  const caseId = page ? page.getAttribute('data-open-case-id') : null;
+  if (!caseId) return;
+  showCaseStage(caseId, viewBtn.getAttribute('data-ko-view-stage'));
+});
 
 document.addEventListener('click', (event) => {
   const btn = event.target && event.target.closest ? event.target.closest('[data-ko-open-stage]') : null;
@@ -5540,6 +5853,121 @@ document.addEventListener('click', (event) => {
     cases[caseId].stageLabel = localNext.stageLabel;
     cases[caseId].complianceCurrent = localNext.complianceCurrent;
     if (typeof openCase === 'function') openCase(caseId);
+  }
+});
+
+document.addEventListener('click', (event) => {
+  const generateBtn = event.target && event.target.closest ? event.target.closest('[data-ko-generate-doc]') : null;
+  if (generateBtn && !generateBtn.disabled) {
+    event.preventDefault();
+    const template = generateBtn.getAttribute('data-ko-generate-doc');
+    const page = document.querySelector('#case-detail-content .cd-page[data-open-case-id]');
+    const caseId = page ? page.getAttribute('data-open-case-id') : null;
+    const isLive = new URLSearchParams(window.location.search).get('liveData') === '1' && window.parent !== window;
+    if (!isLive) {
+      alert('Generating runs from the signed-in broker app.');
+      return;
+    }
+    if (!caseId || !template) return;
+    generateBtn.disabled = true;
+    generateBtn.textContent = 'Generating…';
+    window.parent.postMessage({
+      type: 'ko:generate-illustration',
+      requestId: 'gen-' + Date.now(),
+      caseId: caseId,
+      template: template,
+    }, window.location.origin);
+    return;
+  }
+  const amlBtn = event.target && event.target.closest ? event.target.closest('[data-ko-save-aml]') : null;
+  if (amlBtn) {
+    event.preventDefault();
+    const page = document.querySelector('#case-detail-content .cd-page[data-open-case-id]');
+    const caseId = page ? page.getAttribute('data-open-case-id') : null;
+    const isLive = new URLSearchParams(window.location.search).get('liveData') === '1' && window.parent !== window;
+    if (!isLive || !caseId) {
+      alert('The identity check is saved from the signed-in broker app.');
+      return;
+    }
+    const payload = {};
+    document.querySelectorAll('[data-ko-aml]').forEach((input) => {
+      payload[input.getAttribute('data-ko-aml')] = !!input.checked;
+    });
+    amlBtn.disabled = true;
+    window.parent.postMessage({ type: 'ko:save-aml', caseId: caseId, payload: payload }, window.location.origin);
+    return;
+  }
+  const btn = event.target && event.target.closest ? event.target.closest('[data-ko-send-doc]') : null;
+  if (!btn || btn.disabled) return;
+  event.preventDefault();
+  const template = btn.getAttribute('data-ko-send-doc');
+  const page = document.querySelector('#case-detail-content .cd-page[data-open-case-id]');
+  const caseId = page ? page.getAttribute('data-open-case-id') : null;
+  if (!caseId || !template || btn.getAttribute('aria-busy') === 'true') return;
+  const isLive = new URLSearchParams(window.location.search).get('liveData') === '1' && window.parent !== window;
+  if (!isLive) {
+    alert('Sending runs from the signed-in broker app.');
+    return;
+  }
+  const requestId = 'send-doc-' + Date.now();
+  btn.disabled = true;
+  btn.setAttribute('aria-busy', 'true');
+  btn.setAttribute('data-ko-send-request', requestId);
+  btn.textContent = 'Sending…';
+  window.parent.postMessage({
+    type: 'ko:send-client-document',
+    requestId: requestId,
+    caseId: caseId,
+    template: template,
+  }, window.location.origin);
+});
+
+window.addEventListener('message', (event) => {
+  if (event.origin !== window.location.origin) return;
+  const data = event.data;
+  if (!data || (data.type !== 'ko:send-client-document-result' && data.type !== 'ko:generate-illustration-result' && data.type !== 'ko:save-aml-result')) return;
+  if (data.type === 'ko:save-aml-result') {
+    if (data.success && data.caseId && typeof cases !== 'undefined' && cases[data.caseId]) {
+      const payload = {};
+      document.querySelectorAll('[data-ko-aml]').forEach((input) => {
+        payload[input.getAttribute('data-ko-aml')] = !!input.checked;
+      });
+      cases[data.caseId].amlEvidence = payload;
+      if (!cases[data.caseId].factFind) cases[data.caseId].factFind = {};
+      if (!cases[data.caseId].factFind.personalDetails) cases[data.caseId].factFind.personalDetails = {};
+      cases[data.caseId].factFind.personalDetails.amlEvidence = payload;
+    } else if (!data.success) {
+      alert(data.error || 'Could not save the identity check.');
+    }
+    document.querySelectorAll('[data-ko-save-aml]').forEach((el) => { el.disabled = false; });
+    return;
+  }
+  const caseId = data.caseId;
+  if (data.success && caseId && typeof cases !== 'undefined' && cases[caseId]) {
+    if (data.type === 'ko:generate-illustration-result') {
+      if (!Array.isArray(cases[caseId].documents)) cases[caseId].documents = [];
+      cases[caseId].documents.push({ name: data.documentName || (data.template === 'esis' ? 'ESIS illustration.pdf' : 'Research pack.pdf') });
+    } else {
+      if (!cases[caseId].clientDocSends) cases[caseId].clientDocSends = {};
+      cases[caseId].clientDocSends[data.template] = true;
+      if (data.template === 'esis' || data.template === 'research') {
+        if (!Array.isArray(cases[caseId].documents)) cases[caseId].documents = [];
+        cases[caseId].documents.push({ name: data.template === 'esis' ? 'ESIS illustration.pdf' : 'Research pack.pdf' });
+      }
+    }
+    const host = document.querySelector('#case-detail-content [data-ko-stage-screen]');
+    if (host) {
+      host.removeAttribute('data-view');
+      host.removeAttribute('data-stage-idx');
+    }
+    showCaseStage(caseId, cases[caseId].viewStage);
+    return;
+  }
+  alert(data.error || 'Could not send that document.');
+  const host = document.querySelector('#case-detail-content [data-ko-stage-screen]');
+  if (host && caseId && typeof cases !== 'undefined' && cases[caseId]) {
+    host.removeAttribute('data-view');
+    showCaseStage(caseId, cases[caseId].viewStage);
   }
 });
 
@@ -6534,6 +6962,34 @@ function initCaseDocsTable() {
 }
 
 // ── Open case detail
+window.setCaseApplicants = function (caseId, mode, options) {
+  const c = cases[caseId];
+  if (!c) return;
+  const joint = mode === 'joint';
+  const previousMode = c.applicantMode === 'joint' ? 'joint' : 'single';
+  c.applicantMode = joint ? 'joint' : 'single';
+  if (!c.factFind || typeof c.factFind !== 'object') c.factFind = { personalDetails: {} };
+  if (!c.factFind.personalDetails || typeof c.factFind.personalDetails !== 'object') {
+    c.factFind.personalDetails = {};
+  }
+  const prev = c.factFind.personalDetails.portalFactFindForm;
+  c.factFind.personalDetails.portalFactFindForm = Object.assign(
+    {},
+    prev && typeof prev === 'object' ? prev : {},
+    { hasJointApplicant: joint },
+  );
+  document.querySelectorAll('[data-ko-applicant-mode]').forEach(function (btn) {
+    btn.classList.toggle('is-selected', btn.getAttribute('data-ko-applicant-mode') === c.applicantMode);
+  });
+  if ((!options || !options.localOnly) && window.parent !== window) {
+    c._applicantModeBefore = previousMode;
+    window.parent.postMessage(
+      { type: 'ko:set-case-applicants', caseId: caseId, applicantMode: c.applicantMode },
+      window.location.origin,
+    );
+  }
+};
+
 function openCase(id) {
   if (typeof window.closeFactFindWizardIfOpen === 'function') window.closeFactFindWizardIfOpen();
   const c = cases[id]; if(!c) return;
@@ -6585,6 +7041,11 @@ function openCase(id) {
             <span class="cd-meta-pill">${headerAmount}</span>
             <span class="cd-meta-pill">${headerLtv} LTV</span>
             <span class="cd-meta-pill">${headerAdviser}</span>
+            <span class="cd-meta-pill">
+              <button type="button" class="cd-applicant-btn${c.applicantMode === 'joint' ? '' : ' is-selected'}" data-ko-applicant-mode="single" onclick="setCaseApplicants('${id}','single')">Single</button>
+              <span aria-hidden="true"> / </span>
+              <button type="button" class="cd-applicant-btn${c.applicantMode === 'joint' ? ' is-selected' : ''}" data-ko-applicant-mode="joint" onclick="setCaseApplicants('${id}','joint')">Joint</button>
+            </span>
           </div>
         </div>
         <div class="cd-header-actions">
@@ -6596,6 +7057,7 @@ function openCase(id) {
         <p class="cd-progress-label">Case Progress</p>
         <div class="cd-comp-steps">${progressStepsHtml}</div>
       </div>
+      <div class="cd-stage-screen" data-ko-stage-screen></div>
       <div class="cd-tabs" role="tablist">
         <button type="button" class="cd-tab active" role="tab" aria-selected="true" onclick="switchCaseTab(this,'overview-${id}')">
           <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect x="2" y="2" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.3"/><rect x="9" y="2" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.3"/><rect x="2" y="9" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.3"/><rect x="9" y="9" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.3"/></svg>
@@ -6699,6 +7161,7 @@ function openCase(id) {
   initCaseDocsTable();
   delete caseAiReportState[id];
   initCaseReport(id);
+  showCaseStage(id, c.viewStage || c.complianceCurrent || 'enquiry');
 }
 
 function switchCaseTab(el, viewId) {
@@ -7064,6 +7527,9 @@ function calcRun() {
 
   function prependLiveClient(client) {
     if (!isLiveClients || !tbody || !client?.id) return;
+    if (window.__koDeletedClientIds && window.__koDeletedClientIds[client.id]) return;
+    window.__koPendingClientIds = window.__koPendingClientIds || {};
+    window.__koPendingClientIds[client.id] = true;
     const existing = window.koLiveClients || [];
     window.koLiveClients = [client].concat(existing.filter(function (c) { return c && c.id !== client.id; }));
     if (!tbody.querySelector('[data-client-id="' + client.id + '"]')) {
@@ -7073,6 +7539,23 @@ function calcRun() {
     applyClientsView();
   }
 
+  function markClientsDeleted(ids) {
+    window.__koDeletedClientIds = window.__koDeletedClientIds || {};
+    (ids || []).forEach(function (id) {
+      if (!id) return;
+      window.__koDeletedClientIds[id] = true;
+      if (window.__koPendingClientIds) delete window.__koPendingClientIds[id];
+    });
+    if (window.__koSnapshotClients) {
+      window.__koSnapshotClients = window.__koSnapshotClients.filter(function (client) {
+        return client && !window.__koDeletedClientIds[client.id];
+      });
+    }
+    renderLiveClients((window.koLiveClients || []).filter(function (client) {
+      return client && !window.__koDeletedClientIds[client.id];
+    }));
+  }
+
   window.koRenderClientsTable = renderLiveClients;
   window.koPrependClientRow = prependLiveClient;
 
@@ -7080,20 +7563,26 @@ function calcRun() {
     if (event.origin !== window.location.origin) return;
     const data = event.data;
     if (data?.type === 'ko:clients-sync' && Array.isArray(data.clients)) {
+      var deleted = window.__koDeletedClientIds || {};
+      var snapshotLeft = (window.__koSnapshotClients || []).filter(function (client) {
+        return client && client.id && !deleted[client.id];
+      });
       // Keep snapshot-hydrated rows if parent posts [] before bootstrap resolves.
-      if (data.clients.length === 0 && window.__koSnapshotClients && window.__koSnapshotClients.length) {
+      if (data.clients.length === 0 && snapshotLeft.length) {
         return;
       }
-      // Preserve any just-created rows that a slightly-stale sync omitted.
-      var incoming = data.clients.slice();
-      var live = window.koLiveClients || [];
-      live.forEach(function (c) {
-        if (!c || !c.id) return;
-        if (!incoming.some(function (row) { return row && row.id === c.id; })) {
-          // Only keep rows that are already painted (created this session).
-          if (tbody && tbody.querySelector('[data-client-id="' + c.id + '"]')) {
-            incoming.unshift(c);
-          }
+      // Keep a client created in this session if a slightly stale sync omits them.
+      // Do not put a deleted row back — that was sending it to the top of the table.
+      var pending = window.__koPendingClientIds || {};
+      var incoming = data.clients.filter(function (row) {
+        return row && row.id && !deleted[row.id];
+      });
+      (window.koLiveClients || []).forEach(function (client) {
+        if (!client || !client.id || deleted[client.id] || !pending[client.id]) return;
+        if (!incoming.some(function (row) { return row && row.id === client.id; })) {
+          incoming.unshift(client);
+        } else {
+          delete pending[client.id];
         }
       });
       renderLiveClients(incoming);
@@ -7125,7 +7614,16 @@ function calcRun() {
       window.koSetUserGreeting(data.name);
     }
     if (data?.type === 'ko:delete-clients-result' && data.requestId === deleteRequestId) {
-      if (!data.success) {
+      if (data.success) {
+        deleteSucceededRequestId = data.requestId;
+        var removedIds = Array.isArray(data.clientIds) ? data.clientIds : deleteIdsByRequest[data.requestId];
+        markClientsDeleted(removedIds || []);
+        const failedTitle = document.querySelector('#ko-client-modal-overlay h3');
+        if (failedTitle && failedTitle.textContent === 'Delete failed') closeClientModal();
+      } else if (deleteSucceededRequestId === data.requestId) {
+        if (deleteBtn) deleteBtn.disabled = false;
+        return;
+      } else {
         openClientModal(
           'Delete failed',
           data.error || 'Could not delete selected clients.',
@@ -7402,6 +7900,8 @@ function calcRun() {
   }
 
   let deleteRequestId = 0;
+  let deleteSucceededRequestId = 0;
+  const deleteIdsByRequest = {};
 
   function closeClientModal() {
     document.getElementById('ko-client-modal-overlay')?.remove();
@@ -7432,12 +7932,14 @@ function calcRun() {
         : '<button type="button" data-ko-close style="padding:9px 16px;border:1px solid #d4d4d8;border-radius:10px;background:#fff;font-size:13px;cursor:pointer">Close</button>') +
       '</div></div>';
     document.body.appendChild(overlay);
+    let confirmUsed = false;
     overlay.addEventListener('click', (e) => {
       const target = e.target;
       if (target === overlay || target.closest('[data-ko-cancel]') || target.closest('[data-ko-close]')) {
         closeClientModal();
       }
-      if (target.closest('[data-ko-confirm]') && options?.onConfirm) {
+      if (target.closest('[data-ko-confirm]') && options?.onConfirm && !confirmUsed) {
+        confirmUsed = true;
         closeClientModal();
         options.onConfirm();
       }
@@ -7451,6 +7953,7 @@ function calcRun() {
         .filter((id) => Boolean(id));
       if (deleteBtn) deleteBtn.disabled = true;
       deleteRequestId += 1;
+      deleteIdsByRequest[deleteRequestId] = clientIds.slice();
       window.parent.postMessage(
         { type: 'ko:delete-clients', requestId: deleteRequestId, clientIds },
         window.location.origin,
@@ -7649,14 +8152,102 @@ function calcRun() {
     return '£' + Number(amount).toLocaleString('en-GB');
   }
 
+  function factFindPostcode(detail) {
+    const factFind = detail && detail.factFind;
+    if (!factFind) return '';
+    const propertyDetails = factFind.propertyDetails || {};
+    const current = (factFind.personalDetails && factFind.personalDetails.currentAddress) || {};
+    return propertyDetails.postcode || current.postcode || '';
+  }
+
+  function factFindLine1(detail) {
+    const factFind = detail && detail.factFind;
+    if (!factFind) return '';
+    const propertyDetails = factFind.propertyDetails || {};
+    const current = (factFind.personalDetails && factFind.personalDetails.currentAddress) || {};
+    return current.line1 || current.addressLine1 || propertyDetails.addressLine1 || propertyDetails.line1 || '';
+  }
+
+  function factFindCity(detail) {
+    const factFind = detail && detail.factFind;
+    if (!factFind) return '';
+    const current = (factFind.personalDetails && factFind.personalDetails.currentAddress) || {};
+    const propertyDetails = factFind.propertyDetails || {};
+    return current.city || current.town || propertyDetails.city || '';
+  }
+
+  function mergeCasePrefill(detail, existing) {
+    const client = detail.client || {};
+    const liveClient = koFindLiveClient(detail.clientId || client.id) || {};
+    const liveHome = koClientHome(liveClient);
+    const caseHome = koClientHome(client);
+    const home = liveHome.postcode || liveHome.line1 ? liveHome : caseHome;
+    const property = detail.property || {};
+    const address = client.address && typeof client.address === 'object' ? client.address : {};
+    const propertyAddress = property.address && typeof property.address === 'object' ? property.address : {};
+    const prev = (existing && existing.prefill) || {};
+    const next = {
+      firstName: client.firstName || liveClient.firstName || '',
+      lastName: client.lastName || liveClient.lastName || '',
+      email: client.email || liveClient.email || '',
+      phone: client.phone || liveClient.phone || '',
+      employmentStatus: client.employmentStatus || liveClient.employmentStatus || '',
+      annualIncome: client.annualIncome != null ? client.annualIncome : (liveClient.annualIncome != null ? liveClient.annualIncome : null),
+      dob: client.dateOfBirth || liveClient.dateOfBirth || '',
+      niNumber: client.niNumber || liveClient.niNumber || '',
+      addressLine1: address.line1 || address.addressLine1 || propertyAddress.line1 || propertyAddress.addressLine1 || factFindLine1(detail) || home.line1 || '',
+      city: address.city || address.town || propertyAddress.city || factFindCity(detail) || home.city || '',
+      postcode: property.postcode || address.postcode || factFindPostcode(detail) || (detail.propertyAddress && detail.propertyAddress.postcode) || home.postcode || '',
+      propertyValue: detail.propertyValue != null ? detail.propertyValue : null,
+      loanAmount: detail.loanAmount != null ? detail.loanAmount : null,
+      termYears: detail.termYears != null ? detail.termYears : null,
+      caseType: detail.type || '',
+      purposeNote: prev.purposeNote || '',
+    };
+    const pending = window.koPendingCasePrefill;
+    if (pending && pending.caseId && detail.id === pending.caseId) {
+      if (pending.propertyValue != null) next.propertyValue = pending.propertyValue;
+      if (pending.loanAmount != null) next.loanAmount = pending.loanAmount;
+      if (pending.termYears != null) next.termYears = pending.termYears;
+      if (pending.postcode) next.postcode = pending.postcode;
+      if (pending.addressLine1) next.addressLine1 = pending.addressLine1;
+      if (detail.propertyAddress && detail.propertyAddress.postcode) next.postcode = detail.propertyAddress.postcode;
+      if (detail.propertyAddress && detail.propertyAddress.addressLine1) next.addressLine1 = detail.propertyAddress.addressLine1;
+      if (pending.purposeNote) next.purposeNote = pending.purposeNote;
+    }
+    const merged = Object.assign({}, prev);
+    Object.keys(next).forEach(function (key) {
+      if (next[key] !== '' && next[key] != null) merged[key] = next[key];
+    });
+    return merged;
+  }
+
+  function formatAnnualIncome(value) {
+    if (value == null || value === '' || Number.isNaN(Number(value))) return '';
+    return '£' + Number(value).toLocaleString('en-GB');
+  }
+
   function mapApiCaseToPrototypeView(detail) {
     const client = detail.client || {};
+    const previousCase = detail && detail.id && cases[detail.id] ? cases[detail.id] : null;
+    const applicantForm = detail.factFind && detail.factFind.personalDetails && detail.factFind.personalDetails.portalFactFindForm;
+    const applicantMode = (function () {
+      if (applicantForm && typeof applicantForm.hasJointApplicant === 'boolean') {
+        return applicantForm.hasJointApplicant ? 'joint' : 'single';
+      }
+      if (detail.applicantMode === 'joint' || detail.applicantMode === 'single') return detail.applicantMode;
+      const previousMode = previousCase && previousCase.applicantMode;
+      return previousMode === 'joint' || previousMode === 'single' ? previousMode : 'single';
+    })();
+    const partnerName = detail.jointApplicantName || (previousCase && previousCase.jointApplicantName) || '';
     const clientName = [client.firstName, client.lastName].filter(Boolean).join(' ');
+    const displayName = applicantMode === 'joint' && partnerName ? clientName + ' & ' + partnerName : clientName;
     const adviser = detail.adviser;
     const adviserName = adviser
       ? [adviser.firstName, adviser.lastName].filter(Boolean).join(' ')
       : '—';
     const stageInfo = apiStageToMock[detail.stage] || { stage: 'enquiry', stageLabel: detail.stage || 'Enquiry' };
+    const complianceKey = { enquiry: 'enquiry', factfind: 'factfind', research: 'research', dip: 'application', offer: 'offer', lead: 'enquiry' }[stageInfo.stage] || 'enquiry';
     const employmentLabels = {
       EMPLOYED: 'Employed',
       SELF_EMPLOYED: 'Self-employed',
@@ -7699,28 +8290,52 @@ function calcRun() {
         : JSON.parse(JSON.stringify(CD_COMPLIANCE_PHASES));
     }
 
+    const prefill = mergeCasePrefill(detail, existing);
+    const propertyLine = [prefill.addressLine1, prefill.city, prefill.postcode].filter(Boolean).join(', ');
+    const incomeLabel = formatAnnualIncome(prefill.annualIncome);
     return {
-      name: clientName,
+      name: displayName,
       ref: detail.referenceNumber || '—',
       type: caseTypeLabels[detail.type] || detail.type || '—',
       stage: stageInfo.stage,
       stageLabel: stageInfo.stageLabel,
-      headerAmount: formatCaseMoney(detail.loanAmount),
-      loanAmount: formatCaseMoney(detail.loanAmount),
+      headerAmount: formatCaseMoney(detail.loanAmount != null ? detail.loanAmount : prefill.loanAmount),
+      loanAmount: formatCaseMoney(detail.loanAmount != null ? detail.loanAmount : prefill.loanAmount),
       ltv: detail.ltv != null ? detail.ltv + '%' : '—',
       caseLtv: detail.ltv != null ? detail.ltv + '%' : '—',
       adviser: adviserName,
       caseAdviser: adviserName,
-      lender: detail.selectedLender || 'TBC',
-      apiType: detail.type || '',
-      client: clientName,
-      email: client.email || '—',
-      phone: client.phone || '—',
-      property: '—',
-      employment: employmentLabels[client.employmentStatus] || client.employmentStatus || '—',
-      income: '—',
-      notes: detail.adviserNotes || '',
-      factFind: detail.factFind || null,
+      lender: detail.selectedLender || (existing && existing.lender) || 'TBC',
+      apiType: detail.type || (existing && existing.apiType) || '',
+      clientId: detail.clientId || client.id || (existing && existing.clientId) || '',
+      client: displayName,
+      email: client.email || (existing && existing.email) || '—',
+      phone: client.phone || (existing && existing.phone) || '—',
+      property: propertyLine || (existing && existing.property) || '—',
+      employment: employmentLabels[client.employmentStatus] || client.employmentStatus || (existing && existing.employment) || '—',
+      income: incomeLabel || (existing && existing.income) || '—',
+      notes: detail.adviserNotes || (existing && existing.notes) || '',
+      prefill: prefill,
+      factFind: Object.prototype.hasOwnProperty.call(detail, 'factFind') ? (detail.factFind || null) : ((existing && existing.factFind) || null),
+      applicantMode: applicantMode,
+      jointApplicantName: partnerName,
+      complianceCurrent: complianceKey,
+      productsConsidered: Array.isArray(detail.productsConsidered) ? detail.productsConsidered : ((existing && existing.productsConsidered) || []),
+      selectedProduct: detail.selectedProduct || (existing && existing.selectedProduct) || '',
+      aipAt: detail.aipAt || (existing && existing.aipAt) || '',
+      submittedAt: detail.submittedAt || (existing && existing.submittedAt) || '',
+      offerIssuedAt: detail.offerIssuedAt || (existing && existing.offerIssuedAt) || '',
+      offerExpiresAt: detail.offerExpiresAt || (existing && existing.offerExpiresAt) || '',
+      viewStage: (function () {
+        const current = (existing && existing.viewStage) || null;
+        if (!current) return null;
+        if (stageKeyIndex(current) < stageKeyIndex(complianceKey)) return null;
+        return current;
+      })(),
+      clientDocSends: (existing && existing.clientDocSends) || {},
+      amlEvidence: (existing && existing.amlEvidence) || null,
+      documents: Array.isArray(detail.documents) ? detail.documents : ((existing && existing.documents) || []),
+      propertyAddress: detail.propertyAddress || (existing && existing.propertyAddress) || null,
       timeline: [
         {
           title: 'Case created',
@@ -7803,6 +8418,11 @@ function calcRun() {
     if (pills[1] && c.headerAmount) pills[1].textContent = c.headerAmount;
     if (pills[2] && c.ltv) pills[2].textContent = c.ltv + (String(c.ltv).indexOf('LTV') >= 0 ? '' : ' LTV');
     if (pills[3] && c.adviser) pills[3].textContent = c.adviser;
+    root.querySelectorAll('[data-ko-applicant-mode]').forEach(function (btn) {
+      btn.classList.toggle('is-selected', btn.getAttribute('data-ko-applicant-mode') === (c.applicantMode === 'joint' ? 'joint' : 'single'));
+    });
+    var steps = root.querySelector('.cd-comp-steps');
+    if (steps) steps.innerHTML = renderCaseProgressSteps(c);
 
     var rows = root.querySelectorAll('#caseview-overview-' + id + ' .cd-detail-row');
     function setRow(label, value) {
@@ -7819,20 +8439,32 @@ function calcRun() {
     setRow('Phone', c.phone);
     setRow('Employment', c.employment);
     setRow('Income', c.income);
+    setRow('Property', c.property);
     setRow('Reference', c.ref);
     setRow('Transaction type', c.type);
     setRow('Loan amount', c.loanAmount);
     setRow('LTV', c.caseLtv || c.ltv);
     setRow('Lender', c.lender);
     setRow('Adviser', c.caseAdviser || c.adviser);
+    if (typeof showCaseStage === 'function') showCaseStage(id, c.viewStage || c.complianceCurrent || 'enquiry');
   };
+
+  function caseDisplayName(caseItem) {
+    const client = caseItem.client || {};
+    const name = [client.firstName, client.lastName].filter(Boolean).join(' ');
+    if (caseItem.applicantMode === 'joint' && caseItem.jointApplicantName) {
+      return name + ' & ' + caseItem.jointApplicantName;
+    }
+    return name;
+  }
 
   function buildKanbanCard(caseItem) {
     const client = caseItem.client || {};
-    const name = [client.firstName, client.lastName].filter(Boolean).join(' ');
+    const name = caseDisplayName(caseItem);
     const init = initials(client.firstName, client.lastName).toUpperCase() || '?';
     const typeLabel = caseTypeLabels[caseItem.type] || caseItem.type;
     const ltv = caseItem.ltv != null ? 'LTV ' + caseItem.ltv + '%' : '';
+    const jointTag = caseItem.applicantMode === 'joint' ? '<span class="kb-cc-tag">Joint</span>' : '';
     const amtClass = 'kb-cc-amt kb-cc-amt--' + (stageAmtClass[caseItem.stage] || 'lead');
     const div = document.createElement('div');
     div.className = 'kb-card ov-kbcard cs-case-card';
@@ -7841,7 +8473,7 @@ function calcRun() {
     div.innerHTML =
       '<div class="kb-cc-top"><div class="kb-cc-avatar">' + init + '</div></div>' +
       '<div><button type="button" class="kb-card-name">' + name + '</button><div class="kb-cc-ref">' + (caseItem.referenceNumber || '') + '</div></div>' +
-      '<div class="kb-cc-tags"><span class="kb-cc-tag">' + typeLabel + '</span>' +
+      '<div class="kb-cc-tags"><span class="kb-cc-tag">' + typeLabel + '</span>' + jointTag +
       (ltv ? '<span class="kb-cc-tag">' + ltv + '</span>' : '') + '</div>' +
       '<div class="' + amtClass + '">' + formatLoan(caseItem.loanAmount) + '</div>';
     div.style.cursor = 'pointer';
@@ -7849,8 +8481,7 @@ function calcRun() {
   }
 
   function buildTableRow(caseItem) {
-    const client = caseItem.client || {};
-    const name = [client.firstName, client.lastName].filter(Boolean).join(' ');
+    const name = caseDisplayName(caseItem);
     const tr = document.createElement('tr');
     tr.className = 'cs-table-row';
     tr.setAttribute('data-cs-row', '');
@@ -7865,7 +8496,7 @@ function calcRun() {
     tr.innerHTML =
       '<td style="font-size:12px;color:var(--ink-60)">' + (caseItem.referenceNumber || '') + '</td>' +
       '<td style="font-weight:600"><span class="cs-client-name">' + name + '</span></td>' +
-      '<td style="color:var(--ink-60)">' + (caseTypeLabels[caseItem.type] || caseItem.type) + '</td>' +
+      '<td style="color:var(--ink-60)">' + (caseTypeLabels[caseItem.type] || caseItem.type) + (caseItem.applicantMode === 'joint' ? ' · Joint' : '') + '</td>' +
       '<td style="color:var(--ink-60)">' + (caseItem.selectedLender || 'TBC') + '</td>' +
       '<td style="font-weight:600">' + formatLoan(caseItem.loanAmount) + '</td>' +
       '<td>' + (caseItem.ltv != null ? caseItem.ltv + '%' : '—') + '</td>' +
@@ -7947,6 +8578,11 @@ function calcRun() {
     if (data?.type === 'ko:cases-sync' && Array.isArray(data.cases)) {
       renderLiveCases(data.cases);
     }
+    if (data?.type === 'ko:set-case-applicants-result' && data.caseId && cases[data.caseId] && data.success === false) {
+      const previous = cases[data.caseId]._applicantModeBefore === 'joint' ? 'joint' : 'single';
+      window.setCaseApplicants(data.caseId, previous, { localOnly: true });
+      alert(data.error || 'Could not update whether this case is joint or single.');
+    }
     if (data?.type === 'ko:case-detail' && data.case && data.case.id) {
       var prevOpenId = null;
       var detailRoot = document.getElementById('case-detail-content');
@@ -7981,7 +8617,118 @@ function calcRun() {
     if (data?.type === 'ko:open-case-error') {
       alert(data.error || 'Could not open case.');
     }
+    if (data?.type === 'ko:vulnerability-report-result') {
+      renderVulnerabilityReport(data);
+    }
+    if (data?.type === 'ko:survey-report-result') {
+      renderSurveyReport(data);
+    }
   });
+
+  function renderVulnerabilityReport(data) {
+    var out = document.getElementById('ai-vuln-result');
+    if (!out) return;
+    if (!data.success || !data.report) {
+      out.textContent = data.error || 'Could not generate the vulnerability report.';
+      return;
+    }
+    var report = data.report;
+    var rows = (report.domains || []).map(function (domain) {
+      return '<tr><td>' + escHtml(domain.name) + '</td><td>' + escHtml(domain.count) + '</td></tr>';
+    }).join('');
+    out.innerHTML =
+      '<div class="ai-vuln-report-stats">' +
+        '<div class="ai-vuln-report-stat"><strong>' + escHtml(report.assessmentsCompleted) + '</strong><span>Assessments completed</span></div>' +
+        '<div class="ai-vuln-report-stat"><strong>' + escHtml(report.flaggedAssessments) + '</strong><span>Flagged assessments</span></div>' +
+      '</div>' +
+      '<p>Period: ' + escHtml(report.from) + ' to ' + escHtml(report.to) + '. Counts only. No client is named.</p>' +
+      '<table><thead><tr><th>Domain</th><th>Assessments with a flag</th></tr></thead><tbody>' + rows + '</tbody></table>' +
+      '<button type="button" class="ai-rpt-tool-btn" id="ai-vuln-download">Download CSV</button>';
+    var download = document.getElementById('ai-vuln-download');
+    if (download) {
+      download.addEventListener('click', function () {
+        var lines = [
+          'Period,' + report.from + ' to ' + report.to,
+          'Assessments completed,' + report.assessmentsCompleted,
+          'Flagged assessments,' + report.flaggedAssessments,
+          'Domain,Assessments with a flag',
+        ];
+        (report.domains || []).forEach(function (domain) {
+          lines.push('"' + String(domain.name).replace(/"/g, '""') + '",' + domain.count);
+        });
+        var blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8' });
+        var url = URL.createObjectURL(blob);
+        var link = document.createElement('a');
+        link.href = url;
+        link.download = 'vulnerability-assessments-' + report.to + '.csv';
+        link.click();
+        URL.revokeObjectURL(url);
+      });
+    }
+  }
+
+  function renderSurveyReport(data) {
+    var out = document.getElementById('ai-survey-result');
+    if (!out) return;
+    if (!data.success || !data.report) {
+      out.textContent = data.error || 'Could not generate the survey report.';
+      return;
+    }
+    var report = data.report;
+    out.innerHTML =
+      '<div class="ai-vuln-report-stats">' +
+        '<div class="ai-vuln-report-stat"><strong>' + escHtml(report.sent) + '</strong><span>Surveys sent</span></div>' +
+        '<div class="ai-vuln-report-stat"><strong>' + escHtml(report.responses) + '</strong><span>Responses</span></div>' +
+        '<div class="ai-vuln-report-stat"><strong>' + escHtml(report.belowExpected) + '</strong><span>Below expected</span></div>' +
+      '</div>' +
+      '<p>Period: ' + escHtml(report.from) + ' to ' + escHtml(report.to) + '. Counts only. No client is named.</p>';
+  }
+
+  function bindSurveyReport() {
+    var input = document.getElementById('ai-survey-asof');
+    var btn = document.getElementById('ai-survey-run');
+    if (input && !input.value) input.value = new Date().toISOString().slice(0, 10);
+    if (!btn || btn.dataset.bound === '1') return;
+    btn.dataset.bound = '1';
+    btn.addEventListener('click', function () {
+      var out = document.getElementById('ai-survey-result');
+      if (window.parent === window) {
+        if (out) out.textContent = 'Open Reports from the broker dashboard to generate this report.';
+        return;
+      }
+      if (out) out.textContent = 'Generating report…';
+      window.parent.postMessage({ type: 'ko:survey-report', asOf: input && input.value }, window.location.origin);
+    });
+  }
+
+  function bindVulnerabilityReport() {
+    var input = document.getElementById('ai-vuln-asof');
+    var btn = document.getElementById('ai-vuln-run');
+    if (input && !input.value) {
+      input.value = new Date().toISOString().slice(0, 10);
+    }
+    if (!btn || btn.dataset.bound === '1') return;
+    btn.dataset.bound = '1';
+    btn.addEventListener('click', function () {
+      var out = document.getElementById('ai-vuln-result');
+      var asOf = input && input.value;
+      if (window.parent === window) {
+        if (out) out.textContent = 'Open Reports from the broker dashboard to generate this report.';
+        return;
+      }
+      if (out) out.textContent = 'Generating report…';
+      window.parent.postMessage({ type: 'ko:vulnerability-report', asOf: asOf }, window.location.origin);
+    });
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function () {
+      bindVulnerabilityReport();
+      bindSurveyReport();
+    });
+  } else {
+    bindVulnerabilityReport();
+    bindSurveyReport();
+  }
 
   const tabCases = document.getElementById('tab-cases');
   if (tabCases) {
@@ -8390,8 +9137,8 @@ function calcRun() {
         companyNumberInput?.focus();
         return;
       }
-      if (!email) {
-        showDrawerError('Email is required.');
+      if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        showDrawerError('Enter a valid email, or leave it blank.');
         emailInput?.focus();
         return;
       }
@@ -8434,8 +9181,8 @@ function calcRun() {
         nameInput?.focus();
         return;
       }
-      if (!email) {
-        showDrawerError('Email is required.');
+      if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        showDrawerError('Enter a valid email, or leave it blank.');
         emailInput?.focus();
         return;
       }
@@ -9070,6 +9817,12 @@ calcRun();
         maritalStatus: ffPickString(personal, ['maritalStatus', 'client1MaritalStatus']),
         contactNumber: ffPickString(personal, ['phone', 'contactNumber', 'client1Phone']),
         email: ffPickString(personal, ['email', 'client1Email']),
+        currentAddress: {
+          ...base.client1Personal.currentAddress,
+          line1: ffPickString(personal.currentAddress || property, ['line1', 'addressLine1']),
+          city: ffPickString(personal.currentAddress || property, ['city', 'town']),
+          postcode: ffPickString(personal.currentAddress || property, ['postcode']),
+        },
       },
       client1Employment: {
         ...base.client1Employment,
@@ -9081,8 +9834,9 @@ calcRun();
         grossSalary: ffPickNumberLike(income, ['grossSalary', 'annualIncome', 'client1AnnualIncome']),
         bonusAmount: ffPickNumberLike(income, ['bonusAmount', 'additionalIncome']),
       },
-      propertyValue: ffPickNumberLike(property, ['propertyValue', 'value']),
+      propertyValue: ffPickNumberLike(property, ['propertyValue', 'value', 'purchasePrice']),
       mortgageRequired: ffPickNumberLike(property, ['mortgageRequired', 'loanAmount']),
+      termRequired: ffPickNumberLike(property, ['termRequired', 'termYears']),
       caseType: ffPickString(personal, ['caseType']) || base.caseType,
       hasExistingMortgage: Boolean(mortgages.hasExistingMortgage) || Boolean(ffPickString(mortgages, ['lenderName', 'existingMortgageLender'])),
       existingMortgageLender: ffPickString(mortgages, ['lenderName', 'existingMortgageLender']),
@@ -9104,7 +9858,128 @@ calcRun();
         form = ffMapDetailsToForm(stored);
       }
     }
-    return ffApplyLiveCaseType(form, caseId);
+    return ffApplyApplicantMode(ffApplySourcePrefill(ffApplyLiveCaseType(form, caseId), caseId), caseId);
+  }
+
+  function ffApplyApplicantMode(form, caseId) {
+    const c = caseId ? cases[caseId] : null;
+    if (!c || (c.applicantMode !== 'joint' && c.applicantMode !== 'single')) return form;
+    const stored = c.factFind && c.factFind.personalDetails && c.factFind.personalDetails.portalFactFindForm;
+    const storedHasFlag = stored && Object.prototype.hasOwnProperty.call(stored, 'hasJointApplicant');
+    if (storedHasFlag) return form;
+    return { ...form, hasJointApplicant: c.applicantMode === 'joint' };
+  }
+
+  function ffBlank(value) {
+    return value == null || String(value).trim() === '';
+  }
+
+  function ffDobLabel(value) {
+    if (ffBlank(value)) return '';
+    const raw = String(value).trim();
+    const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(raw);
+    if (!match) return raw;
+    return match[3] + '/' + match[2] + '/' + match[1];
+  }
+
+  function ffFill(target, key, value) {
+    if (!target || !ffBlank(target[key]) || ffBlank(value)) return;
+    target[key] = typeof value === 'number' ? String(value) : String(value);
+  }
+
+  function ffWizardEmployment(status) {
+    const map = {
+      EMPLOYED: 'EMPLOYED_FT',
+      SELF_EMPLOYED: 'SELF_EMPLOYED_SOLE',
+      CONTRACTOR: 'CONTRACTOR',
+      RETIRED: 'RETIRED',
+      UNEMPLOYED: 'UNEMPLOYED',
+    };
+    return map[status] || '';
+  }
+
+  function ffLookupLiveClient(clientId) {
+    const list = window.koLiveClients || [];
+    return list.find((row) => row && row.id === clientId) || null;
+  }
+
+  function ffFirstText() {
+    for (let i = 0; i < arguments.length; i += 1) {
+      const value = arguments[i];
+      if (value != null && String(value).trim()) return String(value).trim();
+    }
+    return '';
+  }
+
+  function ffApplySourcePrefill(form, caseId) {
+    if (!form) return form;
+    const live = caseId && typeof cases !== 'undefined' ? cases[caseId] : null;
+    const pending = window.koPendingCasePrefill && (!window.koPendingCasePrefill.caseId || window.koPendingCasePrefill.caseId === caseId)
+      ? window.koPendingCasePrefill
+      : {};
+    const src = (live && live.prefill) || {};
+    const stored = (live && live.factFind) || {};
+    const propertyDetails = stored.propertyDetails || {};
+    const storedAddress = (stored.personalDetails && stored.personalDetails.currentAddress) || {};
+    const client = live ? (ffLookupLiveClient(live.clientId) || {}) : {};
+    const personal = {
+      ...ffPers(),
+      ...(form.client1Personal || {}),
+      currentAddress: { ...ffAddr(), ...((form.client1Personal && form.client1Personal.currentAddress) || {}) },
+    };
+    const employment = { ...ffEmp(), ...(form.client1Employment || {}) };
+    const income = { ...ffInc(), ...(form.client1Income || {}) };
+    const next = { ...form, client1Personal: personal, client1Employment: employment, client1Income: income };
+    ffFill(personal, 'firstName', src.firstName || client.firstName);
+    ffFill(personal, 'lastName', src.lastName || client.lastName);
+    ffFill(personal, 'email', src.email || client.email);
+    const home = koClientHome(client);
+    ffFill(personal, 'contactNumber', src.phone || client.phone);
+    ffFill(personal, 'dob', ffDobLabel(src.dob || client.dateOfBirth));
+    ffFill(employment, 'employmentStatus', ffWizardEmployment(src.employmentStatus || client.employmentStatus));
+    const annual = src.annualIncome != null ? src.annualIncome : client.annualIncome;
+    ffFill(income, 'grossSalary', annual);
+    ffFill(income, 'niNumber', src.niNumber || client.niNumber);
+    const address = src.address && typeof src.address === 'object' ? src.address : (client.address && typeof client.address === 'object' ? client.address : {});
+    const propertyAddress = (live && live.propertyAddress) || {};
+    ffFill(personal.currentAddress, 'line1', ffFirstText(
+      src.addressLine1,
+      pending.addressLine1,
+      propertyAddress.addressLine1,
+      storedAddress.line1,
+      storedAddress.addressLine1,
+      propertyDetails.addressLine1,
+      propertyDetails.line1,
+      address.line1,
+      address.addressLine1,
+      home.line1,
+    ));
+    ffFill(personal.currentAddress, 'city', ffFirstText(src.city, storedAddress.city, storedAddress.town, propertyDetails.city, address.city, address.town, home.city));
+    ffFill(personal.currentAddress, 'postcode', ffFirstText(
+      src.postcode,
+      pending.postcode,
+      propertyAddress.postcode,
+      storedAddress.postcode,
+      propertyDetails.postcode,
+      address.postcode,
+      home.postcode,
+    ));
+    ffFill(next, 'propertyValue', src.propertyValue);
+    ffFill(next, 'propertyValue', home.value);
+    ffFill(next, 'mortgageRequired', src.loanAmount);
+    ffFill(next, 'termRequired', src.termYears);
+    const caseType = src.caseType || next.caseType;
+    if (caseType === 'PURCHASE' || caseType === 'BTL') {
+      if (ffBlank(next.propertyToggle)) next.propertyToggle = 'PURCHASE';
+      if (ffBlank(next.purposeOfLoan)) next.purposeOfLoan = 'PURCHASE';
+    }
+    if (caseType === 'REMORTGAGE' || caseType === 'FURTHER_ADVANCE' || caseType === 'PRODUCT_TRANSFER') {
+      if (ffBlank(next.propertyToggle)) next.propertyToggle = 'EXISTING';
+    }
+    if (caseType === 'BTL' && ffBlank(next.intendedUse)) next.intendedUse = 'BTL';
+    const note = String(src.purposeNote || '').toLowerCase();
+    if (note.indexOf('primary') >= 0 && ffBlank(next.intendedUse)) next.intendedUse = 'PRIMARY';
+    return next;
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────────
@@ -9133,6 +10008,13 @@ calcRun();
   const ffIsSE   = s => ['SELF_EMPLOYED_SOLE','SELF_EMPLOYED_LTD','PARTNERSHIP'].includes(s);
   const ffLTV    = (pv,mr) => { const p=parseFloat((pv||'').replace(/,/g,'')),m=parseFloat((mr||'').replace(/,/g,'')); return (!p||!m)?null:Math.round((m/p)*1000)/10; };
   const ffAddrMo = d => { if(!d)return 0; const [mm,yyyy]=d.split('/').map(Number); if(!mm||!yyyy)return 0; const f=new Date(yyyy,mm-1,1),n=new Date(); return (n.getFullYear()-f.getFullYear())*12+(n.getMonth()-f.getMonth()); };
+  function ffAddrDateComplete(d) {
+    const match = /^(\d{2})\/(\d{4})$/.exec(String(d || '').trim());
+    if (!match) return false;
+    const mm = Number(match[1]);
+    const yyyy = Number(match[2]);
+    return mm >= 1 && mm <= 12 && yyyy >= 1900 && yyyy <= 2100;
+  }
   const ffVTotal = s => s.reduce((t,d)=>t+(d.q1>=0?d.q1:0)+(d.q2>=0?d.q2:0),0);
 
   // ── Data ──────────────────────────────────────────────────────────────────
@@ -9162,7 +10044,7 @@ calcRun();
     {id:'c1-nation',s:'Personal — Client 1',l:'Nationality and time in the UK?',t:'nationality-group',tgt:'client1Personal'},
     {id:'c1-addr',s:'Personal — Client 1',l:"What is Client 1's current address?",t:'address-group',tgt:'c1-current',sub:'Include move-in date — we need 3 years of history'},
     {id:'c1-rent',s:'Personal — Client 1',l:"What is Client 1's monthly rent?",t:'currency',p:'client1Personal.currentAddress.monthlyRent',ph:'1,250',si:f=>f.client1Personal.currentAddress.ownershipStatus==='RENTING'},
-    {id:'c1-prev-addr',s:'Personal — Client 1',l:"Please provide Client 1's previous address",t:'address-group',tgt:'c1-previous',sub:"Current address doesn't cover 3 full years",si:f=>!!f.client1Personal.currentAddress.dateFrom&&ffAddrMo(f.client1Personal.currentAddress.dateFrom)<36},
+    {id:'c1-prev-addr',s:'Personal — Client 1',l:"Please provide Client 1's previous address",t:'address-group',tgt:'c1-previous',sub:"Current address doesn't cover 3 full years",si:f=>ffAddrDateComplete(f.client1Personal.currentAddress.dateFrom)&&ffAddrMo(f.client1Personal.currentAddress.dateFrom)<36},
     {id:'c1-marital',s:'Personal — Client 1',l:"What is Client 1's marital status?",t:'pills',p:'client1Personal.maritalStatus',aa:true,opts:[{v:'SINGLE',l:'Single'},{v:'MARRIED',l:'Married'},{v:'CIVIL_PARTNERSHIP',l:'Civil partnership'},{v:'SEPARATED',l:'Separated'},{v:'DIVORCED',l:'Divorced'},{v:'WIDOWED',l:'Widowed'}]},
     {id:'c1-contact',s:'Personal — Client 1',l:'How can we contact Client 1?',t:'contact-group',tgt:'client1Personal'},
     {id:'c1-deps',s:'Personal — Client 1',l:'Does Client 1 have any dependants?',t:'dependants-group',tgt:'client1Personal',sub:'Include all financial dependants'},
@@ -9250,8 +10132,13 @@ calcRun();
     const renderedIds = Array.from(card.querySelectorAll('[data-q-id]')).map((el) => el.dataset.qId).join('|');
     const nextIds = page.questions.map((q) => q.id).join('|');
     if (renderedIds !== nextIds) {
-      ffRenderCard();
+      const active = document.activeElement;
+      const path = active && active.getAttribute ? (active.getAttribute('data-path') || '') : '';
+      const area = document.getElementById('ff-card-area');
+      const scroll = area ? area.scrollTop : 0;
+      ffRenderCard({ focusPath: path });
       ffUpdateHdr();
+      if (area) area.scrollTop = scroll;
     }
   }
 
@@ -9608,19 +10495,45 @@ calcRun();
     }
   }
 
-  function ffRenderCard() {
+  function ffRenderCard(opts) {
     const pages = ffClampPageIdx();
     const page = pages[ff.idx] || pages[0];
     const el = document.getElementById('ff-card');
     if (!el) return;
+    const keepPlace = !!(opts && opts.keepPlace);
+    const overlay = document.getElementById('ff-overlay');
+    const scrollTop = keepPlace && overlay ? overlay.scrollTop : 0;
     el.style.animation = 'none';
     el.offsetHeight; // reflow
     el.innerHTML = ffCardHTML(page, pages);
     el.className = ff.dir >= 0 ? 'ff-dir-fwd' : 'ff-dir-back';
-    el.style.animation = ff.dir >= 0
-      ? 'ff-slide-in .3s cubic-bezier(.34,1.56,.64,1)'
-      : 'ff-slide-back .3s cubic-bezier(.34,1.56,.64,1)';
+    if (!keepPlace) {
+      el.style.animation = ff.dir >= 0
+        ? 'ff-slide-in .3s cubic-bezier(.34,1.56,.64,1)'
+        : 'ff-slide-back .3s cubic-bezier(.34,1.56,.64,1)';
+    }
     ffBindCard(page);
+    const restorePlace = () => {
+      if (overlay) overlay.scrollTop = scrollTop;
+    };
+    if (keepPlace) restorePlace();
+    const focusPath = opts && opts.focusPath;
+    if (focusPath) {
+      const next = el.querySelector('[data-path="' + (window.CSS && CSS.escape ? CSS.escape(focusPath) : focusPath) + '"]');
+      if (next) {
+        setTimeout(() => {
+          next.focus({ preventScroll: true });
+          const len = next.value ? next.value.length : 0;
+          if (typeof next.setSelectionRange === 'function') next.setSelectionRange(len, len);
+          if (keepPlace) restorePlace();
+        }, 0);
+        return;
+      }
+    }
+    if (keepPlace) {
+      requestAnimationFrame(restorePlace);
+      return;
+    }
     // Auto-focus first text/email input on the page
     const firstQ = page?.questions?.[0];
     if (firstQ && !['pills','yesno','insurance'].includes(firstQ.t)) {
@@ -10013,7 +10926,7 @@ calcRun();
       }
       case 'sa302-group': {
         const b = q.tgt||'client1Income';
-        return `<div class="ff-grid-3">${bInpPfx('Year 1 net profit',b+'.sa302Year1','£','68,000',true)}${bInpPfx('Year 2 net profit',b+'.sa302Year2','£','61,500')}${bInpPfx('Year 3 net profit',b+'.sa302Year3','£','55,000')}</div>`;
+        return `<div class="ff-grid-3">${bInpPfx('Year 1 net profit',b+'.sa302Year1','£','68,000')}${bInpPfx('Year 2 net profit',b+'.sa302Year2','£','61,500')}${bInpPfx('Year 3 net profit',b+'.sa302Year3','£','55,000')}</div>`;
       }
       case 'bonus-group': {
         const b = q.tgt||'client1Income';
@@ -10137,7 +11050,7 @@ calcRun();
         delete ff.fieldErrors[p];
         ffRenderFieldErrors(card);
         // Fields that affect conditional question visibility on the same page
-        if(p.endsWith('.contractType')) { ffRenderCard(); ffUpdateHdr(); }
+        if(p.endsWith('.contractType')) { ffRenderCard({ keepPlace: true }); ffUpdateHdr(); }
         else if(p.endsWith('.ownershipStatus')) ffMaybeRefreshPageForVisibility();
       });
     });
@@ -10150,8 +11063,14 @@ calcRun();
         const aa = block?.dataset.qAa === '1';
         const v=e.currentTarget.dataset.pill;
         if(path) ffUpd(path,v);
+        if (path === 'client1Personal.maritalStatus' && (v === 'MARRIED' || v === 'CIVIL_PARTNERSHIP')) {
+          ff.form = Object.assign({}, ff.form, { hasJointApplicant: true });
+          if (ff.caseId && typeof window.setCaseApplicants === 'function') {
+            window.setCaseApplicants(ff.caseId, 'joint');
+          }
+        }
         // Auto-advance only on single-question pages that opted in
-        if(solo && aa) setTimeout(ffGoNext,350); else { ffRenderCard(); ffUpdateHdr(); }
+        if(solo && aa) setTimeout(ffGoNext,350); else { ffRenderCard({ keepPlace: true }); ffUpdateHdr(); }
       });
     });
 
@@ -10166,19 +11085,19 @@ calcRun();
           const boolPaths=['hasJointApplicant','hasExistingMortgage'];
           ffUpd(path, boolPaths.includes(path) ? (yn==='yes'||yn==='YES') : yn);
         }
-        if(path==='hasExistingMortgage') { ffRenderCard(); ffUpdateHdr(); }
-        else if(solo && aa) setTimeout(ffGoNext,350); else { ffRenderCard(); ffUpdateHdr(); }
+        if(path==='hasExistingMortgage') { ffRenderCard({ keepPlace: true }); ffUpdateHdr(); }
+        else if(solo && aa) setTimeout(ffGoNext,350); else { ffRenderCard({ keepPlace: true }); ffUpdateHdr(); }
       });
     });
 
     // Rate-type pills
     card.querySelectorAll('[data-rate-type]').forEach(btn => {
-      btn.addEventListener('click', e => { ffUpd('ratePreference',e.currentTarget.dataset.rateType); ffRenderCard(); });
+      btn.addEventListener('click', e => { ffUpd('ratePreference',e.currentTarget.dataset.rateType); ffRenderCard({ keepPlace: true }); });
     });
 
     // Rate-period pills
     card.querySelectorAll('[data-rate-period]').forEach(btn => {
-      btn.addEventListener('click', e => { ffUpd('initialPeriod',e.currentTarget.dataset.ratePeriod); ffRenderCard(); });
+      btn.addEventListener('click', e => { ffUpd('initialPeriod',e.currentTarget.dataset.ratePeriod); ffRenderCard({ keepPlace: true }); });
     });
 
     // Insurance toggles
@@ -10186,7 +11105,7 @@ calcRun();
       btn.addEventListener('click', e => {
         const v=e.currentTarget.dataset.ins, curr=ff.form.insurancePolicies||[];
         ff.form={...ff.form, insurancePolicies:curr.includes(v)?curr.filter(p=>p!==v):[...curr,v]};
-        ffRenderCard();
+        ffRenderCard({ keepPlace: true });
       });
     });
 
@@ -10195,13 +11114,13 @@ calcRun();
       btn.addEventListener('click', e => {
         const di=parseInt(e.currentTarget.dataset.vdi), qk=e.currentTarget.dataset.vq, v=parseInt(e.currentTarget.dataset.vv);
         const sc=ff.form.vulnerabilityScores.map((s,i)=>i===di?{...s,[qk]:v}:s);
-        ff.form={...ff.form,vulnerabilityScores:sc}; ffRenderCard();
+        ff.form={...ff.form,vulnerabilityScores:sc}; ffRenderCard({ keepPlace: true });
       });
     });
 
     // Vulnerability override checkbox
     const ovr=document.getElementById('ff-vuln-ovr');
-    if(ovr) ovr.addEventListener('change', e => { ff.form={...ff.form,vulnerabilityOverride:e.target.checked}; ffRenderCard(); });
+    if(ovr) ovr.addEventListener('change', e => { ff.form={...ff.form,vulnerabilityOverride:e.target.checked}; ffRenderCard({ keepPlace: true }); });
 
     // Override justification textarea
     const oj=document.getElementById('ff-ovr-just');
@@ -10359,11 +11278,7 @@ calcRun();
         <textarea class="nc-textarea" id="nc-purpose-note" rows="2" placeholder="Primary Residence purchase"></textarea>
       </div>
       <div class="nc-disclosure">
-        <p class="nc-disclosure-label" id="nc-disclosure-label">Have the Initial Disclosure Document (IDD) and Customer Privacy Notice (UK GDPR) been sent to the client</p>
-        <div class="nc-disclosure-btns" role="group" aria-labelledby="nc-disclosure-label">
-          <button type="button" class="nc-disclosure-btn" id="nc-disclosure-yes" aria-pressed="false" onclick="setNcDisclosure(true)">Yes</button>
-          <button type="button" class="nc-disclosure-btn" id="nc-disclosure-no" aria-pressed="false" onclick="setNcDisclosure(false)">No</button>
-        </div>
+        <p class="nc-disclosure-label" id="nc-disclosure-label">When you establish this case, the initial disclosure and the customer privacy notice are emailed to the client.</p>
       </div>
     </div>
     <div class="nc-footer">
@@ -10381,7 +11296,7 @@ calcRun();
     <button type="button" class="nc-close nc-success-close" onclick="closeSuccessModal()" aria-label="Close">✕</button>
     <img src="/marketing/SuceSS%20%20Screen.png" class="nc-success-illus" alt="Success illustration" aria-hidden="true">
     <h2 class="nc-success-title" id="nc-success-title">Case Created Successfully!</h2>
-    <p class="nc-success-desc">Case <strong id="nc-success-ref">KOC-2026-0008</strong> has been registered for <span class="nc-success-client-name" id="nc-success-client">Sasha Lindqvist</span> and your Initial Disclosure Document (IDD) and Customer Privacy Notice (UK GDPR) have been sent to the client</p>
+    <p class="nc-success-desc">Case <strong id="nc-success-ref">KOC-2026-0008</strong> has been registered for <span class="nc-success-client-name" id="nc-success-client">Sasha Lindqvist</span>. <span id="nc-success-disclosure">The initial disclosure and customer privacy notice are emailed when the case is established.</span></p>
     <div class="nc-success-actions">
       <button type="button" class="nc-success-primary" onclick="launchFactFind()">
         <img src="/assets/smart_toy.svg" width="18" height="18" alt="" aria-hidden="true" style="filter:brightness(0) invert(1)">

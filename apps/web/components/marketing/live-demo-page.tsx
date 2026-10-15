@@ -33,6 +33,7 @@ import {
   clientsApi,
   lendersApi,
   complianceApi,
+  reportsApi,
   documentsApi,
   formatApiError,
   getApiErrorFieldMap,
@@ -130,6 +131,10 @@ const DOC_TYPE_OPTIONS: { value: DocumentType; label: string }[] = [
   { value: 'OTHER', label: 'Other' },
 ];
 
+function uploadFileKey(file: File) {
+  return `${file.name}:${file.size}:${file.lastModified}`;
+}
+
 function IframeUploadModal({
   caseId,
   onClose,
@@ -137,61 +142,150 @@ function IframeUploadModal({
 }: {
   caseId: string | null;
   onClose: () => void;
-  onUploaded: (doc: { id: string; name: string; documentType: DocumentType; caseId?: string }) => void;
+  onUploaded: (doc: { id: string; name: string; documentType: DocumentType; caseId?: string }) => void | Promise<void>;
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [docType, setDocType] = useState<DocumentType>('OTHER');
+  const [satisfies, setSatisfies] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [dragOver, setDragOver] = useState(false);
+  const [uploadIndex, setUploadIndex] = useState(0);
   const { mutateAsync: upload, isPending } = useUploadDocument();
 
-  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    setSelectedFile(e.target.files?.[0] ?? null);
+  function addFiles(list: FileList | File[]) {
+    const incoming = Array.from(list);
+    if (!incoming.length) return;
+    setSelectedFiles((current) => {
+      const seen = new Set(current.map(uploadFileKey));
+      const next = [...current];
+      for (const file of incoming) {
+        const key = uploadFileKey(file);
+        if (seen.has(key)) continue;
+        seen.add(key);
+        next.push(file);
+      }
+      return next;
+    });
     setError(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  }
+
+  function removeFile(key: string) {
+    setSelectedFiles((current) => current.filter((file) => uploadFileKey(file) !== key));
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!selectedFile) { setError('Please select a file.'); return; }
+    if (selectedFiles.length === 0) { setError('Please select a file.'); return; }
     if (!caseId) { setError('No case selected.'); return; }
     setError(null);
+    const doneKeys = new Set<string>();
     try {
-      const result = await upload({ file: selectedFile, documentType: docType, caseId });
-      onUploaded({ id: result.data.id, name: result.data.name, documentType: result.data.documentType as DocumentType, caseId: result.data.caseId ?? caseId ?? undefined });
+      for (let index = 0; index < selectedFiles.length; index += 1) {
+        const selectedFile = selectedFiles[index];
+        setUploadIndex(index + 1);
+        let name = selectedFile.name;
+        let documentType = docType;
+        if (satisfies === 'identity') {
+          documentType = 'ID';
+          if (!/passport|driving|identity/i.test(name)) name = `Identity ${name}`;
+        } else if (satisfies) {
+          name = `${satisfies} - ${name}`;
+          if (documentType === 'OTHER') documentType = 'COMPLIANCE';
+        }
+        const result = await upload({ file: selectedFile, name, documentType, caseId });
+        doneKeys.add(uploadFileKey(selectedFile));
+        await onUploaded({ id: result.data.id, name: result.data.name, documentType: result.data.documentType as DocumentType, caseId: result.data.caseId ?? caseId ?? undefined });
+      }
       onClose();
     } catch (err) {
-      setError(formatApiError(err, { fallback: 'Upload failed. Please try again.' }));
+      const done = doneKeys.size
+        ? `Uploaded ${doneKeys.size} file${doneKeys.size === 1 ? '' : 's'}. `
+        : '';
+      setError(done + formatApiError(err, { fallback: 'Upload failed. Please try again.' }));
+      if (doneKeys.size) {
+        setSelectedFiles((current) => current.filter((file) => !doneKeys.has(uploadFileKey(file))));
+      }
     }
   }
+
+  const fileCountLabel = selectedFiles.length === 1 ? '1 file selected' : `${selectedFiles.length} files selected`;
 
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 p-4">
       <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl">
         <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
-          <h2 className="text-sm font-bold text-gray-900">Upload Document</h2>
+          <h2 className="text-sm font-bold text-gray-900">Upload documents</h2>
           <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">×</button>
         </div>
         <form onSubmit={handleSubmit}>
           <div className="space-y-4 px-6 py-5">
             <div
-              onClick={() => fileInputRef.current?.click()}
-              className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed px-4 py-6 transition-colors ${selectedFile ? 'border-teal-400 bg-teal-50' : 'border-gray-200 bg-gray-50 hover:border-teal-300'}`}
+              onClick={() => { if (!isPending) fileInputRef.current?.click(); }}
+              onDragEnter={(event) => { event.preventDefault(); setDragOver(true); }}
+              onDragOver={(event) => { event.preventDefault(); setDragOver(true); }}
+              onDragLeave={(event) => { event.preventDefault(); setDragOver(false); }}
+              onDrop={(event) => {
+                event.preventDefault();
+                setDragOver(false);
+                if (!isPending) addFiles(event.dataTransfer.files);
+              }}
+              className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed px-4 py-6 transition-colors ${dragOver || selectedFiles.length ? 'border-teal-400 bg-teal-50' : 'border-gray-200 bg-gray-50 hover:border-teal-300'}`}
             >
-              {selectedFile ? (
+              {selectedFiles.length ? (
                 <>
                   <FileText className="h-8 w-8 text-teal-500" />
-                  <p className="text-sm font-medium text-gray-800 truncate max-w-[260px]">{selectedFile.name}</p>
-                  <p className="text-xs text-gray-500">{(selectedFile.size / 1024).toFixed(1)} KB · {selectedFile.type || 'file'}</p>
-                  <button type="button" onClick={e => { e.stopPropagation(); setSelectedFile(null); if (fileInputRef.current) fileInputRef.current.value = ''; }} className="text-xs text-gray-400 hover:text-red-500 underline">Remove</button>
+                  <p className="text-sm font-medium text-gray-800 text-center">{fileCountLabel}</p>
+                  <ul className="max-h-36 w-full space-y-1 overflow-y-auto text-left">
+                    {selectedFiles.map((file) => {
+                      const key = uploadFileKey(file);
+                      return (
+                        <li key={key} className="flex items-center justify-between gap-2 rounded-md bg-white px-2 py-1 text-xs text-gray-600">
+                          <span className="truncate">{file.name}</span>
+                          <button
+                            type="button"
+                            onClick={(event) => { event.stopPropagation(); removeFile(key); }}
+                            className="shrink-0 text-gray-400 hover:text-red-500"
+                          >
+                            Remove
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                  <p className="text-xs text-gray-400">Add more files, or drop them here.</p>
                 </>
               ) : (
                 <>
                   <Upload className="h-8 w-8 text-gray-400" />
-                  <p className="text-sm font-medium text-gray-700">Click to choose a file</p>
-                  <p className="text-xs text-gray-400">PDF, images, Word, Excel — up to 50 MB</p>
+                  <p className="text-sm font-medium text-gray-700">Click to choose files, or drop them here</p>
+                  <p className="text-xs text-gray-400">PDF, images, Word, Excel — up to 50 MB each. Select or drop as many as you need.</p>
                 </>
               )}
-              <input ref={fileInputRef} type="file" className="sr-only" onChange={handleFileChange} accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.webp" />
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                className="sr-only"
+                onClick={(event) => event.stopPropagation()}
+                onChange={(event) => addFiles(event.target.files ?? [])}
+                accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.webp"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1.5">
+                {selectedFiles.length > 1 ? 'These files satisfy' : 'This file satisfies'}
+              </label>
+              <select value={satisfies} onChange={(e) => setSatisfies(e.target.value)} className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none">
+                <option value="">No specific checklist item</option>
+                <option value="Initial Disclosure Document">Initial disclosure</option>
+                <option value="Customer Privacy Notice">Privacy notice</option>
+                <option value="Terms of Business">Terms of business</option>
+                <option value="ESIS">ESIS</option>
+                <option value="Survey response">Survey response</option>
+                <option value="identity">Identity document</option>
+              </select>
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-500 mb-1.5">Document type</label>
@@ -203,9 +297,13 @@ function IframeUploadModal({
           </div>
           <div className="flex justify-end gap-3 border-t border-gray-100 px-6 py-4">
             <button type="button" onClick={onClose} className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50">Cancel</button>
-            <button type="submit" disabled={!selectedFile || isPending} className="flex items-center gap-2 rounded-lg bg-teal-500 px-4 py-2 text-sm font-medium text-white hover:bg-teal-600 disabled:opacity-50">
+            <button type="submit" disabled={selectedFiles.length === 0 || isPending} className="flex items-center gap-2 rounded-lg bg-teal-500 px-4 py-2 text-sm font-medium text-white hover:bg-teal-600 disabled:opacity-50">
               {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-              Upload
+              {isPending
+                ? `Uploading ${uploadIndex} of ${selectedFiles.length}`
+                : selectedFiles.length > 1
+                  ? `Upload ${selectedFiles.length} files`
+                  : 'Upload'}
             </button>
           </div>
         </form>
@@ -378,6 +476,21 @@ type LiveDemoPageProps = {
   homeHref?: string;
 };
 
+const clientDeleteInflight = new Map<string, Promise<void>>();
+
+function deleteClientShared(token: string, clientId: string) {
+  const existing = clientDeleteInflight.get(clientId);
+  if (existing) return existing;
+  const task = clientsApi
+    .delete(token, clientId)
+    .then(() => undefined)
+    .finally(() => {
+      if (clientDeleteInflight.get(clientId) === task) clientDeleteInflight.delete(clientId);
+    });
+  clientDeleteInflight.set(clientId, task);
+  return task;
+}
+
 export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -442,6 +555,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
   // Stable ref so onLoad/click closures always call the current getToken.
   const getTokenRef = useRef(getToken);
   useEffect(() => { getTokenRef.current = getToken; }, [getToken]);
+  const viewStageRef = useRef<(caseId: string, stage: string) => void>(() => {});
   const openResearchStageRef = useRef<(caseId: string, stage?: string) => Promise<void>>(
     async () => {},
   );
@@ -496,6 +610,8 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
   const advisersDataRef = useRef<AdviserRecord[]>([]);
   /** Newly created clients kept until bootstrap/list queries catch up (avoids sync wipe). */
   const pendingCreatedClientsRef = useRef<ClientSummary[]>([]);
+  /** Clients removed this session, so a stale list cannot paint them again. */
+  const deletedClientIdsRef = useRef(new Set<string>());
   const clientsLoadingRef = useRef(false);
   const casesLoadingRef = useRef(false);
   const unreadMessagesCountRef = useRef(0);
@@ -703,10 +819,13 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
     : (unreadMessagesResponse?.meta?.total ?? unreadMessagesResponse?.data?.length ?? 0);
 
   {
-    const baseClients = isPersonalDashboard
+    const deletedIds = deletedClientIdsRef.current;
+    const baseClients = (isPersonalDashboard
       ? (bootstrapData?.data.clients ?? clientsData?.data ?? [])
-      : (clientsData?.data ?? []);
-    const pending = pendingCreatedClientsRef.current;
+      : (clientsData?.data ?? [])
+    ).filter((client) => !deletedIds.has(client.id));
+    const pending = pendingCreatedClientsRef.current.filter((client) => !deletedIds.has(client.id));
+    pendingCreatedClientsRef.current = pending;
     if (pending.length > 0) {
       const idsInBase = new Set(baseClients.map((c) => c.id));
       pendingCreatedClientsRef.current = pending.filter((c) => !idsInBase.has(c.id));
@@ -722,9 +841,10 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
       clientsDataRef.current = baseClients;
     }
   }
-  casesDataRef.current = isPersonalDashboard
+  casesDataRef.current = (isPersonalDashboard
     ? (bootstrapData?.data.cases ?? casesData?.data ?? [])
-    : (casesData?.data ?? []);
+    : (casesData?.data ?? [])
+  ).filter((item) => !deletedClientIdsRef.current.has(item.clientId));
   if (pipelineData?.data) pipelineCasesRef.current = pipelineData.data;
   advisersDataRef.current = isPersonalDashboard
     ? (bootstrapData?.data.advisers ?? advisersData?.data ?? [])
@@ -861,9 +981,10 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
   const postClientsSync = useCallback((clients?: ClientSummary[]) => {
     const iframeWindow = iframeRef.current?.contentWindow;
     if (!iframeWindow) return;
-    const list = clients ?? clientsDataRef.current;
+    const deletedIds = deletedClientIdsRef.current;
+    const list = (clients ?? clientsDataRef.current).filter((client) => !deletedIds.has(client.id));
     // Never clobber a sessionStorage/iframe paint with [] while bootstrap is still in flight.
-    if (list.length === 0 && clientsLoadingRef.current) return;
+    if (list.length === 0 && clientsLoadingRef.current && deletedIds.size === 0) return;
     iframeWindow.postMessage(
       { type: 'ko:clients-sync', clients: list },
       window.location.origin,
@@ -1227,7 +1348,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
       if (isMockDemo) params.set('userName', 'Alex');
     }
     // Bust CDN/browser cache of the static prototype after UI-only HTML changes.
-    params.set('v', 'prd16-pipeline-1');
+    params.set('v', 'prd16-client-delete-2');
     return `/live-demo-prototype-v2a.html?${params}`;
     // eslint-disable-next-line react-hooks/exhaustive-deps -- personal src intentionally ignores activeTab
   }, [isPersonalDashboard ? 'overview' : activeTab, overviewReady, isPersonalDashboard, isMockDemo]);
@@ -1543,12 +1664,15 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
         type?: string;
         requestId?: number;
         caseId?: string;
+        template?: string;
         stage?: string;
         itemId?: string;
         clientId?: string;
         clientIds?: string[];
+        applicantMode?: 'single' | 'joint';
         path?: string;
         tab?: string;
+        asOf?: string;
         payload?: CreateClientInput | CreateCaseInput | Record<string, unknown>;
         file?: {
           name: string;
@@ -1680,6 +1804,55 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
         return;
       }
 
+      if (data?.type === 'ko:view-stage' && typeof data.caseId === 'string' && typeof data.stage === 'string') {
+        viewStageRef.current(data.caseId, data.stage);
+        return;
+      }
+
+      if (data?.type === 'ko:survey-report') {
+        const replySurvey = (body: Record<string, unknown>) => {
+          iframeWindow.postMessage(
+            { type: 'ko:survey-report-result', ...body },
+            window.location.origin,
+          );
+        };
+        try {
+          const token = await getCachedSessionToken(getToken);
+          if (!token) throw new Error('Not authenticated');
+          const asOf = typeof data.asOf === 'string' ? data.asOf : undefined;
+          const result = await reportsApi.survey(token, asOf);
+          replySurvey({ success: true, report: result.data });
+        } catch (err) {
+          replySurvey({
+            success: false,
+            error: formatApiError(err, { fallback: 'Could not generate the survey report.' }),
+          });
+        }
+        return;
+      }
+
+      if (data?.type === 'ko:vulnerability-report') {
+        const replyReport = (body: Record<string, unknown>) => {
+          iframeWindow.postMessage(
+            { type: 'ko:vulnerability-report-result', ...body },
+            window.location.origin,
+          );
+        };
+        try {
+          const token = await getCachedSessionToken(getToken);
+          if (!token) throw new Error('Not authenticated');
+          const asOf = typeof data.asOf === 'string' ? data.asOf : undefined;
+          const result = await reportsApi.vulnerability(token, asOf);
+          replyReport({ success: true, report: result.data });
+        } catch (err) {
+          replyReport({
+            success: false,
+            error: formatApiError(err, { fallback: 'Could not generate the vulnerability report.' }),
+          });
+        }
+        return;
+      }
+
       if (data?.type === 'ko:open-case' && typeof data.caseId === 'string') {
         const openedCaseId = data.caseId;
         activeCaseIdRef.current = openedCaseId;
@@ -1748,8 +1921,42 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
         };
 
         const postCaseDetail = (caseRow: Case | CaseSummary) => {
+          const storedProperty = readCaseProperty(caseRow.id);
+          const factFind = 'factFind' in caseRow ? caseRow.factFind : null;
+          const propertyDetails =
+            factFind && typeof factFind.propertyDetails === 'object' && factFind.propertyDetails
+              ? (factFind.propertyDetails as { postcode?: string; addressLine1?: string; line1?: string })
+              : undefined;
+          const currentAddress =
+            factFind &&
+            typeof factFind.personalDetails === 'object' &&
+            factFind.personalDetails &&
+            typeof (factFind.personalDetails as { currentAddress?: unknown }).currentAddress === 'object'
+              ? ((factFind.personalDetails as { currentAddress?: { postcode?: string; line1?: string; addressLine1?: string } })
+                  .currentAddress ?? undefined)
+              : undefined;
           iframeWindow.postMessage(
-            { type: 'ko:case-detail', case: caseRow },
+            {
+              type: 'ko:case-detail',
+              case: {
+                ...caseRow,
+                propertyAddress: {
+                  postcode:
+                    storedProperty?.postcode ||
+                    ('property' in caseRow ? caseRow.property?.postcode : '') ||
+                    propertyDetails?.postcode ||
+                    currentAddress?.postcode ||
+                    '',
+                  addressLine1:
+                    storedProperty?.line1 ||
+                    propertyDetails?.addressLine1 ||
+                    propertyDetails?.line1 ||
+                    currentAddress?.line1 ||
+                    currentAddress?.addressLine1 ||
+                    '',
+                },
+              },
+            },
             window.location.origin,
           );
           caseDetailRef.current[openedCaseId] = {
@@ -2003,6 +2210,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
           const extra = data.payload as CreateCaseInput & {
             postcode?: string;
             addressLine1?: string;
+            applicantMode?: 'single' | 'joint';
           };
           const result = await createCase({
             clientId: extra.clientId,
@@ -2013,30 +2221,37 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
             ...(extra.postcode ? { postcode: extra.postcode } : {}),
           });
           const created = result.data;
-          if (extra.postcode) {
-            upsertCaseProperty({
-              id: created.id,
-              clientId: created.clientId,
-              caseId: created.id,
-              postcode: extra.postcode,
-              line1: extra.addressLine1,
-              value: extra.propertyValue != null ? String(extra.propertyValue) : undefined,
-            });
+          if (extra.postcode || extra.applicantMode) {
+            if (extra.postcode) {
+              upsertCaseProperty({
+                id: created.id,
+                clientId: created.clientId,
+                caseId: created.id,
+                postcode: extra.postcode,
+                line1: extra.addressLine1,
+                value: extra.propertyValue != null ? String(extra.propertyValue) : undefined,
+              });
+            }
             void (async () => {
               try {
                 const token = await getCachedSessionToken(getToken);
                 if (!token) return;
                 await casesApi.upsertFactFind(token, created.id, {
-                  propertyDetails: {
-                    postcode: extra.postcode,
-                    addressLine1: extra.addressLine1,
-                  },
-                  personalDetails: {
-                    currentAddress: {
-                      postcode: extra.postcode,
-                      line1: extra.addressLine1,
-                    },
-                  },
+                  ...(extra.postcode
+                    ? {
+                        propertyDetails: {
+                          postcode: extra.postcode,
+                          addressLine1: extra.addressLine1,
+                        },
+                        personalDetails: {
+                          currentAddress: {
+                            postcode: extra.postcode,
+                            line1: extra.addressLine1,
+                          },
+                        },
+                      }
+                    : {}),
+                  ...(extra.applicantMode ? { applicantMode: extra.applicantMode } : {}),
                 });
               } catch {
                 // Property stays on this device for Intel even if fact-find write fails.
@@ -2055,6 +2270,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
             success: true,
             case: created,
             clientName: formatClientName(created.client),
+            disclosure: result.meta?.disclosure ?? null,
           });
           selectTab('cases');
           postCasesSync(nextCases);
@@ -2063,6 +2279,127 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
           if (idoc) void refreshComplianceFromApi(idoc);
         } catch (err) {
           replyCase({ success: false, error: formatApiError(err, { fallback: 'Could not create case. Please try again.' }) });
+        }
+        return;
+      }
+
+      if (data?.type === 'ko:generate-illustration' && data.requestId != null && data.caseId && (data.template === 'esis' || data.template === 'research')) {
+        const replyIllustration = (body: Record<string, unknown>) => {
+          iframeWindow.postMessage(
+            {
+              type: 'ko:generate-illustration-result',
+              requestId: data.requestId,
+              caseId: data.caseId,
+              template: data.template,
+              ...body,
+            },
+            window.location.origin,
+          );
+        };
+        try {
+          const token = await getCachedSessionToken(getToken);
+          if (!token) throw new Error('Not authenticated');
+          const result = await casesApi.generateIllustration(token, String(data.caseId), data.template);
+          const checklist = await complianceApi.getCaseChecklist(token, String(data.caseId)).catch(() => null);
+          if (checklist?.data) {
+            iframeWindow.postMessage(
+              { type: 'ko:case-compliance', caseId: String(data.caseId), snapshot: checklist.data },
+              window.location.origin,
+            );
+          }
+          replyIllustration({ success: true, documentName: result.data.documentName });
+        } catch (err) {
+          replyIllustration({
+            success: false,
+            error: formatApiError(err, { fallback: 'Could not generate that document.' }),
+          });
+        }
+        return;
+      }
+
+      if (data?.type === 'ko:save-aml' && data.caseId && data.payload && typeof data.payload === 'object') {
+        const evidence = data.payload as { idSeen?: boolean; nameMatches?: boolean; addressMatches?: boolean };
+        const replyAml = (body: Record<string, unknown>) => {
+          iframeWindow.postMessage(
+            { type: 'ko:save-aml-result', caseId: data.caseId, ...body },
+            window.location.origin,
+          );
+        };
+        try {
+          const token = await getCachedSessionToken(getToken);
+          if (!token) throw new Error('Not authenticated');
+          await casesApi.saveAmlEvidence(token, String(data.caseId), {
+            idSeen: evidence.idSeen === true,
+            nameMatches: evidence.nameMatches === true,
+            addressMatches: evidence.addressMatches === true,
+          });
+          replyAml({ success: true });
+        } catch (err) {
+          replyAml({ success: false, error: formatApiError(err, { fallback: 'Could not save the identity check.' }) });
+        }
+        return;
+      }
+
+      if (data?.type === 'ko:send-client-document' && data.requestId != null && data.caseId && data.template) {
+        const replySend = (body: Record<string, unknown>) => {
+          iframeWindow.postMessage(
+            {
+              type: 'ko:send-client-document-result',
+              requestId: data.requestId,
+              caseId: data.caseId,
+              template: data.template,
+              ...body,
+            },
+            window.location.origin,
+          );
+        };
+
+        try {
+          const token = await getCachedSessionToken(getToken);
+          if (!token) throw new Error('Not authenticated');
+          const result = await casesApi.sendClientDocument(token, String(data.caseId), String(data.template));
+          const checklist = await complianceApi.getCaseChecklist(token, String(data.caseId)).catch(() => null);
+          if (checklist?.data) {
+            iframeWindow.postMessage(
+              { type: 'ko:case-compliance', caseId: String(data.caseId), snapshot: checklist.data },
+              window.location.origin,
+            );
+          }
+          replySend({ success: true, documentName: result.data.documentName });
+        } catch (err) {
+          replySend({
+            success: false,
+            error: formatApiError(err, { fallback: 'Could not send that document.' }),
+          });
+        }
+        return;
+      }
+
+      if (data?.type === 'ko:set-case-applicants' && data.caseId && (data.applicantMode === 'single' || data.applicantMode === 'joint')) {
+        const replyApplicants = (body: Record<string, unknown>) => {
+          iframeWindow.postMessage(
+            {
+              type: 'ko:set-case-applicants-result',
+              caseId: data.caseId,
+              applicantMode: data.applicantMode,
+              ...body,
+            },
+            window.location.origin,
+          );
+        };
+        try {
+          const token = await getCachedSessionToken(getToken);
+          if (!token) throw new Error('Not authenticated');
+          await casesApi.upsertFactFind(token, String(data.caseId), {
+            applicantMode: data.applicantMode,
+          });
+          void queryClient.invalidateQueries({ queryKey: casesQueryKey(LIVE_CASES_QUERY) });
+          replyApplicants({ success: true });
+        } catch (err) {
+          replyApplicants({
+            success: false,
+            error: formatApiError(err, { fallback: 'Could not update whether this case is joint or single.' }),
+          });
         }
         return;
       }
@@ -2106,15 +2443,26 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
           if (!token) throw new Error('Not authenticated');
 
           const results = await Promise.allSettled(
-            ids.map(async (clientId) => clientsApi.delete(token, clientId)),
+            ids.map(async (clientId) => deleteClientShared(token, clientId)),
           );
           const deletedCount = results.filter((result) => result.status === 'fulfilled').length;
           if (deletedCount === 0) {
-            replyDelete({ success: false, error: 'Could not delete selected clients.' });
+            const failed = results.find((result) => result.status === 'rejected');
+            replyDelete({
+              success: false,
+              error: formatApiError(failed && failed.status === 'rejected' ? failed.reason : null, {
+                fallback: 'Could not delete selected clients.',
+              }),
+            });
             return;
           }
 
-          applyDeletedClientsToCache(queryClient, ids.filter((_, i) => results[i]?.status === 'fulfilled'));
+          const removedIds = ids.filter((_, i) => results[i]?.status === 'fulfilled');
+          for (const id of removedIds) deletedClientIdsRef.current.add(id);
+          pendingCreatedClientsRef.current = pendingCreatedClientsRef.current.filter(
+            (client) => !deletedClientIdsRef.current.has(client.id),
+          );
+          applyDeletedClientsToCache(queryClient, removedIds);
           softInvalidateDashboardLists(queryClient);
           const bootstrap = queryClient.getQueryData<{
             data: { clients: ClientSummary[]; cases: CaseSummary[] };
@@ -2125,10 +2473,14 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
           const freshCases = queryClient.getQueryData<{ data: CaseSummary[] }>(
             casesQueryKey(LIVE_CASES_QUERY),
           );
-          clientsDataRef.current = bootstrap?.data.clients ?? freshClients?.data ?? [];
-          casesDataRef.current = bootstrap?.data.cases ?? freshCases?.data ?? [];
+          clientsDataRef.current = (bootstrap?.data.clients ?? freshClients?.data ?? []).filter(
+            (client) => !deletedClientIdsRef.current.has(client.id),
+          );
+          casesDataRef.current = (bootstrap?.data.cases ?? freshCases?.data ?? []).filter(
+            (item) => !deletedClientIdsRef.current.has(item.clientId),
+          );
           syncLiveDataToIframe();
-          replyDelete({ success: true, deletedCount });
+          replyDelete({ success: true, deletedCount, clientIds: removedIds });
         } catch (err) {
           replyDelete({
             success: false,
@@ -4032,34 +4384,40 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
       idoc.querySelector<HTMLElement>('.cd-progress-rail') ??
       compCard;
     const steps = Array.from(stepsRoot.querySelectorAll<HTMLElement>('.cd-comp-step'));
-    const openNextIndex =
-      apiStage === 'FACT_FIND' ? 2 : apiStage === 'RESEARCH' ? 3 : apiStage === 'DIP' ? 4 : -1;
-    const openNextApi =
-      openNextIndex === 2 ? 'RESEARCH' : openNextIndex === 3 ? 'DIP' : openNextIndex === 4 ? 'OFFER' : '';
+    const viewKeys = ['enquiry', 'factfind', 'research', 'application', 'offer'];
+    const viewKey = idoc.querySelector('[data-ko-stage-screen]')?.getAttribute('data-view') || viewKeys[idx] || 'enquiry';
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const liveCase = (idoc.defaultView as any)?.cases?.[caseId];
+    const liveProducts = Array.isArray(liveCase?.productsConsidered) ? liveCase.productsConsidered : [];
+    const researchReady =
+      apiStage === 'RESEARCH' &&
+      liveProducts.length >= 3 &&
+      (liveProducts.some((product: { isSelected?: boolean }) => product?.isSelected) ||
+        Boolean(liveCase?.selectedProduct));
     steps.forEach((stepEl, i) => {
-      const canOpen = i === openNextIndex;
-      const isComplete = i < idx;
+      const isComplete = i < idx || (i === 2 && researchReady);
       const isCurrent = i === idx;
-      const isPending = i > idx && !canOpen;
-      const theme = canOpen ? themes[i] ?? gray : isPending ? gray : themes[i] ?? gray;
+      const theme = themes[i] ?? gray;
 
       const dot = stepEl.querySelector<HTMLElement>('.cd-comp-dot');
       if (dot) {
-        dot.classList.toggle('cd-comp-dot--pending', isPending || canOpen);
-        dot.classList.toggle('cd-comp-dot--done', !isPending && !canOpen);
-        dot.style.setProperty('--dot-color', theme.dot);
+        dot.classList.toggle('cd-comp-dot--pending', !isComplete);
+        dot.classList.toggle('cd-comp-dot--done', isComplete);
+        dot.style.setProperty('--dot-color', isComplete ? theme.dot : gray.dot);
+        dot.textContent = isComplete ? '✓' : '';
       }
 
       const pill = stepEl.querySelector<HTMLElement>('.cd-comp-pill');
       if (pill) {
         pill.classList.toggle('cd-comp-pill--current', isCurrent);
-        pill.classList.toggle('cd-comp-pill--pending', isPending);
-        pill.classList.toggle('cd-comp-pill--open', canOpen);
+        pill.classList.toggle('cd-comp-pill--pending', false);
+        pill.classList.toggle('cd-comp-pill--viewing', viewKeys[i] === viewKey);
+        pill.classList.remove('cd-comp-pill--open');
         pill.style.setProperty('--pill-bg', theme.bg);
         pill.style.setProperty('--pill-border', theme.border);
         pill.style.setProperty('--pill-color', theme.text);
-        if (canOpen && openNextApi) pill.setAttribute('data-ko-open-stage', openNextApi);
-        else pill.removeAttribute('data-ko-open-stage');
+        pill.setAttribute('data-ko-view-stage', viewKeys[i] ?? 'enquiry');
+        pill.removeAttribute('data-ko-open-stage');
       }
 
       const conns = stepEl.querySelectorAll<HTMLElement>('.cd-comp-connector');
@@ -4091,7 +4449,21 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
     void mountCaseOverviewPanels(idoc, caseId);
     wireComplianceRequestButtons(idoc, caseId);
 
+    const viewingResearch =
+      idoc.querySelector('[data-ko-stage-screen]')?.getAttribute('data-view') === 'research';
+    const stageProducts = idoc.querySelector<HTMLElement>('[data-ko-stage-products]');
     // Record products during Fact-Find / Research so RESEARCH → DIP can pass checklist.
+    // Viewing Research mounts the same editor on that stage screen and does not advance the case.
+    if (viewingResearch && stageProducts) {
+      if (overviewHost) overviewHost.hidden = true;
+      if (productsAcc) productsAcc.hidden = true;
+      void mountResearchProductsPanel(stageProducts, caseId, 'RESEARCH').then(() => {
+        appendAdvanceControls(mountTarget, caseId, apiStage, next);
+        wireComplianceRequestButtons(idoc, caseId);
+      });
+      return;
+    }
+
     if (apiStage === 'FACT_FIND' || apiStage === 'RESEARCH') {
       const productsHost = overviewHost ?? mountTarget;
       if (overviewHost) overviewHost.hidden = false;
@@ -4207,6 +4579,12 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
       if (!iframeRef.current?.contentWindow) window.alert([summary, ...details].filter(Boolean).join('\n\n'));
     }
   }
+  viewStageRef.current = (caseId) => {
+    const idoc = iframeRef.current?.contentDocument;
+    if (!idoc) return;
+    const apiStage = caseDetailRef.current[caseId]?.stage ?? 'ENQUIRY';
+    updateCompliancePanel(idoc, caseId, apiStage);
+  };
   openResearchStageRef.current = (caseId, stage = 'RESEARCH') => {
     const next =
       stage === 'DIP'
@@ -4290,7 +4668,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
         const notes = caseRes.data.adviserNotes ?? '';
         const hasNotes = notes.trim().length > 0 || (caseRes.data.notes?.length ?? 0) > 0;
         const selectedCount = products.filter((p) => p.isSelected).length;
-        const ready = products.length >= 3 && selectedCount >= 1 && hasNotes;
+        const ready = products.length >= 3 && selectedCount >= 1;
 
         caseDetailRef.current[caseId] = {
           ...caseDetailRef.current[caseId],
@@ -4345,9 +4723,15 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
           <h3 style="margin:0 0 6px;font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:#18181b">Products considered</h3>
           <p style="margin:0 0 14px;font-size:12px;color:#71717a;line-height:1.45">
             Record market research options here${apiStage === 'FACT_FIND' ? ' before advancing to Research' : ''}.
-            Compliance needs <strong>3+ products</strong>, one <strong>selected</strong>, and <strong>adviser notes</strong>.
+            The research tick is set from <strong>3+ products</strong> and one <strong>selected</strong> product.
+            Adviser notes stay on the case and do not block Application.
             ${ready ? '<span style="color:#0F6E56;font-weight:600"> Ready to advance.</span>' : ''}
           </p>
+          <ul class="cd-comp-checklist" style="margin:0 0 14px;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px">
+            <li style="display:flex;align-items:center;gap:8px;font-size:13px;color:#18181b"><input type="checkbox" disabled ${products.length >= 3 ? 'checked' : ''} aria-label="At least 3 products recorded"> At least 3 products recorded (${products.length}/3)</li>
+            <li style="display:flex;align-items:center;gap:8px;font-size:13px;color:#18181b"><input type="checkbox" disabled ${selectedCount >= 1 ? 'checked' : ''} aria-label="Recommended product selected"> Recommended product selected</li>
+            <li style="display:flex;align-items:center;gap:8px;font-size:13px;color:#71717a"><input type="checkbox" disabled ${hasNotes ? 'checked' : ''} aria-label="Adviser notes on the case"> Adviser notes on the case</li>
+          </ul>
           ${rows}
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
             <label style="display:flex;flex-direction:column;gap:4px;font-size:11px;font-weight:600;color:#71717a;grid-column:1/-1;position:relative;z-index:2">Lender
@@ -4376,9 +4760,19 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
             <input data-ko-prod="selected" type="checkbox" /> Mark as recommended product
           </label>
           <button type="button" data-ko-prod-add style="margin-bottom:8px;padding:8px 14px;background:#A552E4;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">Add product</button>
-          <p style="margin:0 0 8px;font-size:12px;color:#71717a;line-height:1.45">Recommendation notes are in the <strong>Notes</strong> accordion on Overview. Compliance still needs notes, 3+ products, and one selected.</p>
+          <p style="margin:0 0 8px;font-size:12px;color:#71717a;line-height:1.45">Recommendation notes are in the <strong>Notes</strong> accordion on Overview. They stay with the case and are not required to leave Research.</p>
           <p data-ko-prod-status style="margin:8px 0 0;font-size:12px;color:#71717a;min-height:16px"></p>
         `;
+
+        if (apiStage === 'RESEARCH') {
+          const researchStep = panel.ownerDocument.querySelectorAll('.cd-progress-rail .cd-comp-step')[2];
+          const dot = researchStep?.querySelector('.cd-comp-dot');
+          if (dot) {
+            dot.classList.toggle('cd-comp-dot--done', ready);
+            dot.classList.toggle('cd-comp-dot--pending', !ready);
+            dot.textContent = ready ? '✓' : '';
+          }
+        }
 
         const lenderHost = panel.querySelector<HTMLElement>('[data-ko-lender-select-host]');
         if (lenderHost) {
@@ -4835,7 +5229,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
       {importClientsOpen && isAdmin && (
         <ImportClientsModal
           open={importClientsOpen}
-          existingEmails={clientsDataRef.current.map((client) => client.email)}
+          existingEmails={clientsDataRef.current.map((client) => client.email).filter((email) => Boolean(email && email.trim()))}
           onClose={() => setImportClientsOpen(false)}
           onImported={(created) => {
             if (created.length === 0) {
@@ -4893,9 +5287,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
           caseId={uploadModal.caseId || null}
           onClose={() => setUploadModal(null)}
           onUploaded={async (doc) => {
-            // Capture caseId BEFORE clearing the modal state.
             const activeCaseId = doc.caseId || uploadModal?.caseId;
-            setUploadModal(null);
             if (!activeCaseId) return;
             try {
               const token = await getCachedSessionToken(getToken);

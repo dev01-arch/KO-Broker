@@ -21,6 +21,30 @@ function toIso(value?: Date | string | null) {
   return String(value);
 }
 
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {};
+}
+
+/** One case can hold two applicants. This reads that choice off the fact-find. */
+export function readCaseApplicants(personalDetails: unknown): {
+  applicantMode: 'single' | 'joint';
+  jointApplicantName?: string;
+} {
+  const personal = asRecord(personalDetails);
+  const form = asRecord(personal.portalFactFindForm);
+  const client2 = asRecord(form.client2Personal ?? personal.client2);
+  const joint = personal.hasJointApplicant === true || form.hasJointApplicant === true;
+  const jointApplicantName = [client2.firstName, client2.lastName]
+    .filter((part) => typeof part === 'string' && part.trim())
+    .join(' ');
+  return {
+    applicantMode: joint ? 'joint' : 'single',
+    ...(joint && jointApplicantName ? { jointApplicantName } : {}),
+  };
+}
+
 export function serializeCaseSummary(caseRecord: {
   id: string;
   referenceNumber: string;
@@ -38,8 +62,10 @@ export function serializeCaseSummary(caseRecord: {
   updatedAt: Date;
   client: CaseClient;
   adviser?: CaseAdviser | null;
+  factFind?: { personalDetails?: unknown } | null;
   _count: { messages: number; documents: number };
 }) {
+  const applicants = readCaseApplicants(caseRecord.factFind?.personalDetails);
   return {
     id: caseRecord.id,
     referenceNumber: caseRecord.referenceNumber,
@@ -63,6 +89,8 @@ export function serializeCaseSummary(caseRecord: {
         }
       : null,
     updatedAt: caseRecord.updatedAt.toISOString(),
+    applicantMode: applicants.applicantMode,
+    jointApplicantName: applicants.jointApplicantName,
     _count: caseRecord._count,
   };
 }
@@ -114,6 +142,17 @@ export function serializeCaseDetail(caseRecord: {
     employmentStatus: string;
     clientType?: ClientType;
     companyName?: string | null;
+    annualIncome?: number | null;
+    title?: string | null;
+    dateOfBirth?: Date | string | null;
+    niNumber?: string | null;
+    address?: unknown;
+    properties?: Array<{
+      id: string;
+      postcode: string;
+      address?: unknown;
+      currentValue?: number | null;
+    }>;
   };
   adviser?: CaseAdviser | null;
   factFind?: {
@@ -226,6 +265,17 @@ export function serializeCaseDetail(caseRecord: {
       email: caseRecord.client.email,
       phone: caseRecord.client.phone ?? undefined,
       employmentStatus: caseRecord.client.employmentStatus,
+      annualIncome: caseRecord.client.annualIncome ?? undefined,
+      title: caseRecord.client.title ?? undefined,
+      dateOfBirth: toIso(caseRecord.client.dateOfBirth),
+      niNumber: caseRecord.client.niNumber ?? undefined,
+      address: caseRecord.client.address ?? undefined,
+      properties: (caseRecord.client.properties ?? []).map((home) => ({
+        id: home.id,
+        postcode: home.postcode,
+        address: home.address ?? undefined,
+        currentValue: home.currentValue ?? undefined,
+      })),
     },
     factFind: caseRecord.factFind
       ? {

@@ -48,6 +48,9 @@ const caseListSelect = {
       firstName: true,
       lastName: true,
       email: true,
+      phone: true,
+      employmentStatus: true,
+      annualIncome: true,
     },
   },
   adviser: {
@@ -57,6 +60,7 @@ const caseListSelect = {
       lastName: true,
     },
   },
+  factFind: { select: { personalDetails: true } },
   _count: { select: { messages: true, documents: true } },
 } as const;
 
@@ -196,6 +200,16 @@ export async function getCaseForOrg(orgId: string, id: string) {
             email: true,
             phone: true,
             employmentStatus: true,
+            annualIncome: true,
+            title: true,
+            dateOfBirth: true,
+            niNumber: true,
+            address: true,
+            properties: {
+              orderBy: { createdAt: 'desc' as const },
+              take: 5,
+              select: { id: true, postcode: true, address: true, currentValue: true },
+            },
           },
         },
         adviser: {

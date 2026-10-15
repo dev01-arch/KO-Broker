@@ -92,6 +92,11 @@ export interface ApiSuccessResponse<T> {
     legacy?: number;
     inactive?: number;
     withFrn?: number;
+    disclosure?: {
+      sent: boolean;
+      documents: string[];
+      error?: string;
+    };
   };
 }
 
@@ -144,6 +149,16 @@ export interface ClientSummary {
   insurerName?: string;
   isVulnerable: boolean;
   assignedMember: ClientMemberRef | null;
+  phone?: string;
+  dateOfBirth?: string;
+  niNumber?: string;
+  address?: Record<string, unknown> | null;
+  properties?: Array<{
+    id: string;
+    postcode: string;
+    address?: Record<string, unknown> | null;
+    currentValue?: number | null;
+  }>;
   _count: {
     cases: number;
     messages: number;
@@ -197,6 +212,8 @@ export interface CaseSummary {
   offerExpiresAt?: string;
   initialRateEndsAt?: string;
   adviser: CaseAdviserRef | null;
+  applicantMode?: 'single' | 'joint';
+  jointApplicantName?: string;
   updatedAt: string;
   _count: {
     messages: number;
@@ -331,6 +348,11 @@ export interface Case extends CaseSummary {
     referenceNumber: string;
     phone?: string;
     employmentStatus: string;
+    annualIncome?: number;
+    title?: string;
+    dateOfBirth?: string;
+    niNumber?: string;
+    address?: unknown;
   };
   factFind: FactFind | null;
   productsConsidered?: ProductConsidered[];
@@ -521,6 +543,7 @@ export interface UpsertFactFindInput {
   clientPreferences?: Record<string, unknown>;
   markComplete?: boolean;
   isAmend?: boolean;
+  applicantMode?: 'single' | 'joint';
 }
 
 // ─── Core fetch wrapper ───────────────────────────────────────────────────────
@@ -1077,6 +1100,43 @@ export const casesApi = {
     });
   },
 
+  sendClientDocument(token: string, caseId: string, template: string) {
+    return apiFetch<{ template: string; documentName: string; sent: boolean }>(
+      `/api/cases/${caseId}/client-documents`,
+      token,
+      {
+        method: 'POST',
+        body: JSON.stringify({ template }),
+      },
+    );
+  },
+
+  generateIllustration(token: string, caseId: string, kind: 'esis' | 'research') {
+    return apiFetch<{ kind: string; documentName: string; sent: boolean }>(
+      `/api/cases/${caseId}/illustrations`,
+      token,
+      {
+        method: 'POST',
+        body: JSON.stringify({ kind }),
+      },
+    );
+  },
+
+  saveAmlEvidence(
+    token: string,
+    caseId: string,
+    input: { idSeen: boolean; nameMatches: boolean; addressMatches: boolean },
+  ) {
+    return apiFetch<{ amlEvidence: { idSeen: boolean; nameMatches: boolean; addressMatches: boolean } }>(
+      `/api/cases/${caseId}/aml-evidence`,
+      token,
+      {
+        method: 'POST',
+        body: JSON.stringify(input),
+      },
+    );
+  },
+
   update(token: string, id: string, input: UpdateCaseInput) {
     return apiFetch<CaseSummary>(`/api/cases/${id}`, token, {
       method: 'PATCH',
@@ -1454,6 +1514,29 @@ export const complianceApi = {
       method: 'POST',
       body: JSON.stringify(input),
     });
+  },
+};
+
+export interface VulnerabilityReportPayload {
+  from: string;
+  to: string;
+  assessmentsCompleted: number;
+  flaggedAssessments: number;
+  domains: Array<{ name: string; count: number }>;
+}
+
+export const reportsApi = {
+  vulnerability(token: string, asOf?: string) {
+    const query = asOf ? `?asOf=${encodeURIComponent(asOf)}` : '';
+    return apiFetch<VulnerabilityReportPayload>(`/api/reports/vulnerability${query}`, token);
+  },
+
+  survey(token: string, asOf?: string) {
+    const query = asOf ? `?asOf=${encodeURIComponent(asOf)}` : '';
+    return apiFetch<{ from: string; to: string; sent: number; responses: number; belowExpected: number }>(
+      `/api/reports/survey${query}`,
+      token,
+    );
   },
 };
 

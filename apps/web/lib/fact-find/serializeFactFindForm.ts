@@ -107,10 +107,14 @@ export function serializeFactFindForm(
     insurancePolicies: form.insurancePolicies,
   };
 
+  const currentAddress = asRecord(client1Personal.currentAddress);
   const propertyDetails: Record<string, unknown> = {
     propertyToggle: form.propertyToggle,
     propertyValue: form.propertyValue,
     value: form.propertyValue,
+    postcode: currentAddress.postcode,
+    addressLine1: currentAddress.line1,
+    line1: currentAddress.line1,
     mortgageRequired: form.mortgageRequired,
     loanAmount: form.mortgageRequired,
     depositSource: form.depositSource,

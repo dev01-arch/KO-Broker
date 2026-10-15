@@ -7,6 +7,22 @@
  */
 
 import type { CaseStage, CaseType } from '@ko/types';
+import { isOutboundFeedbackSurvey } from '@/lib/documents/client-templates';
+
+function asPreferenceRecord(value: unknown): Record<string, unknown> | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  return value as Record<string, unknown>;
+}
+
+function surveyWasSent(factFind: ChecklistCaseInput['factFind']): boolean {
+  const access = asPreferenceRecord(asPreferenceRecord(factFind?.clientPreferences)?.surveyAccess);
+  return typeof access?.sentAt === 'string';
+}
+
+function surveyWasAnswered(factFind: ChecklistCaseInput['factFind']): Date | string | null {
+  const response = asPreferenceRecord(asPreferenceRecord(factFind?.clientPreferences)?.feedbackSurvey);
+  return typeof response?.submittedAt === 'string' ? response.submittedAt : null;
+}
 
 export const CHECKLIST_RECORD_PREFIX = 'CHECKLIST:';
 
@@ -190,6 +206,7 @@ export interface ChecklistCaseInput {
     completedAt?: Date | string | null;
     existingMortgages?: unknown;
     clientPreferences?: unknown;
+    personalDetails?: unknown;
   } | null;
   productsConsidered?: Array<{ isSelected: boolean }>;
   documents?: ChecklistEvidenceDoc[];
@@ -443,7 +460,7 @@ const PHASE_CATALOG: CatalogPhase[] = [
         n: 14,
         itemId: 'survey-sent',
         name: 'Feedback survey sent',
-        desc: 'Client feedback survey issued automatically.',
+        desc: 'Client feedback survey issued to the client.',
       },
       {
         n: 15,
@@ -574,6 +591,60 @@ function recordMap(input: ChecklistCaseInput): Map<string, ChecklistEvidenceReco
     if (!map.has(record.stage)) map.set(record.stage, record);
   }
   return map;
+}
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  return value as Record<string, unknown>;
+}
+
+function readVulnerabilityScores(factFind: ChecklistCaseInput['factFind']): Array<{ q1?: unknown; q2?: unknown }> | null {
+  const preferences = asRecord(factFind?.clientPreferences);
+  const personal = asRecord(factFind?.personalDetails);
+  const form = asRecord(personal?.portalFactFindForm);
+  const fromPreferences = preferences?.vulnerabilityScores;
+  const fromForm = form?.vulnerabilityScores;
+  const scores = Array.isArray(fromPreferences) ? fromPreferences : Array.isArray(fromForm) ? fromForm : null;
+  if (!scores) return null;
+  return scores.map((entry) => {
+    const row = asRecord(entry);
+    return { q1: row?.q1, q2: row?.q2 };
+  });
+}
+
+/** True when all 12 vulnerability questions have an answer (0, 1, or 2). Unanswered stays -1. */
+export function vulnerabilityQuestionnaireComplete(factFind: ChecklistCaseInput['factFind']): boolean {
+  const scores = readVulnerabilityScores(factFind);
+  if (!scores || scores.length < 6) return false;
+  return scores.slice(0, 6).every((entry) => {
+    const q1 = entry.q1;
+    const q2 = entry.q2;
+    return typeof q1 === 'number' && q1 >= 0 && typeof q2 === 'number' && q2 >= 0;
+  });
+}
+
+function yesNoAnswered(value: unknown): boolean {
+  return value === 'YES' || value === 'NO' || value === true || value === false;
+}
+
+function yesNoIsAdverse(value: unknown): boolean {
+  return value === 'YES' || value === true;
+}
+
+/** Client 1 adverse-credit questions answered on the fact-find. */
+export function adverseCreditAssessment(factFind: ChecklistCaseInput['factFind']): {
+  answered: boolean;
+  adverse: boolean;
+} {
+  const personal = asRecord(factFind?.personalDetails);
+  const form = asRecord(personal?.portalFactFindForm);
+  const stored = asRecord(personal?.adverseCredit);
+  const missed = form?.client1MissedPayments ?? stored?.client1MissedPayments;
+  const ccj = form?.client1CCJ ?? stored?.client1CCJ;
+  return {
+    answered: yesNoAnswered(missed) && yesNoAnswered(ccj),
+    adverse: yesNoIsAdverse(missed) || yesNoIsAdverse(ccj),
+  };
 }
 
 function jsonMentions(value: unknown, pattern: RegExp): boolean {
@@ -710,13 +781,24 @@ function evaluateItem(catalog: CatalogItem, input: ChecklistCaseInput): Complian
       return pendingItem(catalog);
     }
     case 'aml': {
-      const doc = hasDocType(docs, 'ID') ?? findDoc(docs, [/\baml\b/i, /identity/i, /\bid\b/i]);
+      const doc =
+        hasDocType(docs, 'ID') ??
+        findDoc(docs, [/\baml\b/i, /identity/i, /\bid\b/i, /passport/i, /driving licen[cs]e/i]);
       if (doc) {
         return doneItem(catalog, 'confirmed', doc.createdAt, 'Confirmed offline');
       }
       return pendingItem(catalog, { actions: ['confirm'] });
     }
     case 'adverse-credit': {
+      const assessment = adverseCreditAssessment(input.factFind);
+      if (assessment.answered) {
+        const item = doneItem(catalog, 'complete', factFindDoneAt ?? input.updatedAt ?? input.createdAt, 'Complete');
+        if (!assessment.adverse) return item;
+        return {
+          ...item,
+          note: 'Adverse credit was recorded on the fact-find.',
+        };
+      }
       const mentioned = jsonMentions(
         input.factFind?.existingMortgages ?? input.factFind?.clientPreferences,
         /adverse|ccj|default|iva|bankrupt/,
@@ -735,7 +817,12 @@ function evaluateItem(catalog: CatalogItem, input: ChecklistCaseInput): Complian
       return pendingItem(catalog, { actions: ['confirm'] });
     }
     case 'vulnerability': {
-      if (factFindDoneAt || input.client.vulnerabilityNotes || input.client.isVulnerable) {
+      if (
+        vulnerabilityQuestionnaireComplete(input.factFind) ||
+        factFindDoneAt ||
+        input.client.vulnerabilityNotes ||
+        input.client.isVulnerable
+      ) {
         return doneItem(
           catalog,
           'complete',
@@ -782,14 +869,19 @@ function evaluateItem(catalog: CatalogItem, input: ChecklistCaseInput): Complian
       return pendingItem(catalog);
     }
     case 'survey-sent': {
-      if (idx >= stageIndex('COMPLETION')) {
-        return doneItem(catalog, 'complete', input.updatedAt, 'Complete');
+      const doc = docs.find((entry) => isOutboundFeedbackSurvey(entry.name));
+      if (doc || surveyWasSent(input.factFind) || idx >= stageIndex('COMPLETION')) {
+        return doneItem(catalog, 'complete', doc?.createdAt ?? input.updatedAt, 'Complete');
       }
-      return pendingItem(catalog, { badges: ['Not started', 'AUTO'], actions: undefined });
+      return pendingItem(catalog, { badges: ['Not started'], actions: ['confirm'] });
     }
     case 'survey-response': {
-      const doc = findDoc(docs, [/survey/i, /feedback/i]);
-      if (doc) return doneItem(catalog, 'complete', doc.createdAt, 'Complete');
+      const answeredAt = surveyWasAnswered(input.factFind);
+      const doc = docs.find((entry) => {
+        if (isOutboundFeedbackSurvey(entry.name)) return false;
+        return /survey/i.test(entry.name) || /feedback/i.test(entry.name);
+      });
+      if (doc || answeredAt) return doneItem(catalog, 'complete', doc?.createdAt ?? answeredAt, 'Complete');
       return pendingItem(catalog);
     }
     case 'case-complete': {

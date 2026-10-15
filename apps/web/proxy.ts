@@ -9,6 +9,7 @@ const isPublicRoute = createRouteMatcher([
   '/sign-in(.*)',
   '/sign-up(.*)',
   '/portal(.*)',
+  '/survey(.*)',
   // Adviser invite landing — page handles sign-in/up then accept-invite.
   '/adviser/invite(.*)',
   // API docs — public reference, no auth required.

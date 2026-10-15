@@ -311,7 +311,15 @@ export const CreateClientSchema = z
     lastName: z.string().optional(),
     companyName: z.string().optional(),
     companyNumber: z.string().optional(),
-    email: z.string().email('Valid email is required'),
+    email: z
+      .string()
+      .trim()
+      .max(320)
+      .optional()
+      .transform((value) => value ?? '')
+      .refine((value) => value === '' || z.string().email().safeParse(value).success, {
+        message: 'Enter a valid email, or leave it blank',
+      }),
     phone: z.string().optional(),
     dateOfBirth: z.string().optional(),
     employmentStatus: EmploymentStatusSchema.optional(),
@@ -322,14 +330,6 @@ export const CreateClientSchema = z
     insurerName: z.string().optional(),
   })
   .superRefine((data, ctx) => {
-    if (!data.email?.trim()) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: 'Email is required',
-        path: ['email'],
-      });
-    }
-
     if (data.clientType === 'COMPANY') {
       if (!data.companyName?.trim()) {
         ctx.addIssue({
@@ -623,6 +623,8 @@ export const UpsertFactFindSchema = z.object({
   existingMortgages: factFindSectionSchema.optional(),
   clientPreferences: factFindSectionSchema.optional(),
   markComplete: z.boolean().optional(),
+  /** Keeps this case as one file for a single or joint application. */
+  applicantMode: z.enum(['single', 'joint']).optional(),
   // PRD-16 W4: explicit amend mode — bypasses the completed guard and writes
   // FACT_FIND_AMENDED audit event instead of FACT_FIND_UPDATED.
   isAmend: z.boolean().optional(),

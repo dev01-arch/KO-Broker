@@ -11,6 +11,7 @@ import {
 
 export interface UploadFileInput {
   file: File;
+  name?: string;
   documentType?: DocumentType;
   caseId?: string;
   clientId?: string;
@@ -51,6 +52,7 @@ export function useUploadDocument() {
       const token = await requireAuthToken(getToken);
       return documentsApi.upload(token, {
         file: input.file,
+        name: input.name,
         documentType: input.documentType,
         caseId: input.caseId,
         clientId: input.clientId,

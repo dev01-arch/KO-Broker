@@ -651,6 +651,9 @@ export const devStore = {
         email: client.email,
         phone: client.phone,
         employmentStatus: client.employmentStatus,
+        annualIncome: client.annualIncome,
+        title: client.title,
+        dateOfBirth: client.dateOfBirth,
       },
       adviser: null,
       factFind: factFind

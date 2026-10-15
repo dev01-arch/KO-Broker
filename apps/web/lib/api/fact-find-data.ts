@@ -5,6 +5,7 @@ import { isPrismaConnectionError } from '@/lib/api/prisma-errors';
 import { computeDiff, logAuditEvent } from '@/lib/compliance/audit';
 import { calculateVulnerabilityScore, checkIsVulnerable } from '@/lib/compliance/vulnerability';
 import { checkAndSetRecommendationStale } from '@/lib/compliance/stale';
+import { preserveJsonKeys } from '@/lib/fact-find/preserve-json-keys';
 import type { UpsertFactFindInput } from '@ko/types';
 
 function shouldUseDevStore(error: unknown) {
@@ -25,13 +26,30 @@ export async function promoteCompletedFactFindToResearch(input: {
   if (input.fromStage !== 'ENQUIRY' && input.fromStage !== 'FACT_FIND') return false;
 
   const userId = input.userId ?? undefined;
-  if (input.fromStage === 'ENQUIRY') {
-    const disclosure = await advanceCaseStage(input.orgId, input.caseId, 'FACT_FIND', userId);
-    if ('error' in disclosure) return false;
-  }
+  try {
+    if (input.fromStage === 'ENQUIRY') {
+      const disclosure = await advanceCaseStage(input.orgId, input.caseId, 'FACT_FIND', userId);
+      if ('error' in disclosure) {
+        await prisma.case.update({
+          where: { id: input.caseId },
+          data: { stage: 'RESEARCH', updatedAt: new Date() },
+        });
+        return true;
+      }
+    }
 
-  const research = await advanceCaseStage(input.orgId, input.caseId, 'RESEARCH', userId);
-  return !('error' in research);
+    const research = await advanceCaseStage(input.orgId, input.caseId, 'RESEARCH', userId);
+    if (!('error' in research)) return true;
+
+    await prisma.case.update({
+      where: { id: input.caseId },
+      data: { stage: 'RESEARCH', updatedAt: new Date() },
+    });
+    return true;
+  } catch (error) {
+    console.error('[promoteCompletedFactFindToResearch]', error);
+    return false;
+  }
 }
 
 // Sections whose change on amend can trigger a stale recommendation
@@ -63,8 +81,10 @@ export async function upsertFactFindWithCompliance(
     });
     if (!caseRecord) return { error: 'NOT_FOUND' as const };
 
-    const isAmend = input.isAmend === true;
     const factFindComplete = !!caseRecord.factFind?.completedAt;
+    const isAmend =
+      input.isAmend === true ||
+      (factFindComplete && (input.applicantMode === 'single' || input.applicantMode === 'joint'));
 
     // Guard: completed fact-find can only be edited via explicit amend or allowWhenComplete
     if (factFindComplete && !isAmend && !options?.allowWhenComplete && !input.markComplete) {
@@ -110,12 +130,62 @@ export async function upsertFactFindWithCompliance(
 
     // Strip framework flags — only sections go into the DB
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { markComplete, isAmend: _isAmend, ...sections } = input;
+    const { markComplete, isAmend: _isAmend, applicantMode: _applicantMode, ...sections } = input;
+    const existingFactFind = caseRecord.factFind;
     const sectionData = Object.fromEntries(
       Object.entries(sections).filter(([, value]) => value !== undefined),
     );
+    if (sectionData.clientPreferences && typeof sectionData.clientPreferences === 'object') {
+      sectionData.clientPreferences = preserveJsonKeys(
+        existingFactFind?.clientPreferences,
+        sectionData.clientPreferences as Record<string, unknown>,
+        ['surveyAccess', 'feedbackSurvey'],
+      ) as typeof sectionData.clientPreferences;
+    }
+    if (sectionData.personalDetails && typeof sectionData.personalDetails === 'object') {
+      sectionData.personalDetails = preserveJsonKeys(
+        existingFactFind?.personalDetails,
+        sectionData.personalDetails as Record<string, unknown>,
+        ['amlEvidence'],
+      ) as typeof sectionData.personalDetails;
+    }
 
-    const existingFactFind = caseRecord.factFind;
+    if (input.applicantMode === 'single' || input.applicantMode === 'joint') {
+      const previousPersonal =
+        existingFactFind?.personalDetails &&
+        typeof existingFactFind.personalDetails === 'object' &&
+        !Array.isArray(existingFactFind.personalDetails)
+          ? (existingFactFind.personalDetails as Record<string, unknown>)
+          : {};
+      const incomingPersonal =
+        sectionData.personalDetails &&
+        typeof sectionData.personalDetails === 'object' &&
+        !Array.isArray(sectionData.personalDetails)
+          ? (sectionData.personalDetails as Record<string, unknown>)
+          : {};
+      const previousForm =
+        previousPersonal.portalFactFindForm &&
+        typeof previousPersonal.portalFactFindForm === 'object' &&
+        !Array.isArray(previousPersonal.portalFactFindForm)
+          ? (previousPersonal.portalFactFindForm as Record<string, unknown>)
+          : {};
+      const incomingForm =
+        incomingPersonal.portalFactFindForm &&
+        typeof incomingPersonal.portalFactFindForm === 'object' &&
+        !Array.isArray(incomingPersonal.portalFactFindForm)
+          ? (incomingPersonal.portalFactFindForm as Record<string, unknown>)
+          : {};
+      sectionData.personalDetails = {
+        ...previousPersonal,
+        ...incomingPersonal,
+        portalFactFindForm: {
+          ...previousForm,
+          ...incomingForm,
+          hasJointApplicant: input.applicantMode === 'joint',
+        },
+      };
+    }
+
     const factFind = await prisma.factFind.upsert({
       where: { caseId },
       create: {

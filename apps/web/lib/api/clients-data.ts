@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/db';
+import type { Prisma } from '@ko/db';
 import { devStore } from '@/lib/api/dev-store';
 import { isPrismaConnectionError, isPrismaUniqueConflict } from '@/lib/api/prisma-errors';
 import { sendAdviserClientAssignedEmail, sendClientWelcomeEmail, type EmailDeliveryStatus } from '@/lib/notifications/client-emails';
@@ -242,6 +243,15 @@ export async function listClientsForOrg(
           status: true,
           insurerName: true,
           isVulnerable: true,
+          phone: true,
+          dateOfBirth: true,
+          niNumber: true,
+          address: true,
+          properties: {
+            orderBy: { createdAt: 'desc' },
+            take: 5,
+            select: { id: true, postcode: true, address: true, currentValue: true },
+          },
           assignedMember: {
             select: { id: true, firstName: true, lastName: true },
           },
@@ -267,7 +277,7 @@ export async function createClientForOrg(
     lastName?: string;
     companyName?: string;
     companyNumber?: string;
-    email: string;
+    email?: string;
     phone?: string;
     dateOfBirth?: string;
     employmentStatus?: EmploymentStatus;
@@ -279,6 +289,7 @@ export async function createClientForOrg(
   },
   options?: { skipEmails?: boolean },
 ) {
+  const email = (input.email ?? '').trim().toLowerCase();
   const clientType = input.clientType ?? 'INDIVIDUAL';
   const isCompany = clientType === 'COMPANY';
   const companyName = input.companyName?.trim();
@@ -344,7 +355,7 @@ export async function createClientForOrg(
           title: isCompany ? undefined : input.title,
           firstName,
           lastName,
-          email: input.email,
+          email,
           phone: input.phone,
           dateOfBirth: !isCompany && input.dateOfBirth ? new Date(input.dateOfBirth) : undefined,
           employmentStatus: input.employmentStatus ?? 'EMPLOYED',
@@ -369,7 +380,9 @@ export async function createClientForOrg(
         return { client: created };
       }
 
-      const welcomeEmail = await sendClientWelcomeEmail(created);
+      const welcomeEmail: EmailDeliveryStatus = created.email.trim()
+        ? await sendClientWelcomeEmail(created)
+        : { sent: false, error: 'No email address on this client' };
       let adviserEmail: EmailDeliveryStatus | undefined;
       if (assignedMember) {
         adviserEmail = await sendAdviserClientAssignedEmail({
@@ -381,7 +394,7 @@ export async function createClientForOrg(
     } catch (error) {
       if (isPrismaUniqueConflict(error, 'referenceNumber') && attempt < 4) continue;
       if (!shouldUseDevStore(error)) throw error;
-      const client = devStore.createClient(orgId, input);
+      const client = devStore.createClient(orgId, { ...input, email });
       const created = {
         id: client.id,
         referenceNumber: client.referenceNumber,
@@ -459,6 +472,33 @@ export async function updateClientForOrg(
   }
 }
 
+const OPTIONAL_CLIENT_DELETE_TABLES = [
+  'case_notes',
+  'client_info_requests',
+  'properties',
+  'case_intelligence_snapshots',
+] as const;
+
+async function presentClientDeleteTables() {
+  try {
+    const rows = await prisma.$queryRaw<Array<{ name: string | null }>>`
+      SELECT to_regclass('public.case_notes') AS "case_notes",
+             to_regclass('public.client_info_requests') AS "client_info_requests",
+             to_regclass('public.properties') AS "properties",
+             to_regclass('public.case_intelligence_snapshots') AS "case_intelligence_snapshots"
+    `;
+    const row = rows[0] ?? {};
+    return new Set(
+      OPTIONAL_CLIENT_DELETE_TABLES.filter((name) => {
+        const value = (row as Record<string, string | null>)[name];
+        return Boolean(value);
+      }),
+    );
+  } catch {
+    return new Set<string>(OPTIONAL_CLIENT_DELETE_TABLES);
+  }
+}
+
 export async function deleteClientForOrg(orgId: string, id: string) {
   try {
     const existing = await prisma.client.findFirst({
@@ -473,22 +513,51 @@ export async function deleteClientForOrg(orgId: string, id: string) {
         select: { id: true },
       })
     ).map((item) => item.id);
+    const tables = await presentClientDeleteTables();
 
-    await prisma.$transaction(async (tx) => {
-      if (caseIds.length > 0) {
-        await tx.factFind.deleteMany({ where: { caseId: { in: caseIds } } });
-        await tx.productConsidered.deleteMany({ where: { caseId: { in: caseIds } } });
-        await tx.complianceRecord.deleteMany({ where: { caseId: { in: caseIds } } });
-        await tx.suitabilityReport.deleteMany({ where: { caseId: { in: caseIds } } });
-        await tx.message.deleteMany({ where: { caseId: { in: caseIds } } });
-        await tx.document.deleteMany({ where: { caseId: { in: caseIds } } });
-        await tx.case.deleteMany({ where: { id: { in: caseIds } } });
+    // Batch transaction: one round trip, so a slow remote database cannot hit the
+    // 5s interactive-transaction timeout. Order matters for foreign keys.
+    const steps: Prisma.PrismaPromise<unknown>[] = [];
+    if (caseIds.length > 0) {
+      const inCases = { caseId: { in: caseIds } };
+      if (tables.has('case_notes')) steps.push(prisma.caseNote.deleteMany({ where: inCases }));
+      if (tables.has('client_info_requests')) {
+        steps.push(
+          prisma.clientInfoRequest.deleteMany({
+            where: { OR: [{ clientId: id }, { caseId: { in: caseIds } }] },
+          }),
+        );
       }
+      if (tables.has('case_intelligence_snapshots')) {
+        steps.push(prisma.caseIntelligenceSnapshot.deleteMany({ where: inCases }));
+      }
+      steps.push(
+        prisma.factFind.deleteMany({ where: inCases }),
+        prisma.productConsidered.deleteMany({ where: inCases }),
+        prisma.complianceRecord.deleteMany({ where: inCases }),
+        prisma.suitabilityReport.deleteMany({ where: inCases }),
+        prisma.message.deleteMany({ where: inCases }),
+        prisma.document.deleteMany({ where: inCases }),
+      );
+      if (tables.has('properties')) {
+        steps.push(
+          prisma.case.updateMany({ where: { id: { in: caseIds } }, data: { propertyId: null } }),
+        );
+      }
+      steps.push(prisma.case.deleteMany({ where: { id: { in: caseIds } } }));
+    } else if (tables.has('client_info_requests')) {
+      steps.push(prisma.clientInfoRequest.deleteMany({ where: { clientId: id } }));
+    }
+    steps.push(
+      prisma.message.deleteMany({ where: { orgId, clientId: id } }),
+      prisma.document.deleteMany({ where: { orgId, clientId: id } }),
+    );
+    if (tables.has('properties')) {
+      steps.push(prisma.property.deleteMany({ where: { orgId, clientId: id } }));
+    }
+    steps.push(prisma.client.deleteMany({ where: { id, orgId } }));
 
-      await tx.message.deleteMany({ where: { orgId, clientId: id } });
-      await tx.document.deleteMany({ where: { orgId, clientId: id } });
-      await tx.client.delete({ where: { id } });
-    });
+    await prisma.$transaction(steps);
 
     return { deleted: true as const };
   } catch (error) {

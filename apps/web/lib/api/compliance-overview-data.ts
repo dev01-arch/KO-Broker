@@ -38,6 +38,7 @@ const caseComplianceInclude = {
       completedAt: true,
       existingMortgages: true,
       clientPreferences: true,
+      personalDetails: true,
     },
   },
   productsConsidered: {
