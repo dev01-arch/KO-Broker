@@ -10134,11 +10134,9 @@ calcRun();
     if (renderedIds !== nextIds) {
       const active = document.activeElement;
       const path = active && active.getAttribute ? (active.getAttribute('data-path') || '') : '';
-      const area = document.getElementById('ff-card-area');
-      const scroll = area ? area.scrollTop : 0;
-      ffRenderCard({ focusPath: path });
+      const caret = active && typeof active.selectionStart === 'number' ? active.selectionStart : null;
+      ffRenderCard({ focusPath: path, keepPlace: true, caret: caret });
       ffUpdateHdr();
-      if (area) area.scrollTop = scroll;
     }
   }
 
@@ -10524,7 +10522,8 @@ calcRun();
         setTimeout(() => {
           next.focus({ preventScroll: true });
           const len = next.value ? next.value.length : 0;
-          if (typeof next.setSelectionRange === 'function') next.setSelectionRange(len, len);
+          const pos = opts && typeof opts.caret === 'number' ? Math.min(opts.caret, len) : len;
+          if (typeof next.setSelectionRange === 'function') next.setSelectionRange(pos, pos);
           if (keepPlace) restorePlace();
         }, 0);
         return;
