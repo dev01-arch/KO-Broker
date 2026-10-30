@@ -100,14 +100,16 @@ export function BillingSettingsSection({
 
   const billingAccess = profile?.billing?.access;
   const inTrial = billingAccess === 'trial';
-  const freeAccess = billingAccess === 'complimentary' || billingAccess === 'grandfathered';
+  const freeAccess = billingAccess === 'complimentary';
+  const legacyUnpaid = billingAccess === 'grandfathered' && !subscription?.hasSubscription;
+  const choosingFirstPlan = inTrial || legacyUnpaid;
   const currentPlan = profile?.billing?.subscribedPlan ?? profile?.plan ?? 'STARTER';
   const trialEndDate = formatBillingDate(profile?.billing?.trialEndsAt);
   const currentPlanLabel = inTrial
     ? 'Free trial (all features)'
     : billingAccess === 'complimentary'
       ? 'Complimentary access (all features)'
-      : billingAccess === 'grandfathered'
+      : legacyUnpaid
         ? 'Legacy access (all features)'
         : formatPlanLabel(currentPlan);
   const hasBillingAccount = Boolean(subscription?.hasBillingAccount);
@@ -261,19 +263,20 @@ export function BillingSettingsSection({
 
         <div className="grid gap-6 xl:grid-cols-3">
           {PRICING_TIERS.map((tier) => {
-            const isCurrent = !inTrial && !freeAccess && tier.plan === currentPlan;
-            const isIncluded = freeAccess || (!inTrial && planRank(currentPlan) > planRank(tier.plan));
+            const isCurrent = !choosingFirstPlan && !freeAccess && tier.plan === currentPlan;
+            const isIncluded =
+              freeAccess || (!choosingFirstPlan && planRank(currentPlan) > planRank(tier.plan));
             const canUpgrade =
               Boolean(tier.checkoutPlan) &&
               !freeAccess &&
-              (inTrial || planRank(tier.plan) > planRank(currentPlan));
+              (choosingFirstPlan || planRank(tier.plan) > planRank(currentPlan));
             const checkoutPlan = tier.checkoutPlan;
             const isUpgrading = isPending && checkoutPlan != null && upgradingPlan === checkoutPlan;
 
             let buttonText = 'Included';
             if (isCurrent) buttonText = 'Current plan';
             else if (canUpgrade && checkoutPlan) {
-              buttonText = inTrial ? `Choose ${tier.name}` : `Upgrade to ${tier.name}`;
+              buttonText = choosingFirstPlan ? `Choose ${tier.name}` : `Upgrade to ${tier.name}`;
             }
 
             return (
