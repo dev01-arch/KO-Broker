@@ -3,6 +3,8 @@ import { Prisma } from '@ko/db';
 import type { OrgIntegrations, OrgMessagingSettings, UpdateIntegrationsInput, UpdateMessagingSettingsInput } from '@ko/types';
 import { devStore } from '@/lib/api/dev-store';
 import { isPrismaConnectionError } from '@/lib/api/prisma-errors';
+import { planLimitsEnforced } from '@/lib/api/plan-access';
+import { getOrgAccess, paywallEnabled } from '@/lib/billing/org-access';
 import { cancelAllPendingDigestsForOrg } from '@/lib/notifications/message-email-digest';
 
 function shouldUseDevStore(error: unknown) {
@@ -265,10 +267,21 @@ export async function getOrgProfile(
       select: { id: true, name: true, plan: true },
     });
     if (!org) return null;
+    const access = paywallEnabled() ? await getOrgAccess(org.id) : null;
     return {
       orgId: org.id,
       orgName: org.name,
-      plan: org.plan as 'STARTER' | 'PROFESSIONAL' | 'ENTERPRISE',
+      plan: (access?.effectivePlan ?? org.plan) as 'STARTER' | 'PROFESSIONAL' | 'ENTERPRISE',
+      featuresEnforced: planLimitsEnforced(),
+      ...(access
+        ? {
+            billing: {
+              access: access.reason,
+              subscribedPlan: access.subscribedPlan,
+              trialEndsAt: access.trialEndsAt,
+            },
+          }
+        : {}),
       role: user.role as 'ADMIN' | 'ADVISER' | 'COMPLIANCE' | 'VIEWER',
       // Per-adviser visibility (ADMIN UI ignores these; advisers use for nav/gates)
       canViewAllClients: user.role === 'ADMIN' ? true : Boolean(user.canViewAllClients),

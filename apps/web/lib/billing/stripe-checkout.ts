@@ -1,15 +1,18 @@
 import Stripe from 'stripe';
 
-export type CheckoutPlan = 'PROFESSIONAL' | 'ENTERPRISE';
-export type StripeBillingTier = 'STARTER' | CheckoutPlan;
+export type CheckoutPlan = 'STARTER' | 'PROFESSIONAL' | 'ENTERPRISE';
+export type StripeBillingTier = CheckoutPlan;
 export type StripeBillingInterval = 'monthly' | 'yearly';
 
+/** Monthly amounts in pence; yearly is 10× (two months free). Used only when no price ID is configured. */
 const PLAN_AMOUNTS: Record<CheckoutPlan, number> = {
+  STARTER: 3500,
   PROFESSIONAL: 5000,
   ENTERPRISE: 7500,
 };
 
 const PLAN_LABELS: Record<CheckoutPlan, string> = {
+  STARTER: 'KO Platform Starter',
   PROFESSIONAL: 'KO Platform Professional',
   ENTERPRISE: 'KO Platform Enterprise',
 };
@@ -62,23 +65,25 @@ export function getPlanFromStripePriceId(priceId: string): StripeBillingTier | n
 
 export function buildCheckoutLineItems(
   plan: CheckoutPlan,
+  interval: StripeBillingInterval = 'monthly',
 ): Stripe.Checkout.SessionCreateParams.LineItem[] {
-  const envPriceId = getStripePriceId(plan, 'monthly');
+  const envPriceId = getStripePriceId(plan, interval);
 
   if (envPriceId) {
     return [{ price: envPriceId, quantity: 1 }];
   }
 
+  const yearly = interval === 'yearly';
   return [
     {
       price_data: {
         currency: 'gbp',
         product_data: {
           name: PLAN_LABELS[plan],
-          description: 'Per adviser, per month',
+          description: yearly ? 'Per adviser, per year' : 'Per adviser, per month',
         },
-        unit_amount: PLAN_AMOUNTS[plan],
-        recurring: { interval: 'month' },
+        unit_amount: yearly ? PLAN_AMOUNTS[plan] * 10 : PLAN_AMOUNTS[plan],
+        recurring: { interval: yearly ? 'year' : 'month' },
       },
       quantity: 1,
     },

@@ -9,6 +9,7 @@ import {
   stripeConfigured,
   type CheckoutPlan,
 } from '@/lib/billing/stripe-checkout';
+import { changeExistingSubscription } from '@/lib/billing/subscription-change';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'mock-key', {
   apiVersion: '2026-06-24.dahlia',
@@ -23,8 +24,9 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'mock-key', {
 export const POST = createHandler({
   method: 'POST',
   schema: CheckoutSchema,
+  allowUnpaid: true,
   handler: async (req: NextRequest, { body, user, orgId }) => {
-    const { plan, successUrl, cancelUrl } = body;
+    const { plan, interval = 'monthly', successUrl, cancelUrl } = body;
 
     // === FRONTEND ADDITION: require real Stripe config + line-item builder ===
     if (!stripeConfigured()) {
@@ -76,11 +78,57 @@ export const POST = createHandler({
       }
     }
 
+    const successTarget =
+      successUrl || `${appUrl}/dashboard/settings?billing=success&section=billing`;
+
+    if (customerId) {
+      try {
+        const change = await changeExistingSubscription(stripe, {
+          customerId,
+          orgId: org.id,
+          plan: plan as CheckoutPlan,
+          interval,
+        });
+        if (change.kind === 'changed') {
+          return NextResponse.json(
+            {
+              success: true,
+              data: {
+                url: successTarget,
+                checkoutUrl: successTarget,
+                sessionId: change.subscriptionId,
+                plan,
+                updatedExistingSubscription: true,
+              },
+            },
+            { status: 200 },
+          );
+        }
+        if (change.kind === 'error') {
+          return NextResponse.json(
+            { success: false, error: { code: change.code, message: change.message } },
+            { status: change.status },
+          );
+        }
+      } catch (err) {
+        if (!isMissingStripeCustomerError(err)) {
+          console.error('[Stripe Checkout] Failed to change existing subscription:', err);
+          return NextResponse.json(
+            {
+              success: false,
+              error: { code: 'INTERNAL_ERROR', message: 'Could not change your current subscription' },
+            },
+            { status: 500 },
+          );
+        }
+      }
+    }
+
     const sessionConfig: Stripe.Checkout.SessionCreateParams = {
       payment_method_types: ['card'],
-      line_items: buildCheckoutLineItems(plan as CheckoutPlan),
+      line_items: buildCheckoutLineItems(plan as CheckoutPlan, interval),
       mode: 'subscription',
-      success_url: successUrl || `${appUrl}/dashboard/settings?billing=success&section=billing`,
+      success_url: successTarget,
       cancel_url: cancelUrl || `${appUrl}/dashboard/settings?billing=cancel&section=billing`,
       metadata: { orgId: org.id, plan },
       subscription_data: {

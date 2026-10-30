@@ -13,6 +13,8 @@ import { ZodSchema, ZodError } from 'zod';
 import { requireAuth, requireRole, getOrgId, AuthError } from '../auth';
 import { type User, type Role } from '../db';
 import { orgHasFeature } from '@/lib/api/plan-access';
+import { getOrgAccess } from '@/lib/billing/org-access';
+import { PAYMENT_REQUIRED_CODE, PAYMENT_REQUIRED_MESSAGE } from '@/lib/api/require-api-auth';
 import { isPrismaConnectionError, isPrismaMissingColumnError } from '@/lib/api/prisma-errors';
 
 // ── Shared types ──────────────────────────────────────────────────────────────
@@ -35,6 +37,8 @@ interface BaseConfig<TBody> {
   requireAuth?: boolean;
   requiredRole?: Role;
   requiredFeature?: string;
+  /** Skip the paywall (billing routes an unpaid org must still reach). */
+  allowUnpaid?: boolean;
   schema?: ZodSchema<TBody>;
 }
 
@@ -62,6 +66,13 @@ async function resolveAuth(config: BaseConfig<unknown>): Promise<{ user?: User; 
     user = await requireAuth();
   }
   const orgId = await getOrgId();
+
+  if (orgId && !config.allowUnpaid) {
+    const access = await getOrgAccess(orgId);
+    if (!access.allowed) {
+      throw new AuthError(PAYMENT_REQUIRED_CODE, PAYMENT_REQUIRED_MESSAGE);
+    }
+  }
 
   // === FRONTEND ADDITION: soft plan gate via KO_ENFORCE_PLAN_LIMITS ===
   if (config.requiredFeature && orgId) {

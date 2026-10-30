@@ -330,6 +330,13 @@ footer{border-top:1px solid rgba(255,255,255,0.07);padding:40px 80px;display:fle
 #tab-cases .cs-view-more-below{display:inline-flex;align-items:center;gap:8px;padding:10px 28px;border:1px dashed rgba(6,109,128,0.35);border-radius:32px;background:rgba(234,252,255,0.6);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;color:#066D80;cursor:pointer;transition:background .15s,border-color .15s}
 #tab-cases .cs-view-more-below:hover{background:#EAFCFF;border-color:#00B8D9}
 #tab-cases .cs-table-row.cs-filter-hidden{display:none}
+#tab-cases .cs-table-row.cs-page-hidden{display:none}
+#tab-cases .cs-table-pager{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;border-top:1px solid #e4e4e7;background:#fff}
+#tab-cases .cs-table-pager-info{font-family:'DM Sans',sans-serif;font-size:12px;color:#71717a}
+#tab-cases .cs-table-pager-controls{display:flex;align-items:center;gap:6px}
+#tab-cases .cs-table-pager-btn{border:1px solid #e4e4e7;border-radius:8px;background:#fff;width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;color:#3f3f46;cursor:pointer}
+#tab-cases .cs-table-pager-btn:disabled{opacity:.5;cursor:not-allowed}
+#tab-cases .cs-table-pager-label{font-family:'DM Sans',sans-serif;font-size:12px;color:#71717a;padding:0 8px}
 #tab-cases .cs-table-panel{background:#fff;border:1px solid rgba(13,31,26,0.08);border-radius:12px;overflow:auto;box-shadow:0 1px 3px rgba(0,0,0,0.04)}
 #tab-cases .cs-table-panel table{margin:0}
 body.embedded #tab-cases{background:transparent}
@@ -790,7 +797,7 @@ tbody tr:hover td{background:var(--surface)}
 #tab-case-detail .cd-back{align-self:flex-start;display:inline-flex;align-items:center;padding:0;border:0;background:transparent;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;color:#52525b;cursor:pointer;margin-bottom:-8px}
 #tab-case-detail .cd-back:hover{color:#18181b;text-decoration:underline}
 #tab-case-detail .cd-header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:nowrap}
-#tab-case-detail .cd-header-actions{display:flex;flex-direction:column;align-items:flex-end;gap:10px;flex-shrink:0;margin-left:auto}
+#tab-case-detail .cd-header-actions{display:flex;flex-direction:row;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:10px;flex-shrink:0;margin-left:auto}
 #tab-case-detail .cd-market-intel-btn{display:flex;height:43px;padding:4px 20px;justify-content:center;align-items:center;gap:5.637px;border-radius:32px;border:1px solid #0F6E56;background:#fff;color:#0F6E56;font-family:'Syne',sans-serif;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap;box-sizing:border-box;transition:background .15s,box-shadow .15s}
 #tab-case-detail .cd-market-intel-btn:hover{background:#E1F5EE}
 #tab-case-detail .cd-factfind-btn{display:flex;height:43px;padding:4px 20px;justify-content:center;align-items:center;gap:5.637px;border-radius:32px;border:none;background:#D4A017;color:#fff;font-family:'Syne',sans-serif;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap;box-sizing:border-box;transition:background .15s,box-shadow .15s;box-shadow:0 4px 12px rgba(212,160,23,0.28)}
@@ -806,6 +813,15 @@ tbody tr:hover td{background:var(--surface)}
 #tab-case-detail .cd-stage-screen ul{margin:0 0 12px;padding-left:18px;font-family:'DM Sans',sans-serif;font-size:13px;color:#18181b;line-height:1.5}
 #tab-case-detail .cd-comp-pill--viewing{box-shadow:0 0 0 2px var(--pill-border,#0F6E56)}
 #tab-case-detail .cd-stage-advance{margin-top:8px;padding:10px 18px;background:#1D9E75;color:#fff;border:none;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer}
+#tab-case-detail .cd-progress-actions{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));margin-top:16px}
+#tab-case-detail .cd-progress-actions:empty{display:none}
+#tab-case-detail .cd-progress-actions .cd-stage-advance{grid-column:5;justify-self:center;width:max-content;white-space:nowrap;margin-top:0;border-radius:32px;padding:10px 20px;box-shadow:0 4px 12px rgba(29,158,117,0.25);transition:background .15s,opacity .15s}
+#tab-case-detail .cd-progress-actions .cd-stage-advance::after{content:' →'}
+#tab-case-detail .cd-progress-actions .cd-stage-advance:hover{background:#178a65}
+#tab-case-detail .cd-progress-actions .cd-stage-advance:disabled{opacity:.6;cursor:wait}
+@media(max-width:900px){
+#tab-case-detail .cd-progress-actions .cd-stage-advance{grid-column:1 / -1;justify-self:stretch;width:auto;white-space:normal}
+}
 #tab-case-detail .cd-client-docs{margin-top:16px;padding-top:14px;border-top:1px solid #f4f4f5}
 #tab-case-detail .cd-client-docs h3{margin:0 0 6px}
 #tab-case-detail .cd-doc-list{list-style:none;margin:0;padding:0}
@@ -826,6 +842,22 @@ tbody tr:hover td{background:var(--surface)}
 .ai-vuln-report-stats{display:flex;flex-wrap:wrap;gap:16px}
 .ai-vuln-report-stat{min-width:160px}
 .ai-vuln-report-stat strong{display:block;font-family:'Syne',sans-serif;font-size:22px;color:#061F18}
+.ai-vuln-result{display:flex;flex-direction:column;gap:12px}
+.ai-vuln-result:empty{display:none}
+#tab-ai .ai-vuln-result .ov-kpi-row{gap:16px;align-items:stretch}
+#tab-ai .ai-vuln-result .ov-kpi-val{margin-top:auto}
+#tab-ai .ai-vuln-acc{border:1px solid #e4e4e7;border-radius:12px;background:#fff}
+#tab-ai .ai-vuln-acc > summary{list-style:none;cursor:pointer;font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:#18181b;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;border-radius:12px;transition:background .15s}
+#tab-ai .ai-vuln-acc > summary:hover{background:#fafafa}
+#tab-ai .ai-vuln-acc > summary:focus-visible{outline:2px solid #00B8D9;outline-offset:2px}
+#tab-ai .ai-vuln-acc > summary::-webkit-details-marker{display:none}
+#tab-ai .ai-vuln-acc > summary::after{content:'Show';flex-shrink:0;padding:5px 30px 5px 12px;border:1px solid #e4e4e7;border-radius:999px;background:#f4f4f5 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none'%3E%3Cpath d='M4 6l4 4 4-4' stroke='%233f3f46' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 10px center/14px 14px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;color:#3f3f46;line-height:1.2;transition:background-color .15s,border-color .15s}
+#tab-ai .ai-vuln-acc > summary:hover::after{background-color:#e9fcff;border-color:#00B8D9}
+#tab-ai .ai-vuln-acc[open] > summary::after{content:'Hide';background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none'%3E%3Cpath d='M4 10l4-4 4 4' stroke='%233f3f46' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")}
+#tab-ai .ai-vuln-acc-meta{font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;color:#71717a;margin-left:8px}
+#tab-ai .ai-vuln-acc-body{padding:4px 16px 16px;display:flex;flex-direction:column;gap:12px}
+.ai-vuln-report-msg{font-family:'DM Sans',sans-serif;font-size:13px;color:#52525b}
+.ai-vuln-report-msg--error{color:#b91c1c}
 .ai-vuln-report table{width:100%;border-collapse:collapse;font-family:'DM Sans',sans-serif;font-size:13px}
 .ai-vuln-report th,.ai-vuln-report td{text-align:left;padding:8px 0;border-bottom:1px solid #f4f4f5}
 #tab-case-detail .cd-comp{display:flex;flex-direction:column;gap:20px;width:100%}
@@ -1175,10 +1207,13 @@ tbody tr:hover td{background:var(--surface)}
 #tab-case-detail .cd-body{display:flex;flex-direction:column;gap:24px}
 #tab-case-detail .ko-acc-stack{display:flex;flex-direction:column;gap:12px;width:100%}
 #tab-case-detail .ko-acc{border:1px solid #e4e4e7;border-radius:12px;background:#fff;overflow:visible}
-#tab-case-detail .ko-acc > summary{list-style:none;cursor:pointer;font-family:'Syne',sans-serif;font-size:16px;font-weight:700;color:#18181b;padding:16px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+#tab-case-detail .ko-acc > summary{list-style:none;cursor:pointer;font-family:'Syne',sans-serif;font-size:16px;font-weight:700;color:#18181b;padding:16px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;border-radius:12px;transition:background .15s}
+#tab-case-detail .ko-acc > summary:hover{background:#fafafa}
+#tab-case-detail .ko-acc > summary:focus-visible{outline:2px solid #00B8D9;outline-offset:2px}
 #tab-case-detail .ko-acc > summary::-webkit-details-marker{display:none}
-#tab-case-detail .ko-acc > summary::after{content:'▾';color:#71717a;font-size:12px;flex-shrink:0}
-#tab-case-detail .ko-acc[open] > summary::after{content:'▴'}
+#tab-case-detail .ko-acc > summary::after{content:'Show';flex-shrink:0;padding:5px 30px 5px 12px;border:1px solid #e4e4e7;border-radius:999px;background:#f4f4f5 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none'%3E%3Cpath d='M4 6l4 4 4-4' stroke='%233f3f46' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 10px center/14px 14px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;color:#3f3f46;line-height:1.2;transition:background-color .15s,border-color .15s}
+#tab-case-detail .ko-acc > summary:hover::after{background-color:#e9fcff;border-color:#00B8D9}
+#tab-case-detail .ko-acc[open] > summary::after{content:'Hide';background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none'%3E%3Cpath d='M4 10l4-4 4 4' stroke='%233f3f46' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")}
 #tab-case-detail .ko-acc-body{padding:0 20px 20px;display:flex;flex-direction:column;gap:16px}
 #tab-case-detail .ko-acc-muted{margin:0;font-family:'DM Sans',sans-serif;font-size:13px;color:#a1a1aa}
 #tab-case-detail .ko-acc-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
@@ -2891,6 +2926,14 @@ body.ff-open .dash-main{overflow:hidden!important;height:100%!important;max-heig
                   <tr class="cs-table-row" data-cs-row onclick="openCase('adeyemi')"><td style="font-size:12px;color:var(--ink-60)">KOF-0310</td><td style="font-weight:600">T. Adeyemi</td><td style="color:var(--ink-60)">Purchase</td><td style="color:var(--ink-60)">TBC</td><td style="font-weight:600">£385K</td><td>78%</td><td><span class="status s-enquiry">Enquiry</span></td><td><span class="accent accent-blue">—</span></td><td style="color:var(--ink-60)">J. Osei</td><td style="font-size:12px;color:var(--ink-60)">3 days ago</td></tr>
                 </tbody>
               </table>
+              <div class="cs-table-pager" id="cs-table-pager" style="display:none">
+                <span class="cs-table-pager-info" id="cs-table-pager-info">Showing 0 of 0</span>
+                <div class="cs-table-pager-controls">
+                  <button type="button" class="cs-table-pager-btn" id="cs-table-prev" aria-label="Previous page">‹</button>
+                  <span class="cs-table-pager-label" id="cs-table-page-label">1 / 1</span>
+                  <button type="button" class="cs-table-pager-btn" id="cs-table-next" aria-label="Next page">›</button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -3437,25 +3480,31 @@ body.ff-open .dash-main{overflow:hidden!important;height:100%!important;max-heig
           </div>
           <section class="ai-vuln-report" id="ai-vuln-report" aria-labelledby="ai-vuln-title">
             <h2 id="ai-vuln-title">Vulnerability assessments</h2>
-            <p>Year-to-date counts up to the date you choose. The report uses numbers only. Client names, emails, and case references are not included.</p>
+            <p>Counts for the dates you choose. The report uses numbers only. Client names, emails, and case references are not included.</p>
             <div class="ai-vuln-report-row">
-              <label for="ai-vuln-asof">As of
-                <input type="date" id="ai-vuln-asof">
+              <label for="ai-vuln-from">From
+                <input type="date" id="ai-vuln-from">
+              </label>
+              <label for="ai-vuln-to">To
+                <input type="date" id="ai-vuln-to">
               </label>
               <button type="button" class="ai-rpt-btn-new" id="ai-vuln-run">Generate report</button>
             </div>
-            <div id="ai-vuln-result"></div>
+            <div id="ai-vuln-result" class="ai-vuln-result" aria-live="polite"></div>
           </section>
           <section class="ai-vuln-report" id="ai-survey-report" aria-labelledby="ai-survey-title">
             <h2 id="ai-survey-title">Client feedback</h2>
-            <p>Year-to-date counts of surveys sent from cases, responses received, and how many were below the expected standard. No names or case references.</p>
+            <p>Counts of surveys sent from cases, responses received, and how many were below the expected standard for the dates you choose. No names or case references.</p>
             <div class="ai-vuln-report-row">
-              <label for="ai-survey-asof">As of
-                <input type="date" id="ai-survey-asof">
+              <label for="ai-survey-from">From
+                <input type="date" id="ai-survey-from">
+              </label>
+              <label for="ai-survey-to">To
+                <input type="date" id="ai-survey-to">
               </label>
               <button type="button" class="ai-rpt-btn-new" id="ai-survey-run">Generate report</button>
             </div>
-            <div id="ai-survey-result"></div>
+            <div id="ai-survey-result" class="ai-vuln-result" aria-live="polite"></div>
           </section>
 
           <div class="ov-kpi-row">
@@ -5074,6 +5123,7 @@ function koFindLiveClient(clientId) {
 
     cards().forEach((el) => el.classList.toggle('cs-filter-hidden', !test(el)));
     rows().forEach((el) => el.classList.toggle('cs-filter-hidden', !test(el)));
+    if (typeof window.koResetCasesTablePage === 'function') window.koResetCasesTablePage();
     refreshCasesKanbanColumns();
   }
 
@@ -5167,6 +5217,61 @@ function koFindLiveClient(clientId) {
     filterAdviser.innerHTML = '<option value="">All advisers</option>';
   }
   refreshCasesKanbanColumns();
+})();
+
+// Cases table pagination — layered on top of `cs-filter-hidden` via `cs-page-hidden`.
+(function initCasesTablePager() {
+  const tableBody = document.getElementById('cs-table-body');
+  const pager = document.getElementById('cs-table-pager');
+  const info = document.getElementById('cs-table-pager-info');
+  const label = document.getElementById('cs-table-page-label');
+  const prev = document.getElementById('cs-table-prev');
+  const next = document.getElementById('cs-table-next');
+  if (!tableBody || !pager) return;
+  const pageSize = 10;
+  let page = 1;
+
+  function refresh() {
+    const matched = [...tableBody.querySelectorAll('.cs-table-row')].filter(
+      (tr) => !tr.classList.contains('cs-filter-hidden'),
+    );
+    const total = matched.length;
+    const totalPages = Math.max(1, Math.ceil(total / pageSize));
+    if (page > totalPages) page = totalPages;
+    if (page < 1) page = 1;
+    const start = (page - 1) * pageSize;
+    tableBody.querySelectorAll('.cs-table-row').forEach((tr) => tr.classList.remove('cs-page-hidden'));
+    matched.forEach((tr, i) => {
+      tr.classList.toggle('cs-page-hidden', i < start || i >= start + pageSize);
+    });
+    if (info) {
+      info.textContent = total
+        ? `Showing ${start + 1}–${Math.min(start + pageSize, total)} of ${total}`
+        : 'Showing 0 of 0';
+    }
+    if (label) label.textContent = `${total ? page : 1} / ${totalPages}`;
+    if (prev) prev.disabled = page <= 1 || total === 0;
+    if (next) next.disabled = page >= totalPages || total === 0;
+    pager.style.display = total > 0 ? 'flex' : 'none';
+  }
+
+  prev?.addEventListener('click', () => {
+    page -= 1;
+    refresh();
+  });
+  next?.addEventListener('click', () => {
+    page += 1;
+    refresh();
+  });
+
+  window.koResetCasesTablePage = function () {
+    page = 1;
+    refresh();
+  };
+  window.koRefreshCasesTablePager = refresh;
+
+  new MutationObserver(refresh).observe(tableBody, { childList: true });
+  refresh();
 })();
 
 function refreshCasesKanbanColumns() {
@@ -5808,7 +5913,13 @@ function showCaseStage(caseId, stageKey) {
   if (host && !unchanged) {
     host.setAttribute('data-view', key);
     host.setAttribute('data-stage-idx', stageIdx);
-    host.innerHTML = caseStageScreenHtml(c, key) + clientDocumentsHtml(c) + caseAdvanceButtonHtml(c);
+    const railAdvance = document.querySelector('#case-detail-content [data-ko-rail-advance]');
+    if (railAdvance) {
+      host.innerHTML = caseStageScreenHtml(c, key) + clientDocumentsHtml(c);
+      railAdvance.innerHTML = caseAdvanceButtonHtml(c);
+    } else {
+      host.innerHTML = caseStageScreenHtml(c, key) + clientDocumentsHtml(c) + caseAdvanceButtonHtml(c);
+    }
   }
   document.querySelectorAll('#case-detail-content [data-ko-view-stage]').forEach((btn) => {
     btn.classList.toggle('cd-comp-pill--viewing', btn.getAttribute('data-ko-view-stage') === key);
@@ -7056,6 +7167,7 @@ function openCase(id) {
       <div class="cd-progress-rail">
         <p class="cd-progress-label">Case Progress</p>
         <div class="cd-comp-steps">${progressStepsHtml}</div>
+        <div class="cd-progress-actions" data-ko-rail-advance></div>
       </div>
       <div class="cd-stage-screen" data-ko-stage-screen></div>
       <div class="cd-tabs" role="tablist">
@@ -8625,25 +8737,72 @@ function calcRun() {
     }
   });
 
+  var reportRequestSeq = { vuln: 0, survey: 0 };
+
+  function reportKpiCard(title, hint, value, variant, icon) {
+    return '<div class="ov-kpi-card' + (variant ? ' ov-kpi-card--' + variant : '') + '">' +
+      '<div class="ov-kpi-top">' +
+        '<div class="ov-kpi-copy">' +
+          '<div class="ov-kpi-title">' + escHtml(title) + '</div>' +
+          '<div class="ov-kpi-hint">' + escHtml(hint) + '</div>' +
+        '</div>' +
+        '<img class="ov-kpi-icon" src="assets/' + icon + '" width="26" height="26" alt="" />' +
+      '</div>' +
+      '<div class="ov-kpi-val">' + escHtml(Number(value) || 0) + '</div>' +
+      '<div class="ov-kpi-trend" aria-hidden="true">&nbsp;</div>' +
+    '</div>';
+  }
+
+  function reportResultsPanel(report, bodyHtml) {
+    return '<details class="ai-vuln-acc" open>' +
+      '<summary><span>Results<span class="ai-vuln-acc-meta">' + escHtml(report.from) + ' to ' + escHtml(report.to) + '</span></span></summary>' +
+      '<div class="ai-vuln-acc-body">' + bodyHtml + '</div>' +
+    '</details>';
+  }
+
+  function reportPercent(part, whole) {
+    var p = Number(part) || 0;
+    var w = Number(whole) || 0;
+    return w > 0 ? Math.round((p / w) * 100) + '%' : '—';
+  }
+
+  function setReportMessage(out, text, isError) {
+    if (!out) return;
+    out.innerHTML = '<p class="ai-vuln-report-msg' + (isError ? ' ai-vuln-report-msg--error' : '') + '">' + escHtml(text) + '</p>';
+  }
+
+  function setReportBusy(btnId, busy) {
+    var btn = document.getElementById(btnId);
+    if (!btn) return;
+    btn.disabled = !!busy;
+    btn.textContent = busy ? 'Generating…' : 'Generate report';
+  }
+
+  function isStaleReportReply(kind, data) {
+    return typeof data.requestId === 'number' && data.requestId !== reportRequestSeq[kind];
+  }
+
   function renderVulnerabilityReport(data) {
+    if (isStaleReportReply('vuln', data)) return;
+    setReportBusy('ai-vuln-run', false);
     var out = document.getElementById('ai-vuln-result');
     if (!out) return;
     if (!data.success || !data.report) {
-      out.textContent = data.error || 'Could not generate the vulnerability report.';
+      setReportMessage(out, data.error || 'Could not generate the vulnerability report.', true);
       return;
     }
     var report = data.report;
     var rows = (report.domains || []).map(function (domain) {
       return '<tr><td>' + escHtml(domain.name) + '</td><td>' + escHtml(domain.count) + '</td></tr>';
     }).join('');
-    out.innerHTML =
-      '<div class="ai-vuln-report-stats">' +
-        '<div class="ai-vuln-report-stat"><strong>' + escHtml(report.assessmentsCompleted) + '</strong><span>Assessments completed</span></div>' +
-        '<div class="ai-vuln-report-stat"><strong>' + escHtml(report.flaggedAssessments) + '</strong><span>Flagged assessments</span></div>' +
+    out.innerHTML = reportResultsPanel(report,
+      '<div class="ov-kpi-row">' +
+        reportKpiCard('Assessments completed', 'All 12 questions answered', report.assessmentsCompleted, '', 'checklist.svg') +
+        reportKpiCard('Flagged assessments', reportPercent(report.flaggedAssessments, report.assessmentsCompleted) + ' of completed assessments', report.flaggedAssessments, 'msgs', 'person-alert.svg') +
       '</div>' +
       '<p>Period: ' + escHtml(report.from) + ' to ' + escHtml(report.to) + '. Counts only. No client is named.</p>' +
       '<table><thead><tr><th>Domain</th><th>Assessments with a flag</th></tr></thead><tbody>' + rows + '</tbody></table>' +
-      '<button type="button" class="ai-rpt-tool-btn" id="ai-vuln-download">Download CSV</button>';
+      '<button type="button" class="ai-rpt-tool-btn" id="ai-vuln-download">Download CSV</button>');
     var download = document.getElementById('ai-vuln-download');
     if (download) {
       download.addEventListener('click', function () {
@@ -8660,7 +8819,7 @@ function calcRun() {
         var url = URL.createObjectURL(blob);
         var link = document.createElement('a');
         link.href = url;
-        link.download = 'vulnerability-assessments-' + report.to + '.csv';
+        link.download = 'vulnerability-assessments-' + report.from + '-to-' + report.to + '.csv';
         link.click();
         URL.revokeObjectURL(url);
       });
@@ -8668,56 +8827,94 @@ function calcRun() {
   }
 
   function renderSurveyReport(data) {
+    if (isStaleReportReply('survey', data)) return;
+    setReportBusy('ai-survey-run', false);
     var out = document.getElementById('ai-survey-result');
     if (!out) return;
     if (!data.success || !data.report) {
-      out.textContent = data.error || 'Could not generate the survey report.';
+      setReportMessage(out, data.error || 'Could not generate the survey report.', true);
       return;
     }
     var report = data.report;
-    out.innerHTML =
-      '<div class="ai-vuln-report-stats">' +
-        '<div class="ai-vuln-report-stat"><strong>' + escHtml(report.sent) + '</strong><span>Surveys sent</span></div>' +
-        '<div class="ai-vuln-report-stat"><strong>' + escHtml(report.responses) + '</strong><span>Responses</span></div>' +
-        '<div class="ai-vuln-report-stat"><strong>' + escHtml(report.belowExpected) + '</strong><span>Below expected</span></div>' +
+    out.innerHTML = reportResultsPanel(report,
+      '<div class="ov-kpi-row">' +
+        reportKpiCard('Surveys sent', 'Feedback surveys issued from cases', report.sent, '', 'chat.svg') +
+        reportKpiCard('Responses', 'Surveys submitted in this period', report.responses, 'pipeline', 'description.svg') +
+        reportKpiCard('Below expected', reportPercent(report.belowExpected, report.responses) + ' of responses', report.belowExpected, 'msgs', 'person-alert.svg') +
       '</div>' +
-      '<p>Period: ' + escHtml(report.from) + ' to ' + escHtml(report.to) + '. Counts only. No client is named.</p>';
+      '<p>Period: ' + escHtml(report.from) + ' to ' + escHtml(report.to) + '. Counts only. No client is named.</p>');
+  }
+
+  function localIsoDay(date) {
+    var m = String(date.getMonth() + 1).padStart(2, '0');
+    var d = String(date.getDate()).padStart(2, '0');
+    return date.getFullYear() + '-' + m + '-' + d;
+  }
+
+  function bindReportRange(opts) {
+    var fromInput = document.getElementById(opts.fromId);
+    var toInput = document.getElementById(opts.toId);
+    var btn = document.getElementById(opts.btnId);
+    var today = localIsoDay(new Date());
+    if (toInput && !toInput.value) toInput.value = today;
+    if (fromInput && !fromInput.value) fromInput.value = today.slice(0, 4) + '-01-01';
+    function syncLimits() {
+      if (fromInput) fromInput.max = (toInput && toInput.value) || today;
+      if (toInput) {
+        toInput.min = (fromInput && fromInput.value) || '';
+        toInput.max = today;
+      }
+    }
+    syncLimits();
+    if (!btn || btn.dataset.bound === '1') return;
+    btn.dataset.bound = '1';
+    if (fromInput) fromInput.addEventListener('change', syncLimits);
+    if (toInput) toInput.addEventListener('change', syncLimits);
+    btn.addEventListener('click', function () {
+      var out = document.getElementById(opts.outId);
+      var from = fromInput ? fromInput.value : '';
+      var to = toInput ? toInput.value : '';
+      if (window.parent === window) {
+        setReportMessage(out, 'Open Reports from the broker dashboard to generate this report.');
+        return;
+      }
+      if (!from || !to) {
+        setReportMessage(out, 'Choose both a "From" and a "To" date.', true);
+        return;
+      }
+      if (from > to) {
+        setReportMessage(out, 'The "From" date must be on or before the "To" date.', true);
+        return;
+      }
+      reportRequestSeq[opts.kind] += 1;
+      setReportBusy(opts.btnId, true);
+      setReportMessage(out, 'Generating report…');
+      window.parent.postMessage(
+        { type: opts.messageType, from: from, to: to, requestId: reportRequestSeq[opts.kind] },
+        window.location.origin,
+      );
+    });
   }
 
   function bindSurveyReport() {
-    var input = document.getElementById('ai-survey-asof');
-    var btn = document.getElementById('ai-survey-run');
-    if (input && !input.value) input.value = new Date().toISOString().slice(0, 10);
-    if (!btn || btn.dataset.bound === '1') return;
-    btn.dataset.bound = '1';
-    btn.addEventListener('click', function () {
-      var out = document.getElementById('ai-survey-result');
-      if (window.parent === window) {
-        if (out) out.textContent = 'Open Reports from the broker dashboard to generate this report.';
-        return;
-      }
-      if (out) out.textContent = 'Generating report…';
-      window.parent.postMessage({ type: 'ko:survey-report', asOf: input && input.value }, window.location.origin);
+    bindReportRange({
+      kind: 'survey',
+      fromId: 'ai-survey-from',
+      toId: 'ai-survey-to',
+      btnId: 'ai-survey-run',
+      outId: 'ai-survey-result',
+      messageType: 'ko:survey-report',
     });
   }
 
   function bindVulnerabilityReport() {
-    var input = document.getElementById('ai-vuln-asof');
-    var btn = document.getElementById('ai-vuln-run');
-    if (input && !input.value) {
-      input.value = new Date().toISOString().slice(0, 10);
-    }
-    if (!btn || btn.dataset.bound === '1') return;
-    btn.dataset.bound = '1';
-    btn.addEventListener('click', function () {
-      var out = document.getElementById('ai-vuln-result');
-      var asOf = input && input.value;
-      if (window.parent === window) {
-        if (out) out.textContent = 'Open Reports from the broker dashboard to generate this report.';
-        return;
-      }
-      if (out) out.textContent = 'Generating report…';
-      window.parent.postMessage({ type: 'ko:vulnerability-report', asOf: asOf }, window.location.origin);
+    bindReportRange({
+      kind: 'vuln',
+      fromId: 'ai-vuln-from',
+      toId: 'ai-vuln-to',
+      btnId: 'ai-vuln-run',
+      outId: 'ai-vuln-result',
+      messageType: 'ko:vulnerability-report',
     });
   }
   if (document.readyState === 'loading') {

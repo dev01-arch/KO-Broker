@@ -1,17 +1,14 @@
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { prisma } from '@/lib/db';
-import { getPlanFromStripePriceId } from '@/lib/billing/stripe-checkout';
+import { syncSubscriptionToOrg } from '@/lib/billing/subscription-sync';
+import { cancelOtherSubscriptions } from '@/lib/billing/subscription-change';
 
 type OrgPlan = 'STARTER' | 'PROFESSIONAL' | 'ENTERPRISE';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'mock-key', {
   apiVersion: '2026-06-24.dahlia',
 });
-
-function getPlanFromPriceId(priceId: string): OrgPlan {
-  return getPlanFromStripePriceId(priceId) ?? 'STARTER';
-}
 
 /**
  * POST /api/webhooks/stripe
@@ -63,54 +60,34 @@ async function handleEvent(event: Stripe.Event) {
           },
         });
       }
-      break;
-    }
 
-    case 'customer.subscription.updated': {
-      const subscription = event.data.object as Stripe.Subscription;
-      const customerId = subscription.customer as string;
-      const priceId = subscription.items.data[0]?.price.id;
-      const metadataPlan = subscription.metadata?.plan as OrgPlan | undefined;
-
-      if (customerId) {
-        const plan =
-          metadataPlan && ['STARTER', 'PROFESSIONAL', 'ENTERPRISE'].includes(metadataPlan)
-            ? metadataPlan
-            : priceId
-              ? getPlanFromPriceId(priceId)
-              : null;
-
-        if (!plan) break;
-
-        const org = await prisma.organisation.findFirst({
-          where: { stripeCustomerId: customerId },
-        });
-
-        if (org) {
-          await prisma.organisation.update({
-            where: { id: org.id },
-            data: { plan },
-          });
-        }
+      const subscriptionId =
+        typeof session.subscription === 'string' ? session.subscription : session.subscription?.id;
+      if (subscriptionId) {
+        await syncSubscriptionToOrg(await stripe.subscriptions.retrieve(subscriptionId));
+        if (customerId) await cancelOtherSubscriptions(stripe, customerId, subscriptionId);
       }
       break;
     }
 
+    case 'customer.subscription.created':
+    case 'customer.subscription.updated': {
+      await syncSubscriptionToOrg(event.data.object as Stripe.Subscription);
+      break;
+    }
+
     case 'customer.subscription.deleted': {
-      const subscription = event.data.object as Stripe.Subscription;
-      const customerId = subscription.customer as string;
+      await syncSubscriptionToOrg(event.data.object as Stripe.Subscription, { deleted: true });
+      break;
+    }
 
-      if (customerId) {
-        const org = await prisma.organisation.findFirst({
-          where: { stripeCustomerId: customerId },
-        });
-
-        if (org) {
-          await prisma.organisation.update({
-            where: { id: org.id },
-            data: { plan: 'STARTER' },
-          });
-        }
+    case 'invoice.paid':
+    case 'invoice.payment_failed': {
+      const invoice = event.data.object as Stripe.Invoice;
+      const ref = invoice.parent?.subscription_details?.subscription;
+      const subscriptionId = typeof ref === 'string' ? ref : ref?.id;
+      if (subscriptionId) {
+        await syncSubscriptionToOrg(await stripe.subscriptions.retrieve(subscriptionId));
       }
       break;
     }

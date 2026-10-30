@@ -37,7 +37,7 @@ export function useOrgProfile() {
 
 export function usePlanFeature(feature: string) {
   const { data: profile } = useOrgProfile();
-  if (!planLimitsEnforced()) {
+  if (!(profile?.featuresEnforced ?? planLimitsEnforced())) {
     return true;
   }
   const plan = profile?.plan ?? 'STARTER';

@@ -1,6 +1,11 @@
 import { getCurrentUser } from '@/lib/auth';
 import { apiUnauthorized, apiError } from '@/lib/api/responses';
 import { isPrismaConnectionError } from '@/lib/api/prisma-errors';
+import { getOrgAccess } from '@/lib/billing/org-access';
+
+export const PAYMENT_REQUIRED_CODE = 'PAYMENT_REQUIRED';
+export const PAYMENT_REQUIRED_MESSAGE =
+  'Your organisation needs an active subscription. Choose a plan to continue.';
 
 type ApiAuthSuccess = {
   user: {
@@ -27,7 +32,9 @@ type ApiAuthResult = ApiAuthSuccess | { response: Response };
  * calls both does not hit Clerk or the database twice.
  * Proxy middleware already verified the session and set x-user-id.
  */
-export async function requireApiAuth(): Promise<ApiAuthResult> {
+export async function requireApiAuth(
+  options: { allowUnpaid?: boolean } = {},
+): Promise<ApiAuthResult> {
   try {
     const user = await getCurrentUser();
     if (!user) {
@@ -39,6 +46,13 @@ export async function requireApiAuth(): Promise<ApiAuthResult> {
       return {
         response: apiError('FORBIDDEN', 'No organisation linked to this account', 403),
       };
+    }
+
+    if (!options.allowUnpaid) {
+      const access = await getOrgAccess(orgId);
+      if (!access.allowed) {
+        return { response: apiError(PAYMENT_REQUIRED_CODE, PAYMENT_REQUIRED_MESSAGE, 402) };
+      }
     }
 
     return {

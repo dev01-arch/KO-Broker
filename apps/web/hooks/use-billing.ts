@@ -2,7 +2,12 @@
 
 import { useAuth } from '@clerk/nextjs';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { billingApi, requireAuthToken } from '@/lib/api/client';
+import {
+  billingApi,
+  requireAuthToken,
+  type BillingInterval,
+  type BillingPlanId,
+} from '@/lib/api/client';
 
 function useToken() {
   const { getToken } = useAuth();
@@ -11,12 +16,20 @@ function useToken() {
 
 export const billingSubscriptionQueryKey = ['billing', 'subscription'] as const;
 
+type CheckoutRequest = {
+  plan: BillingPlanId;
+  interval?: BillingInterval;
+  successUrl?: string;
+  cancelUrl?: string;
+};
+
 export function useCreateCheckout() {
   const getToken = useToken();
   return useMutation({
-    mutationFn: async (plan: 'PROFESSIONAL' | 'ENTERPRISE') => {
+    mutationFn: async (request: BillingPlanId | CheckoutRequest) => {
       const token = await requireAuthToken(getToken);
-      const response = await billingApi.createCheckout(token, { plan });
+      const input = typeof request === 'string' ? { plan: request } : request;
+      const response = await billingApi.createCheckout(token, input);
       const checkoutUrl = response.data.url ?? response.data.checkoutUrl;
       if (!checkoutUrl) {
         throw new Error('Checkout URL missing from server response');

@@ -95,10 +95,21 @@ export function BillingSettingsSection({
     isPending: portalPending,
     error: portalError,
   } = useBillingPortal();
-  const [upgradingPlan, setUpgradingPlan] = useState<'PROFESSIONAL' | 'ENTERPRISE' | null>(null);
+  const [upgradingPlan, setUpgradingPlan] = useState<Plan | null>(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
 
-  const currentPlan = profile?.plan ?? 'STARTER';
+  const billingAccess = profile?.billing?.access;
+  const inTrial = billingAccess === 'trial';
+  const freeAccess = billingAccess === 'complimentary' || billingAccess === 'grandfathered';
+  const currentPlan = profile?.billing?.subscribedPlan ?? profile?.plan ?? 'STARTER';
+  const trialEndDate = formatBillingDate(profile?.billing?.trialEndsAt);
+  const currentPlanLabel = inTrial
+    ? 'Free trial (all features)'
+    : billingAccess === 'complimentary'
+      ? 'Complimentary access (all features)'
+      : billingAccess === 'grandfathered'
+        ? 'Legacy access (all features)'
+        : formatPlanLabel(currentPlan);
   const hasBillingAccount = Boolean(subscription?.hasBillingAccount);
   const showManageSection =
     subscriptionLoading || hasBillingAccount || currentPlan !== 'STARTER';
@@ -121,7 +132,7 @@ export function BillingSettingsSection({
     onBillingNoticeDismiss?.();
   }
 
-  async function handleUpgrade(plan: 'PROFESSIONAL' | 'ENTERPRISE') {
+  async function handleUpgrade(plan: Plan) {
     setUpgradingPlan(plan);
     try {
       const url = await checkout(plan);
@@ -149,10 +160,15 @@ export function BillingSettingsSection({
       <div className="space-y-8">
         <div className="rounded-lg border border-ink-20 bg-ink-08/40 px-4 py-4">
           <p className="text-xs font-semibold uppercase tracking-wide text-ink-60">Current plan</p>
-          <p className="mt-1 font-heading text-lg font-bold text-ink">{formatPlanLabel(currentPlan)}</p>
+          <p className="mt-1 font-heading text-lg font-bold text-ink">{currentPlanLabel}</p>
           <p className="mt-1 text-sm text-ink-60">
             Per adviser, per month. No setup fees. Cancel any time.
           </p>
+          {inTrial && trialEndDate && (
+            <p className="mt-2 text-sm text-ink-60">
+              Your trial ends on {trialEndDate}. Choose a plan below to keep access after that.
+            </p>
+          )}
           {renewalDate && !subscription?.cancelAtPeriodEnd && (
             <p className="mt-2 text-sm text-ink-60">Next billing date: {renewalDate}</p>
           )}
@@ -245,15 +261,20 @@ export function BillingSettingsSection({
 
         <div className="grid gap-6 xl:grid-cols-3">
           {PRICING_TIERS.map((tier) => {
-            const isCurrent = tier.plan === currentPlan;
-            const isIncluded = planRank(currentPlan) > planRank(tier.plan);
-            const canUpgrade = Boolean(tier.checkoutPlan) && planRank(tier.plan) > planRank(currentPlan);
+            const isCurrent = !inTrial && !freeAccess && tier.plan === currentPlan;
+            const isIncluded = freeAccess || (!inTrial && planRank(currentPlan) > planRank(tier.plan));
+            const canUpgrade =
+              Boolean(tier.checkoutPlan) &&
+              !freeAccess &&
+              (inTrial || planRank(tier.plan) > planRank(currentPlan));
             const checkoutPlan = tier.checkoutPlan;
             const isUpgrading = isPending && checkoutPlan != null && upgradingPlan === checkoutPlan;
 
             let buttonText = 'Included';
             if (isCurrent) buttonText = 'Current plan';
-            else if (canUpgrade && checkoutPlan) buttonText = `Upgrade to ${tier.name}`;
+            else if (canUpgrade && checkoutPlan) {
+              buttonText = inTrial ? `Choose ${tier.name}` : `Upgrade to ${tier.name}`;
+            }
 
             return (
               <PricingCard

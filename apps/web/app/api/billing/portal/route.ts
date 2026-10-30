@@ -17,7 +17,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'mock-key', {
  */
 export async function POST(req: NextRequest) {
   try {
-    const authResult = await requireApiAuth();
+    const authResult = await requireApiAuth({ allowUnpaid: true });
     if ('response' in authResult) return authResult.response;
 
     const { user, orgId } = authResult;

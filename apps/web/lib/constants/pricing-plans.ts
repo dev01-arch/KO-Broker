@@ -10,8 +10,13 @@ export type PricingTier = {
   v2Design: 'starter' | 'professional' | 'enterprise';
   features: string[];
   mostPopular?: boolean;
-  checkoutPlan?: 'PROFESSIONAL' | 'ENTERPRISE';
+  checkoutPlan?: Plan;
 };
+
+/** Yearly price is 10× monthly (two months free), matching the Stripe yearly prices. */
+export function yearlyPrice(tier: PricingTier): string {
+  return String(Number(tier.price) * 10);
+}
 
 export const PRICING_TIERS: PricingTier[] = [
   {
@@ -20,6 +25,7 @@ export const PRICING_TIERS: PricingTier[] = [
     name: 'Starter',
     price: '35',
     v2Design: 'starter',
+    checkoutPlan: 'STARTER',
     features: [
       'Core CRM & Pipeline',
       'Compliance Engine',

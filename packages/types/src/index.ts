@@ -187,7 +187,8 @@ export const CompleteComplianceItemSchema = z.object({
 export type CompleteComplianceItemInput = z.infer<typeof CompleteComplianceItemSchema>;
 
 export const CheckoutSchema = z.object({
-  plan: z.enum(['PROFESSIONAL', 'ENTERPRISE']),
+  plan: z.enum(['STARTER', 'PROFESSIONAL', 'ENTERPRISE']),
+  interval: z.enum(['monthly', 'yearly']).optional(),
   successUrl: z.string().url().optional(),
   cancelUrl: z.string().url().optional(),
 });

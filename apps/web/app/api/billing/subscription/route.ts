@@ -10,7 +10,7 @@ import { getBillingSubscriptionForCustomer } from '@/lib/billing/stripe-subscrip
  */
 export async function GET() {
   try {
-    const authResult = await requireApiAuth();
+    const authResult = await requireApiAuth({ allowUnpaid: true });
     if ('response' in authResult) return authResult.response;
 
     const { orgId } = authResult;

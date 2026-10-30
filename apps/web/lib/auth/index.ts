@@ -18,13 +18,13 @@ import { readCachedAuthUser, writeCachedAuthUser } from '@/lib/auth/user-cache';
 export { invalidateCachedAuthUser } from '@/lib/auth/user-cache';
 
 export class AuthError extends Error {
-  code: 'UNAUTHORIZED' | 'FORBIDDEN' | 'NO_ORG';
+  code: 'UNAUTHORIZED' | 'FORBIDDEN' | 'NO_ORG' | 'PAYMENT_REQUIRED';
   statusCode: number;
 
-  constructor(code: 'UNAUTHORIZED' | 'FORBIDDEN' | 'NO_ORG', message: string) {
+  constructor(code: 'UNAUTHORIZED' | 'FORBIDDEN' | 'NO_ORG' | 'PAYMENT_REQUIRED', message: string) {
     super(message);
     this.code = code;
-    this.statusCode = code === 'UNAUTHORIZED' ? 401 : 403;
+    this.statusCode = code === 'UNAUTHORIZED' ? 401 : code === 'PAYMENT_REQUIRED' ? 402 : 403;
     this.name = 'AuthError';
   }
 }

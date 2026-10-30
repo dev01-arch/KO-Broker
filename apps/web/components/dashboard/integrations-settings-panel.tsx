@@ -42,7 +42,7 @@ import { useOrgRole } from '@/hooks/use-org';
 /** Hidden from the UI — code retained for future admin tooling. */
 const SHOW_ARCHIVED_SECTIONS = false;
 
-type SettingsSection = 'organization' | 'lenders' | 'messaging' | 'billing' | 'account';
+export type SettingsSection = 'organization' | 'lenders' | 'messaging' | 'billing' | 'account';
 
 const SETTINGS_SECTIONS: {
   id: SettingsSection;
@@ -132,11 +132,18 @@ function EnabledToggle({
 type IntegrationsSettingsPanelProps = {
   embedded?: boolean;
   initialSection?: SettingsSection;
+  /**
+   * Imperative section switch from the parent (e.g. sidebar "Upgrade to pro").
+   * A new object identity re-applies the section even if the URL `section` param
+   * is unchanged or Next's `useSearchParams` hasn't caught up with history.pushState.
+   */
+  sectionRequest?: { section: SettingsSection } | null;
 };
 
 export function IntegrationsSettingsPanel({
   embedded = false,
   initialSection = 'organization',
+  sectionRequest = null,
 }: IntegrationsSettingsPanelProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -213,6 +220,11 @@ export function IntegrationsSettingsPanel({
       setActiveSection(sectionParam as SettingsSection);
     }
   }, [billingNotice, sectionParam, isAdmin, roleReady]);
+
+  // Advisers are still bounced off admin-only sections by the hard redirect below.
+  useEffect(() => {
+    if (sectionRequest) setActiveSection(sectionRequest.section);
+  }, [sectionRequest]);
 
   // Hard redirect: advisers never stay on team/billing (wait until role is known).
   useEffect(() => {

@@ -7,7 +7,7 @@ import { isPrismaConnectionError } from '@/lib/api/prisma-errors';
 /** Returns the signed-in user's org plan, role, and visibility for UI gating (§1, §4). */
 export async function GET() {
   try {
-    const authResult = await requireApiAuth();
+    const authResult = await requireApiAuth({ allowUnpaid: true });
     if ('response' in authResult) return authResult.response;
     const { orgId, user } = authResult;
     const visibilityUser = await getCurrentUser();

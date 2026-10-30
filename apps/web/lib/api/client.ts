@@ -599,6 +599,13 @@ async function apiFetch<T>(
   return request;
 }
 
+/** The org's access ended mid-session (trial over / payment failed): send the user to the paywall. */
+function redirectToSubscribe() {
+  if (typeof window === 'undefined') return;
+  if (window.location.pathname.startsWith('/subscribe')) return;
+  window.top?.location.assign('/subscribe');
+}
+
 async function performApiFetch<T>(
   path: string,
   token: string,
@@ -648,6 +655,9 @@ async function performApiFetch<T>(
   const json = (await res.json()) as ApiResponse<T>;
 
   if (!json.success) {
+    if (res.status === 402 && json.error?.code === 'PAYMENT_REQUIRED') {
+      redirectToSubscribe();
+    }
     throw new ApiError(
       json.error?.code ?? 'INTERNAL_ERROR',
       json.error?.message ?? 'An unexpected error occurred',
@@ -1525,29 +1535,85 @@ export interface VulnerabilityReportPayload {
   domains: Array<{ name: string; count: number }>;
 }
 
+export interface SurveyReportPayload {
+  from: string;
+  to: string;
+  sent: number;
+  responses: number;
+  belowExpected: number;
+}
+
+/** A plain string is treated as the legacy `asOf` (end) date. */
+export type ReportRangeInput = string | { from?: string; to?: string };
+
+function reportRangeQuery(range?: ReportRangeInput): string {
+  if (!range) return '';
+  const params = new URLSearchParams();
+  if (typeof range === 'string') {
+    params.set('asOf', range);
+  } else {
+    if (range.from) params.set('from', range.from);
+    if (range.to) params.set('to', range.to);
+  }
+  const query = params.toString();
+  return query ? `?${query}` : '';
+}
+
 export const reportsApi = {
-  vulnerability(token: string, asOf?: string) {
-    const query = asOf ? `?asOf=${encodeURIComponent(asOf)}` : '';
-    return apiFetch<VulnerabilityReportPayload>(`/api/reports/vulnerability${query}`, token);
+  vulnerability(token: string, range?: ReportRangeInput) {
+    return apiFetch<VulnerabilityReportPayload>(
+      `/api/reports/vulnerability${reportRangeQuery(range)}`,
+      token,
+    );
   },
 
-  survey(token: string, asOf?: string) {
-    const query = asOf ? `?asOf=${encodeURIComponent(asOf)}` : '';
-    return apiFetch<{ from: string; to: string; sent: number; responses: number; belowExpected: number }>(
+  survey(token: string, range?: ReportRangeInput) {
+    const query = reportRangeQuery(range);
+    return apiFetch<SurveyReportPayload>(
       `/api/reports/survey${query}`,
       token,
     );
   },
 };
 
+export type BillingPlanId = 'STARTER' | 'PROFESSIONAL' | 'ENTERPRISE';
+export type BillingInterval = 'monthly' | 'yearly';
+export type OrgAccessReason =
+  | 'paywall_off'
+  | 'complimentary'
+  | 'grandfathered'
+  | 'subscribed'
+  | 'trial'
+  | 'trial_ended'
+  | 'payment_failed'
+  | 'canceled';
+
 export interface OrgProfile {
-  plan: 'STARTER' | 'PROFESSIONAL' | 'ENTERPRISE';
+  /** Plan used for feature gates (Enterprise during trial / complimentary / grandfathered access). */
+  plan: BillingPlanId;
   role: 'ADMIN' | 'ADVISER' | 'COMPLIANCE' | 'VIEWER';
   orgId: string;
   orgName: string;
   canViewAllClients?: boolean;
   canViewAccountDetails?: boolean;
   canViewAiSummaries?: boolean;
+  featuresEnforced?: boolean;
+  /** Present only when the paywall is enabled. */
+  billing?: {
+    access: OrgAccessReason;
+    subscribedPlan: BillingPlanId;
+    trialEndsAt: string | null;
+  };
+}
+
+export interface BillingAccessPayload {
+  allowed: boolean;
+  reason: OrgAccessReason;
+  effectivePlan: BillingPlanId;
+  subscribedPlan: BillingPlanId;
+  trialEndsAt: string | null;
+  paywallEnabled: boolean;
+  isAdmin: boolean;
 }
 
 export interface DashboardBootstrapPayload {
@@ -1754,7 +1820,12 @@ export const systemApi = {
 export const billingApi = {
   createCheckout(
     token: string,
-    input: { plan: 'PROFESSIONAL' | 'ENTERPRISE'; successUrl?: string; cancelUrl?: string },
+    input: {
+      plan: BillingPlanId;
+      interval?: BillingInterval;
+      successUrl?: string;
+      cancelUrl?: string;
+    },
   ) {
     return apiFetch<{ url: string; checkoutUrl?: string; sessionId: string; plan: string }>(
       '/api/billing/checkout',
@@ -1775,6 +1846,15 @@ export const billingApi = {
 
   createPortalSession(token: string) {
     return apiFetch<{ url: string }>('/api/billing/portal', token, { method: 'POST' });
+  },
+
+  getAccess(token: string) {
+    return apiFetch<BillingAccessPayload>('/api/billing/access', token);
+  },
+
+  /** Re-reads the subscription from Stripe before returning access (use after checkout). */
+  syncAccess(token: string) {
+    return apiFetch<BillingAccessPayload>('/api/billing/access', token, { method: 'POST' });
   },
 };
 

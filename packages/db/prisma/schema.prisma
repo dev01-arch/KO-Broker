@@ -21,6 +21,13 @@ enum Plan {
   ENTERPRISE
 }
 
+/// Free access that bypasses Stripe. NONE means the org must be trialling or subscribed.
+enum OrgAccessGrant {
+  NONE
+  COMPLIMENTARY
+  GRANDFATHERED
+}
+
 enum Role {
   ADMIN
   ADVISER
@@ -168,6 +175,13 @@ model Organisation {
   settings         Json?    @default("{}")
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
+
+  // Billing access (paywall). Only read when BILLING_PAYWALL_STARTS_AT is set.
+  accessGrant          OrgAccessGrant @default(NONE)
+  trialEndsAt          DateTime?
+  stripeSubscriptionId String?
+  subscriptionStatus   String?
+  currentPeriodEnd     DateTime?
 
   users                    User[]
   members                  OrganisationMember[]

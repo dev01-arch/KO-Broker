@@ -18,6 +18,9 @@
     "db:push": "pnpm --filter @ko/db push",
     "db:seed": "pnpm --filter @ko/db seed",
     "db:migrate": "pnpm --filter @ko/db migrate",
+    "db:migrate:deploy": "pnpm --filter @ko/db migrate:deploy",
+    "db:migrate:status": "pnpm --filter @ko/db migrate:status",
+    "db:migrate:resolve": "pnpm --filter @ko/db migrate:resolve",
     "clean": "pnpm -r run clean"
   },
   "dependencies": {

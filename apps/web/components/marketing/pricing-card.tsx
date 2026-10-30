@@ -14,6 +14,7 @@ export type PricingCardProps = {
   buttonLoading?: boolean;
   isCurrentPlan?: boolean;
   v2Design?: 'starter' | 'professional' | 'enterprise';
+  pricePeriod?: string;
 };
 
 export function PricingCard({
@@ -28,6 +29,7 @@ export function PricingCard({
   buttonLoading = false,
   isCurrentPlan = false,
   v2Design,
+  pricePeriod = '/adviser/mo',
 }: PricingCardProps) {
   const subtitle =
     tier === 'Starter'
@@ -141,7 +143,7 @@ export function PricingCard({
         <div className="flex items-baseline gap-1">
           <span className="heading-numeric text-3xl md:text-4xl">£</span>
           <span className="heading-numeric text-5xl md:text-7xl">{price}</span>
-          <span className="text-xs tracking-tight text-gray-400">/adviser/mo</span>
+          <span className="text-xs tracking-tight text-gray-400">{pricePeriod}</span>
         </div>
         {features.length > 0 ? (
           <ul className="flex min-h-0 flex-1 flex-col gap-4 text-xs text-gray-600">

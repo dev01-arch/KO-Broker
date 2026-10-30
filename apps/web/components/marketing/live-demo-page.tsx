@@ -7,7 +7,10 @@ import { useAuth, useUser } from '@clerk/nextjs';
 import { useQueryClient } from '@tanstack/react-query';
 import { Bell, Briefcase, Building2, Calculator as CalculatorIcon, FileText, Loader2, LogOut, Settings, ShieldCheck, TrendingUp, Upload, type LucideIcon } from 'lucide-react';
 import MortgageCalculators from '@/components/marketing/demo-calculator/MortgageCalculators';
-import { IntegrationsSettingsPanel } from '@/components/dashboard/integrations-settings-panel';
+import {
+  IntegrationsSettingsPanel,
+  type SettingsSection,
+} from '@/components/dashboard/integrations-settings-panel';
 import { ImportClientsModal } from '@/components/dashboard/clients/import-clients-modal';
 import { EditClientModal } from '@/components/dashboard/clients/edit-client-modal';
 import { MortgageIntelligencePanel } from '@/components/dashboard/intelligence/mortgage-intelligence-panel';
@@ -400,6 +403,17 @@ function isEmbeddedPanelTab(tab: DemoTab): tab is 'calculator' | 'settings' | 'i
   return tab === 'calculator' || tab === 'settings' || tab === 'intelligence';
 }
 
+function readReportRange(data: { from?: unknown; to?: unknown; asOf?: unknown }) {
+  const from = typeof data.from === 'string' && data.from ? data.from : undefined;
+  const to =
+    typeof data.to === 'string' && data.to
+      ? data.to
+      : typeof data.asOf === 'string' && data.asOf
+        ? data.asOf
+        : undefined;
+  return { from, to };
+}
+
 function timeGreeting(): string {
   const hour = new Date().getHours();
   if (hour < 12) return 'Good morning';
@@ -516,6 +530,9 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
   const pendingTabUrlRef = useRef<DemoTab | null>(null);
   /** Once opened, keep Settings/Calculator/Intelligence mounted (hidden) so return visits don't remount. */
   const [settingsMounted, setSettingsMounted] = useState(false);
+  const [settingsSectionRequest, setSettingsSectionRequest] = useState<{
+    section: SettingsSection;
+  } | null>(null);
   const [calculatorMounted, setCalculatorMounted] = useState(false);
   const [intelligenceMounted, setIntelligenceMounted] = useState(false);
   const isDashboard = homeHref === '/dashboard';
@@ -786,11 +803,14 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
   const { canViewAiSummaries } = useAdviserVisibility();
   const currentPlanLabel = useMemo(() => {
     if (isMockDemo) return 'Starter';
+    const access = orgProfile?.billing?.access;
+    if (access === 'trial') return 'Free trial';
+    if (access === 'complimentary') return 'Complimentary';
     const plan = orgProfile?.plan ?? 'STARTER';
     if (plan === 'PROFESSIONAL') return 'Professional';
     if (plan === 'ENTERPRISE') return 'Enterprise';
     return 'Starter';
-  }, [isMockDemo, orgProfile?.plan]);
+  }, [isMockDemo, orgProfile?.billing?.access, orgProfile?.plan]);
   const showPlanUpgrade = currentPlanLabel === 'Starter';
   const sidebarUserEmail = useMemo(() => {
     if (isMockDemo) return 'alex@koplatform.demo';
@@ -799,6 +819,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
   const openBillingSettings = useCallback(() => {
     setActiveTab('settings');
     setSettingsMounted(true);
+    setSettingsSectionRequest({ section: 'billing' });
     const params = readLocationSearchParams(searchParams);
     params.set('tab', 'settings');
     params.set('section', 'billing');
@@ -1348,7 +1369,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
       if (isMockDemo) params.set('userName', 'Alex');
     }
     // Bust CDN/browser cache of the static prototype after UI-only HTML changes.
-    params.set('v', 'prd16-client-delete-2');
+    params.set('v', 'cases-table-pager-1');
     return `/live-demo-prototype-v2a.html?${params}`;
     // eslint-disable-next-line react-hooks/exhaustive-deps -- personal src intentionally ignores activeTab
   }, [isPersonalDashboard ? 'overview' : activeTab, overviewReady, isPersonalDashboard, isMockDemo]);
@@ -1812,15 +1833,14 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
       if (data?.type === 'ko:survey-report') {
         const replySurvey = (body: Record<string, unknown>) => {
           iframeWindow.postMessage(
-            { type: 'ko:survey-report-result', ...body },
+            { type: 'ko:survey-report-result', requestId: data.requestId, ...body },
             window.location.origin,
           );
         };
         try {
           const token = await getCachedSessionToken(getToken);
           if (!token) throw new Error('Not authenticated');
-          const asOf = typeof data.asOf === 'string' ? data.asOf : undefined;
-          const result = await reportsApi.survey(token, asOf);
+          const result = await reportsApi.survey(token, readReportRange(data));
           replySurvey({ success: true, report: result.data });
         } catch (err) {
           replySurvey({
@@ -1834,15 +1854,14 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
       if (data?.type === 'ko:vulnerability-report') {
         const replyReport = (body: Record<string, unknown>) => {
           iframeWindow.postMessage(
-            { type: 'ko:vulnerability-report-result', ...body },
+            { type: 'ko:vulnerability-report-result', requestId: data.requestId, ...body },
             window.location.origin,
           );
         };
         try {
           const token = await getCachedSessionToken(getToken);
           if (!token) throw new Error('Not authenticated');
-          const asOf = typeof data.asOf === 'string' ? data.asOf : undefined;
-          const result = await reportsApi.vulnerability(token, asOf);
+          const result = await reportsApi.vulnerability(token, readReportRange(data));
           replyReport({ success: true, report: result.data });
         } catch (err) {
           replyReport({
@@ -5694,7 +5713,7 @@ export function LiveDemoPage({ homeHref = '/' }: LiveDemoPageProps) {
                 </button>
               </div>
               <div className="px-4 lg:px-0">
-                <IntegrationsSettingsPanel embedded />
+                <IntegrationsSettingsPanel embedded sectionRequest={settingsSectionRequest} />
               </div>
             </div>
           )}
